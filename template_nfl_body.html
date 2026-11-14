@@ -1,4 +1,13 @@
 <style>
+.dleg{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+[class^="dk-"]{display:inline-block;padding:2px 6px;margin:0 3px 3px 0;border-radius:6px;font-size:11.5px;font-weight:700}
+.dk-TD{background:#16a34a2e;color:var(--good)}.dk-FG{background:#2563eb26;color:var(--primary)}.dk-PUNT{background:#64748b22;color:var(--muted)}
+.dk-TO{background:#dc262626;color:var(--bad)}.dk-DOWNS{background:#ea580c26;color:var(--warn)}.dk-MISS{background:#a855f726;color:#a855f7}.dk-END{background:#64748b14;color:var(--muted)}
+#earlyGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,600px),1fr))}
+.eduo{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:760px){.eduo{grid-template-columns:1fr}}
+.eside h3{font-size:18px;margin:4px 0 6px}.kv{display:flex;justify-content:space-between;gap:8px;margin-top:6px}.kv b{font-size:18px}.kv.vs{color:var(--muted);font-size:13px}.kv.vs b{font-size:15px}
+.qrow{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.qrow span{padding:3px 7px;border-radius:7px;border:1px solid var(--line);font-size:12px;color:var(--muted)}.qrow span.on{color:var(--text);border-color:var(--primary)}.qrow span.nil{color:var(--bad)}
+.grow{display:grid;grid-template-columns:70px 1fr 1fr 34px;gap:6px;align-items:center;font-size:12px;border-top:1px solid var(--line);padding-top:4px;margin-top:4px}
 :root{--primary:#11833f;--pri-bg:rgba(17,131,63,.1)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--primary:#3ddc84;--pri-bg:rgba(61,220,132,.12)}}
 :root[data-theme="dark"]{--primary:#3ddc84;--pri-bg:rgba(61,220,132,.12)}
@@ -26,6 +35,7 @@ body{padding-bottom:40px}
   <button class="tab" data-t="s80">⭐ 80~100% 판정</button>
   <button class="tab" data-t="props">📋 라인 vs 기록</button>
   <button class="tab" data-t="td">🎯 터치다운</button>
+  <button class="tab" data-t="early">🚀 첫 3드라이브 · 첫 TD</button>
   <button class="tab" data-t="usage">🔄 역할 변화</button>
   <button class="tab" data-t="review">🔍 지난 경기 리뷰</button>
 </div>
@@ -48,6 +58,14 @@ body{padding-bottom:40px}
 </section>
 <section class="panel" id="td"><div class="note">Anytime TD 라인이 열린 선수(QB 제외)의 이번 시즌 기록이에요. <b>TD 경기</b> = 러시·리시빙 터치다운을 1개 이상 기록한 경기 수예요. 칩은 최근 5경기 TD 수예요.</div>
   <div class="filters"><select class="sel" id="tdgame"></select></div><div class="grid" id="tdGrid"></div></section>
+<section class="panel" id="early">
+  <div class="note"><b>첫 3드라이브</b> = 경기마다 각 팀이 공격한 처음 3번의 드라이브예요(이번 시즌 전체 경기). <b>공격 득점률</b> = 그중 TD·필드골로 끝난 비율. <b>수비 저지율</b> = 상대의 첫 3드라이브를 무득점(펀트·턴오버·4다운 저지·필드골 실패)으로 끝낸 비율이고, 무엇으로 막았는지 횟수를 같이 보여줘요. <b>첫 TD 쿼터</b> = 그 팀이 경기에서 처음 터치다운을 기록한 쿼터예요(수비·스페셜팀 TD 포함). 모두 ESPN 드라이브·득점 기록 자동 집계예요.</div>
+  <div class="dleg"><span class="dk-TD">TD</span><span class="dk-FG">FG</span><span class="dk-PUNT">펀트</span><span class="dk-TO">턴오버</span><span class="dk-DOWNS">4다운</span><span class="dk-MISS">FG실패</span><span class="dk-END">종료</span></div>
+  <h2 class="sec">이번 주 매치업</h2><div class="grid" id="earlyGrid"></div>
+  <h2 class="sec">팀 순위</h2>
+  <div class="filters"><select class="sel" id="esort"><option value="offScore">정렬: 공격 첫 3드라이브 득점률</option><option value="offTD">정렬: 공격 첫 3드라이브 TD율</option><option value="defStop">정렬: 수비 첫 3드라이브 저지율</option><option value="q1">정렬: 1쿼터 첫 TD 비율</option><option value="h1">정렬: 전반 첫 TD 비율</option></select></div>
+  <div class="tblwrap"><table id="etbl"></table></div>
+</section>
 <section class="panel" id="usage"><div class="note">최근 3경기의 평균 타깃·캐리를 시즌 평균과 비교했어요. 변화가 큰 순서예요(4경기 이상 출전, prop 라인이 있는 RB·WR·TE). 역할이 늘거나 줄면 라인이 아직 따라오지 못했을 수 있어서 같이 보면 좋아요.</div><div class="grid" id="usageGrid"></div></section>
 <section class="panel" id="review"><div id="revWrap"></div></section>
 </div>
@@ -151,6 +169,24 @@ function drawTD(v){const L=AUTO.td.filter(t=>(v==='all'||t.g===v)&&t.N>=3&&t.hit
  <div class="prop-line"><span class="mk" style="font-size:18px">TD 경기 ${t.hit}/${t.N} (${t.rate}%)</span><span class="small">시즌 ${t.tot}TD</span></div>
  <div class="chips">${t.last.map(v=>`<i class="${v>0?'y':''}">${v}</i>`).join('')}</div></div>`).join('')||'<div class="muted">3경기 이상 출전하고 TD가 있는 선수가 없어요.</div>';}
 $('tdgame').onchange=e=>drawTD(e.target.value);drawTD('all');
+
+/* 첫 3드라이브 · 첫 TD */
+const E=AUTO.early||{},DKN={TD:"TD",FG:"FG",PUNT:"펀트",TO:"턴오버",DOWNS:"4다운",MISS:"FG실패",END:"종료"};
+const dchip=k=>`<span class="dk-${k}">${DKN[k]}</span>`;
+const stopHow=d=>['PUNT','TO','DOWNS','MISS'].filter(k=>d[k]).map(k=>`${DKN[k]} ${d[k]}`).join(' · ')||'—';
+const qline=e=>`<div class="qrow">${['1','2','3','4'].map(q=>`<span class="${e.tdq[q]?'on':''}">${q}Q <b>${e.tdq[q]}</b></span>`).join('')}${e.tdq.OT?`<span class="on">OT <b>${e.tdq.OT}</b></span>`:''}<span class="${e.tdq.none?'nil':''}">TD 없음 <b>${e.tdq.none}</b></span></div>`;
+function eside(t,o){const e=E[t],x=E[o];if(!e)return `<div class="eside"><h3>${t}</h3><div class="muted">기록 없음</div></div>`;
+ return `<div class="eside"><h3>${t} <span class="small muted">${e.G}경기</span></h3>
+ <div class="kv"><span>공격 첫 3드라이브 득점률</span><b>${e.offScore}%</b></div><div class="small muted">TD ${e.off.TD||0} · FG ${e.off.FG||0} / ${e.offN}드라이브 (TD율 ${e.offTD}%) · 첫 3드라이브 중 득점한 경기 ${e.offGame}/${e.G}</div>
+ ${x?`<div class="kv vs"><span>vs ${o} 수비 저지율</span><b>${x.defStop}%</b></div>`:''}
+ <div class="kv"><span>${t} 수비 저지율 (상대 첫 3드라이브)</span><b>${e.defStop}%</b></div><div class="small muted">막은 방법: ${stopHow(e.def)} · 허용 TD ${e.def.TD||0} · FG ${e.def.FG||0} · 완봉 경기 ${e.defGame}/${e.G}</div>
+ <div class="small" style="margin-top:8px"><b>첫 TD 쿼터</b> <span class="muted">(1Q ${e.q1}% · 전반 ${e.h1}%)</span></div>${qline(e)}
+ <div class="small muted" style="margin-top:8px">최근 경기 (공격 첫 3 / 상대 첫 3 / 첫 TD)</div>
+ ${e.games.map(g=>`<div class="grow"><span class="muted">${g.d.slice(5).replace('-','/')} ${g.opp}</span><span>${g.o.map(dchip).join('')}</span><span>${g.x.map(dchip).join('')}</span><b>${g.tdq?(g.tdq>4?'OT':g.tdq+'Q'):'—'}</b></div>`).join('')}</div>`;}
+$('earlyGrid').innerHTML=AUTO.games.map(g=>`<div class="card"><h3 style="font-size:20px">${g.m} <span class="small muted">${g.time}</span></h3><div class="eduo">${eside(g.away,g.home)}${eside(g.home,g.away)}</div></div>`).join('');
+function drawE(){const k=$('esort').value,T=Object.keys(E).filter(t=>E[t]).sort((a,b)=>E[b][k]-E[a][k]);
+ $('etbl').innerHTML=`<tr><th>팀</th><th>공격 득점률</th><th>공격 TD율</th><th>수비 저지율</th><th>막은 방법</th><th>1Q 첫 TD</th><th>전반 첫 TD</th></tr>`+T.map(t=>{const e=E[t];return `<tr><td><b>${t}</b> <span class="muted small">${e.G}경기</span></td><td>${e.offScore}%</td><td>${e.offTD}%</td><td>${e.defStop}%</td><td class="small">${stopHow(e.def)}</td><td>${e.q1}%</td><td>${e.h1}%</td></tr>`}).join('');}
+$('esort').onchange=drawE;drawE();
 
 /* USAGE */
 $('usageGrid').innerHTML=AUTO.usage.slice(0,24).map(u=>{const up=u.d>0;

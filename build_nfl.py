@@ -175,6 +175,59 @@ def props_for(eid):
     return lines, td
 
 
+def drive_kind(r):
+    """드라이브 결과 → TD / FG / PUNT / TO(턴오버) / DOWNS / MISS(필드골 실패) / END(전후반 종료 등)"""
+    r = (r or "").upper()
+    if r == "TD":
+        return "TD"
+    if r == "FG":
+        return "FG"
+    if "INT" in r or "FUMBLE" in r:
+        return "TO"
+    if "FG" in r or "MISSED" in r:
+        return "MISS" if "DOWNS" not in r else "DOWNS"
+    if "DOWNS" in r:
+        return "DOWNS"
+    if "PUNT" in r:
+        return "PUNT"
+    return "END"
+
+
+def early(ab, evs, sums):
+    """팀의 이번 시즌 경기별 첫 3드라이브(공격)·상대 첫 3드라이브(수비)·첫 TD 쿼터."""
+    off, dfn, games = {}, {}, []
+    for d, e in sorted(evs, reverse=True):
+        s = sums[e]
+        dr = (s.get("drives") or {}).get("previous") or []
+        if not dr:
+            continue
+        mine = [drive_kind(x.get("result")) for x in dr if x["team"]["abbreviation"] == ab][:3]
+        opp = [drive_kind(x.get("result")) for x in dr if x["team"]["abbreviation"] != ab][:3]
+        oab = next((x["team"]["abbreviation"] for x in dr if x["team"]["abbreviation"] != ab), "")
+        tdq = next((p["period"]["number"] for p in s.get("scoringPlays", [])
+                    if p["team"]["abbreviation"] == ab and (p.get("type") or {}).get("abbreviation") == "TD"), None)
+        for k in mine:
+            off[k] = off.get(k, 0) + 1
+        for k in opp:
+            dfn[k] = dfn.get(k, 0) + 1
+        games.append({"d": d[:10], "opp": oab, "o": mine, "x": opp, "tdq": tdq})
+    if not games:
+        return None
+    no, nd, G = sum(off.values()), sum(dfn.values()), len(games)
+    q = {str(k): sum(g["tdq"] == k for g in games) for k in (1, 2, 3, 4)}
+    q["OT"] = sum((g["tdq"] or 0) > 4 for g in games)
+    q["none"] = sum(g["tdq"] is None for g in games)
+    return {"G": G,
+            "off": off, "offN": no, "offScore": round(100 * (off.get("TD", 0) + off.get("FG", 0)) / no) if no else 0,
+            "offTD": round(100 * off.get("TD", 0) / no) if no else 0,
+            "offGame": sum(any(k in ("TD", "FG") for k in g["o"]) for g in games),
+            "def": dfn, "defN": nd, "defStop": round(100 * (nd - dfn.get("TD", 0) - dfn.get("FG", 0)) / nd) if nd else 0,
+            "defTDallow": round(100 * dfn.get("TD", 0) / nd) if nd else 0,
+            "defGame": sum(not any(k in ("TD", "FG") for k in g["x"]) for g in games),
+            "tdq": q, "q1": round(100 * q["1"] / G), "h1": round(100 * (q["1"] + q["2"]) / G),
+            "games": games[:6]}
+
+
 def main(date, out):
     slate_days, back_days = windows(date)
     games, teams = [], {}
@@ -227,6 +280,7 @@ def main(date, out):
     with ThreadPoolExecutor(8) as ex:
         sums = dict(zip(all_ev, ex.map(summary, all_ev)))
         prop_res = dict(zip([g["id"] for g in games], ex.map(props_for, [g["id"] for g in games])))
+    early_by = {ab: early(ab, evs, sums) for ab, evs in ev_by_team.items()}
     logs, who = {}, {}
     for ab, evs in ev_by_team.items():
         for _, e in sorted(evs, reverse=True):
@@ -423,7 +477,7 @@ def main(date, out):
     for g in games:
         g.pop("tid", None)
     A = {"date": date, "slate": slate_days, "back": back_days, "games": games, "props": props, "td": tds, "usage": usage[:30],
-         "stat80": stat80, "grades": grades, "gradeFrom": grade_from,
+         "stat80": stat80, "early": early_by, "grades": grades, "gradeFrom": grade_from,
          "results": results, "propReview": prop_review, "propReviewFrom": os.path.basename(prev_files[-1])[4:12] if prev_files else None,
          "cats": {**{v[0]: v[1] for v in PROP.values()}, "TD": "애니타임 TD"}, "avgAllow": avg_allow,
          "built": datetime.now().strftime("%Y-%m-%d %H:%M")}
