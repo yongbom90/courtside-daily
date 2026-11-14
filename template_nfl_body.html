@@ -1,0 +1,143 @@
+<style>
+:root{--primary:#11833f;--pri-bg:rgba(17,131,63,.1)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--primary:#3ddc84;--pri-bg:rgba(61,220,132,.12)}}
+:root[data-theme="dark"]{--primary:#3ddc84;--pri-bg:rgba(61,220,132,.12)}
+body{padding-bottom:40px}
+.prow{display:grid;grid-template-columns:minmax(150px,1.3fr) 92px minmax(120px,1fr) minmax(150px,1fr) minmax(110px,.8fr) minmax(120px,.9fr);gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.phead{display:grid;grid-template-columns:minmax(150px,1.3fr) 92px minmax(120px,1fr) minmax(150px,1fr) minmax(110px,.8fr) minmax(120px,.9fr);gap:10px;padding:0 12px 6px;font-size:11px;color:var(--muted);font-weight:700}
+.prow .nm{font-weight:800}.prow .nm small{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
+.lnv{text-align:center}.lnv b{font-family:"Barlow Condensed";font-size:24px;font-weight:800;color:var(--primary);display:block;line-height:1}.lnv span{font-size:11px;color:var(--muted)}
+.chips i{min-width:30px}
+.split{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:4px;background:var(--bad-bg)}.split i{display:block;height:100%;background:var(--good)}
+.sel{background:var(--surface);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 10px;font-size:13px}
+.wx{font-size:12px}
+@media(max-width:760px){.prow{grid-template-columns:1fr 80px}.phead{display:none}.prow>div{grid-column:auto}.prow .c-rate,.prow .c-form,.prow .c-avg,.prow .c-opp{grid-column:1/-1}}
+</style>
+<body>
+<div class="wrap">
+<header>
+  <div><h1 id="ttl"></h1><p id="sub"></p></div>
+  <button class="themebtn" onclick="toggleTheme()">☀︎ / ☾ 테마</button>
+</header>
+<div class="tabs">
+  <button class="tab active" data-t="slate">📊 슬레이트</button>
+  <button class="tab" data-t="teams">🏈 팀별 분석</button>
+  <button class="tab" data-t="props">📈 Prop 라인 vs 기록</button>
+  <button class="tab" data-t="td">🎯 터치다운</button>
+  <button class="tab" data-t="usage">🔄 역할 변화</button>
+  <button class="tab" data-t="review">🔍 지난 경기 리뷰</button>
+</div>
+<section class="panel active" id="slate"><div class="note" id="slateNote"></div><div class="grid" id="slateGrid"></div></section>
+<section class="panel" id="teams"><div class="note">경기별로 두 팀을 나란히 보여줘요. 경기당 기록·최근 5경기·부상은 ESPN 자동 집계예요. 스타일·강점·약점·매치업 포인트는 분석 의견이에요.</div><div id="teamWrap"></div></section>
+<section class="panel" id="props">
+  <div class="note"><b>무엇을 보여주나:</b> DraftKings가 정한 선수 기록 라인(ESPN 제공)과, 그 선수의 이번 시즌 실제 경기 기록을 나란히 놓은 표예요. <b>오버 x/N</b> = 시즌 출전 경기 중 라인보다 높게 기록한 경기 수예요. 칩은 최근 5경기 기록(최신→)이고 초록이 라인 초과예요.<br><b>주의:</b> 픽이나 추천이 아니에요. 기록이 없는 경기(출전했지만 패스·러시·리시빙 기록 0)는 집계에서 빠질 수 있고, 시즌 중 이적한 선수는 현 소속팀 경기만 셌어요. OUT/Doubtful 선수는 뺐어요.</div>
+  <div class="filters" id="pcat"></div>
+  <div class="filters"><select class="sel" id="pgame"></select><select class="sel" id="psort">
+    <option value="over">정렬: 오버 비율 높은 순(표본 보정)</option><option value="under">정렬: 언더 비율 높은 순(표본 보정)</option><option value="gap">정렬: 최근5 평균 − 라인 큰 순</option><option value="move">정렬: 라인 이동 큰 순</option></select></div>
+  <div class="phead"><span>선수 · 경기</span><span style="text-align:center">라인</span><span>시즌 오버 / 언더</span><span>최근 5경기 (최신→)</span><span>시즌 평균 → 최근5</span><span>상대 허용(경기당)</span></div>
+  <div id="plist"></div>
+</section>
+<section class="panel" id="td"><div class="note">Anytime TD 라인이 열린 선수(QB 제외)의 이번 시즌 기록이에요. <b>TD 경기</b> = 러시·리시빙 터치다운을 1개 이상 기록한 경기 수예요. 칩은 최근 5경기 TD 수예요.</div>
+  <div class="filters"><select class="sel" id="tdgame"></select></div><div class="grid" id="tdGrid"></div></section>
+<section class="panel" id="usage"><div class="note">최근 3경기의 평균 타깃·캐리를 시즌 평균과 비교했어요. 변화가 큰 순서예요(4경기 이상 출전, prop 라인이 있는 RB·WR·TE). 역할이 늘거나 줄면 라인이 아직 따라오지 못했을 수 있어서 같이 보면 좋아요.</div><div class="grid" id="usageGrid"></div></section>
+<section class="panel" id="review"><div id="revWrap"></div></section>
+</div>
+<div id="toast"></div>
+<script>
+const AUTO=__AUTO__;
+const AN=__AN__;
+const $=id=>document.getElementById(id);
+const md=s=>s.slice(4,6)*1+'/'+s.slice(6)*1;
+const fmtO=o=>o==null?'—':o>0?"+"+o:""+o;
+const injCls=s=>/Out|Doubtful|Injured/.test(s)?'inj-out':/Question/.test(s)?'inj-q':'inj-p';
+const C=AUTO.cats;
+const kd=[...new Set(AUTO.games.map(g=>g.kick.slice(5,10).replace('-','/').replace(/^0/,'').replace('/0','/')))];
+const days=kd.length?kd.join('·'):AUTO.slate.map(md).join('~');
+const l5html=a=>`<div class="l5">${(a||[]).map(e=>`<i class="${e.r}" title="${e.d}">${e.r} ${e.sc} ${e.at==='@'?'@':'v'}${e.opp}</i>`).join('')}</div>`;
+const wxText=g=>g.indoor?'실내(돔)':g.wx&&g.wx.temp!=null?`${g.wx.temp}°F · 돌풍 ${g.wx.gust??'—'}mph · 강수 ${g.wx.prec??'—'}%`:'날씨 정보 없음';
+const f1=v=>v==null?'—':(+v).toFixed(1).replace(/\.0$/,'');
+
+$('ttl').innerText=`NFL ${days} 데일리 위젯`;
+$('sub').innerText=`${AUTO.games.length}경기 · prop 라인 ${AUTO.props.length}개 · 라인 DraftKings(ESPN, ${AUTO.built} 수집) · 부상 ESPN 리포트${AUTO.results.length?' · 지난 경기 '+AUTO.results.length+'개 리뷰':''}`;
+$('slateNote').innerHTML=`라인·부상·날씨는 ${AUTO.built}(ET) 기준이라 킥오프 전까지 바뀔 수 있어요. 승률은 ESPN Matchup Predictor예요. 이 위젯은 데이터 정리용이고 결과를 보장하지 않아요.`;
+
+$('slateGrid').innerHTML=AUTO.games.map(g=>{const a=(AN.games||{})[g.m]||{};
+ return `<div class="card"><h3>${g.m}<span class="tag t-pri">${g.time}</span></h3>
+ <div class="small muted">${g.away} ${g.rec[g.away]} / ${g.home} ${g.rec[g.home]} · ${g.venue}</div>
+ <div class="lines"><div class="ln"><b>${g.sp||'—'}</b><span>스프레드</span></div><div class="ln"><b>${g.tot||'—'}</b><span>토탈</span></div><div class="ln"><b style="font-size:14px">${g.away} ${fmtO(g.ml[g.away])}<br>${g.home} ${fmtO(g.ml[g.home])}</b><span>ML</span></div></div>
+ <div class="small"><b>ESPN 승률:</b> ${g.away} ${f1(g.bpi[g.away])}% · ${g.home} ${f1(g.bpi[g.home])}%</div>
+ <div class="bar"><i style="width:${g.bpi[g.away]||50}%;background:var(--primary)"></i></div>
+ <div class="wx"><b>날씨:</b> ${wxText(g)}</div>
+ <div class="small"><b>OUT/Doubtful:</b> ${[g.away,g.home].map(t=>t+' '+((g.inj[t]||[]).filter(i=>/Out|Doubt/.test(i.s)).map(i=>i.n+(i.pos?' ('+i.pos+')':'')).join(', ')||'없음')).join(' / ')}</div>
+ ${a.ctx?`<div class="small"><b>컨텍스트:</b> ${a.ctx}</div>`:''}
+ ${(a.notes||[]).length?`<div class="lean"><ul class="tight">${a.notes.map(n=>`<li>${n}</li>`).join('')}</ul></div>`:''}
+ </div>`}).join('')||'<div class="muted">이번 구간에 예정된 경기가 없어요.</div>';
+
+const ST=[['totalPointsPerGame','득점'],['totalPointsPerGameAllowed','실점'],['yardsPerGame','야드'],['passingYardsPerGame','패스'],['rushingYardsPerGame','러시'],['yardsPerGameAllowed','허용 야드'],['passingYardsPerGameAllowed','허용 패스'],['rushingYardsPerGameAllowed','허용 러시']];
+$('teamWrap').innerHTML=AUTO.games.map(g=>`<h2 class="sec">${g.m} <span class="small muted">${g.sp||''} / ${g.tot||''} · ${g.time}</span></h2><div class="two">${[g.away,g.home].map(t=>{
+ const a=(AN.teams||{})[t]||{};const st=g.stats[t]||{};
+ const top=AUTO.props.filter(p=>p.t===t&&['PYD','RYD','REYD'].includes(p.cat)).sort((x,y)=>y.line-x.line).slice(0,5);
+ return `<div class="card"><h3>${t} <span class="small muted" style="font-family:Noto Sans KR">${g.rec[t]}</span></h3>
+ <table><tr>${ST.map(s=>`<th>${s[1]}</th>`).join('')}</tr><tr>${ST.map(s=>`<td>${f1(st[s[0]])}</td>`).join('')}</tr></table>
+ ${l5html(g.l5[t])}
+ <div class="kv"><b>스타일</b><span>${a.style||'—'}</span><b>강점</b><span>${a.str||'—'}</span><b>약점</b><span>${a.weak||'—'}</span><b>매치업</b><span>${a.key||'—'}</span></div>
+ ${top.length?`<table><tr><th>주요 라인</th><th>라인</th><th>시즌 평균</th><th>오버</th></tr>${top.map(p=>`<tr><td>${p.n} <span class="muted small">${p.pos}</span></td><td>${C[p.cat]} ${p.line}</td><td>${f1(p.avg)}</td><td>${p.N?p.hit+'/'+p.N:'—'}</td></tr>`).join('')}</table>`:''}
+ <table>${(g.inj[t]||[]).map(i=>`<tr><td>${i.n} <span class="muted small">${i.pos}</span></td><td class="${injCls(i.s)}">${i.s}</td><td>${i.d}</td></tr>`).join('')||'<tr><td class="muted">부상자 없음</td></tr>'}</table>
+ </div>`}).join('')}</div>`).join('');
+
+/* PROPS */
+const ORDER=['PYD','RYD','REYD','REC','RRY','PRY','CMP','ATT','PTD','INT','CAR'];
+let pc='REYD',pg='all',ps='over';
+const cnt=c=>AUTO.props.filter(p=>p.cat===c).length;
+$('pcat').innerHTML=ORDER.filter(cnt).map(c=>`<button class="fbtn ${c===pc?'on':''}" data-c="${c}">${C[c]} (${cnt(c)})</button>`).join('');
+$('pgame').innerHTML='<option value="all">모든 경기</option>'+AUTO.games.map(g=>`<option>${g.m}</option>`).join('');
+document.querySelectorAll('#pcat .fbtn').forEach(b=>b.onclick=()=>{pc=b.dataset.c;document.querySelectorAll('#pcat .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawP();});
+$('pgame').onchange=e=>{pg=e.target.value;drawP();};$('psort').onchange=e=>{ps=e.target.value;drawP();};
+function drawP(){
+ // 표본 보정 비율 (적중+1)/(경기+2): 3/3 같은 적은 표본이 8/9보다 위로 가지 않게
+ const key={over:p=>p.N?-(p.hit+1)/(p.N+2):1,under:p=>p.N?-(p.N-p.hit+1)/(p.N+2):1,gap:p=>p.N?-(p.a5-p.line)/Math.max(1,p.line):1e9,move:p=>-Math.abs((p.open??p.line)-p.line)};
+ const L=AUTO.props.filter(p=>p.cat===pc&&(pg==='all'||p.g===pg)).sort((a,b)=>key[ps](a)-key[ps](b)||b.N-a.N);
+ $('plist').innerHTML=L.length?L.map(p=>{
+  const un=p.N?p.N-p.hit:0;const ar=!p.N?'':p.a5>p.avg?'<span style="color:var(--good)">▲</span>':p.a5<p.avg?'<span style="color:var(--bad)">▼</span>':'＝';
+  const oa=p.oppAllow!=null?`${p.opp} ${f1(p.oppAllow)} <span class="muted small">(슬레이트 평균 ${f1(p.slateAllow)})</span>`:'—';
+  return `<div class="prow"><div class="nm">${p.n}<small>${p.pos} · ${p.t} · ${p.g}</small></div>
+  <div class="lnv"><b>${p.line}</b><span>${p.open!=null&&p.open!==p.line?'오픈 '+p.open:'오픈 동일'}</span></div>
+  <div class="c-rate">${p.N?`<b>오버 ${p.hit}/${p.N}</b> <span class="muted small">· 언더 ${un}/${p.N}</span><div class="split"><i style="width:${p.rate}%"></i></div>`:'<span class="muted">시즌 기록 없음</span>'}</div>
+  <div class="c-form">${p.N?`<div class="chips">${p.last.map(v=>`<i class="${v>p.line?'y':''}">${f1(v)}</i>`).join('')}</div><div class="small muted" style="margin-top:3px">최근5 오버 ${p.h5}/${p.last.length} · 범위 ${f1(p.mn)}~${f1(p.mx)}</div>`:''}</div>
+  <div class="c-avg small">${p.N?`<span class="muted">시즌</span> ${p.avg} → <span class="muted">최근5</span> <b>${p.a5}</b> ${ar}`:'—'}</div>
+  <div class="c-opp small">${['CAR','RYD'].includes(p.cat)?'러시':'패스'} 허용 ${oa}</div>
+  ${p.flags.length?`<div class="flags">• ${p.flags.join(' · ')}</div>`:''}</div>`}).join(''):'<div class="muted">해당 조건의 라인이 없어요.</div>';}
+drawP();
+
+/* TD */
+$('tdgame').innerHTML='<option value="all">모든 경기</option>'+AUTO.games.map(g=>`<option>${g.m}</option>`).join('');
+function drawTD(v){const L=AUTO.td.filter(t=>(v==='all'||t.g===v)&&t.N>=3&&t.hit>0).sort((a,b)=>b.hit/b.N-a.hit/a.N||b.tot-a.tot).slice(0,v==='all'?36:60);
+ $('tdGrid').innerHTML=L.map(t=>`<div class="card"><h3 style="font-size:19px">${t.n} <span class="tag t-pri">${t.pos} ${t.t}</span></h3>
+ <div class="small muted">${t.g}${t.q?` · <span class="inj-q">${t.q}</span>`:''}</div>
+ <div class="prop-line"><span class="mk" style="font-size:18px">TD 경기 ${t.hit}/${t.N} (${t.rate}%)</span><span class="small">시즌 ${t.tot}TD</span></div>
+ <div class="chips">${t.last.map(v=>`<i class="${v>0?'y':''}">${v}</i>`).join('')}</div></div>`).join('')||'<div class="muted">3경기 이상 출전하고 TD가 있는 선수가 없어요.</div>';}
+$('tdgame').onchange=e=>drawTD(e.target.value);drawTD('all');
+
+/* USAGE */
+$('usageGrid').innerHTML=AUTO.usage.slice(0,24).map(u=>{const up=u.d>0;
+ return `<div class="card"><h3 style="font-size:19px">${u.n} <span class="tag ${up?'t-good':'t-bad'}">${up?'▲ 역할 증가':'▼ 역할 감소'}</span></h3>
+ <div class="small muted">${u.pos} · ${u.t} · ${u.g} · ${u.N}경기</div>
+ <div class="kv"><b>타깃</b><span>시즌 ${u.tgt} → 최근3 <b>${u.tgt3}</b> <span class="muted small">(${u.lastT.map(f1).join(', ')})</span></span>
+ <b>캐리</b><span>시즌 ${u.car} → 최근3 <b>${u.car3}</b> <span class="muted small">(${u.lastC.map(f1).join(', ')})</span></span></div></div>`}).join('');
+
+/* REVIEW */
+const R=AN.review||{};const PR=AUTO.propReview.filter(p=>p.r!=='-');
+const prSum=Object.entries(PR.reduce((m,p)=>{(m[p.cat]=m[p.cat]||[0,0])[p.r==='O'?0:1]++;return m;},{}));
+$('revWrap').innerHTML=(R.summary?`<div class="note">${R.summary}</div>`:'')+
+ (AUTO.results.length?`<h2 class="sec">지난 경기 결과 (${AUTO.back.map(md).join('~')}, 마감 라인 대비)</h2><div class="tblwrap"><table><tr><th>경기</th><th>스코어 (쿼터)</th><th>마감 라인</th><th>결과</th><th>헤드라인</th></tr>
+ ${AUTO.results.map(r=>`<tr><td>${r.m}</td><td>${Object.entries(r.score).map(([t,s])=>`<b>${t} ${s}</b> <span class="muted small">(${(r.q[t]||[]).join('-')})</span>`).join('<br>')}</td><td>${r.close}</td><td class="small">${r.res}</td><td class="small">${r.headline}</td></tr>`).join('')}</table></div>`:'<div class="muted">이 구간에 끝난 경기가 없어요.</div>')+
+ ((R.items||[]).length?`<h2 class="sec">왜 그렇게 됐나</h2><div class="grid">${R.items.map(x=>`<div class="card"><h3 style="font-size:20px">${x.t}</h3><div class="small">${x.why}</div>${x.lesson?`<div class="lean"><b>참고:</b> ${x.lesson}</div>`:''}</div>`).join('')}</div>`:'')+
+ (PR.length?`<h2 class="sec">지난 위젯 라인 vs 실제 기록 (${md(AUTO.propReviewFrom)} 수집 라인)</h2>
+ <div class="filters">${prSum.map(([c,[o,u]])=>`<span class="tag t-pri">${C[c]} 오버 ${o} · 언더 ${u}</span>`).join(' ')}</div>
+ <div class="tblwrap"><table><tr><th>선수</th><th>라인</th><th>실제</th><th>결과</th><th>당시 시즌 오버 비율</th></tr>${PR.map(p=>`<tr><td>${p.n} <span class="muted small">${p.t} · ${p.g}</span></td><td>${C[p.cat]} ${p.line}</td><td>${f1(p.act)}</td><td class="${p.r==='O'?'ok':'ng'}">${p.r==='O'?'오버':'언더'}</td><td>${p.rate!=null?p.rate+'%':'—'}</td></tr>`).join('')}</table></div>`:'');
+
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));t.classList.add('active');$(t.dataset.t).classList.add('active');window.scrollTo(0,0);});
+function toggleTheme(){const r=document.documentElement;const cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=cur==='dark'?'light':'dark';}
+</script>
+</body>
+</html>

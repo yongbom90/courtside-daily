@@ -8,6 +8,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 kind, d, src, label = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else ""
 site = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")
 f = f"{kind}/{d}.html"
+os.makedirs(os.path.join(site, kind), exist_ok=True)
 shutil.copyfile(src, os.path.join(site, f))
 pj = os.path.join(site, "pages.json")
 P = json.load(open(pj, encoding="utf-8")) if os.path.exists(pj) else {"nba": [], "nfl": []}

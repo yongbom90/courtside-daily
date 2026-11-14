@@ -9,3 +9,5 @@ nfl_auto.json
 __pycache__/
 sent/
 auto_prev.json
+nfl_auto_prev.json
+.preview/
