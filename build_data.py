@@ -2,12 +2,14 @@
 usage: python build_data.py YYYYMMDD out.json
 분석 문장(팀 분석, 방향, 리뷰)은 Claude가 analysis.json에 따로 쓴다.
 """
-import json, os, sys, urllib.request
+import glob, json, os, sys, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
 sys.stdout.reconfigure(encoding="utf-8")
 B = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
+CORE = "https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba"
+HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".cache")
 os.makedirs(CACHE, exist_ok=True)
 
@@ -44,7 +46,7 @@ def box_rows(s):
             if mins <= 0:
                 continue
             tpm = (d.get("threePointFieldGoalsMade-threePointFieldGoalsAttempted") or "0-0").split("-")[0]
-            rows.append({"n": a["athlete"]["displayName"], "min": mins,
+            rows.append({"n": a["athlete"]["displayName"], "id": a["athlete"]["id"], "min": mins,
                          "PTS": int(d.get("points") or 0), "REB": int(d.get("rebounds") or 0),
                          "AST": int(d.get("assists") or 0), "3PM": int(tpm or 0)})
         out[t["team"]["abbreviation"]] = rows
@@ -81,6 +83,9 @@ def s80(name, team, game, logs, spread):
             flags.append(f"최근 5경기 {h5}/5")
         if spread >= 12 and a5 < th * 1.25:
             flags.append(f"스프레드 {spread} 블로아웃 → 출전시간 감소 위험")
+        mf = minutes_flag(logs)
+        if mf and "감소" in mf:
+            flags.append(mf)
         if rate >= 90 and h5 == 5 and a5 >= th * 1.25 and not flags:
             rec = "top"
         elif rate >= 80 and h5 >= 4 and not flags:
@@ -90,6 +95,38 @@ def s80(name, team, game, logs, spread):
         res.append({"n": name, "t": team, "g": game, "cat": cat, "th": th, "hit": hit, "N": N, "rate": rate,
                     "h5": h5, "avg": avg, "a5": a5, "last": last, "rec": rec, "flags": flags})
     return res
+
+
+def minutes_flag(logs):
+    """최근 3경기 평균 출전시간이 시즌보다 15% 이상 줄거나 늘면 문구."""
+    if len(logs) < 5:
+        return None
+    ms = sum(l["min"] for l in logs) / len(logs)
+    m3 = sum(l["min"] for l in logs[:3]) / 3
+    if m3 < ms * 0.85:
+        return f"출전시간 감소 (시즌 {ms:.1f} → 최근3 {m3:.1f}분)"
+    if m3 > ms * 1.15:
+        return f"출전시간 증가 (시즌 {ms:.1f} → 최근3 {m3:.1f}분)"
+    return None
+
+
+PROP = {"Total Points": "PTS", "Total Rebounds": "REB", "Total Assists": "AST", "Total 3-Point Field Goals": "3PM"}
+
+
+def props_for(eid):
+    """DraftKings 선수 기본 라인(ESPN core API). {(선수id, 항목): (현재 라인, 오픈 라인)}"""
+    try:
+        items = get(f"{CORE}/events/{eid}/competitions/{eid}/odds/100/propBets?limit=1000").get("items", [])
+    except Exception as e:
+        print(f"  props {eid}: {e}", file=sys.stderr)
+        return {}
+    out = {}
+    for i in items:
+        cat = PROP.get(i.get("type", {}).get("name", ""))
+        aid = i.get("athlete", {}).get("$ref", "").split("/athletes/")[-1].split("?")[0]
+        if cat and aid and (i.get("current") or {}).get("target"):
+            out[(aid, cat)] = (i["current"]["target"]["value"], (i.get("open") or {}).get("target", {}).get("value"))
+    return out
 
 
 def main(date, out):
@@ -132,6 +169,7 @@ def main(date, out):
     all_ev = sorted({e for v in ev_by_team.values() for _, e in v})
     with ThreadPoolExecutor(8) as ex:
         sums = dict(zip(all_ev, ex.map(summary, all_ev)))
+        lines_by_game = dict(zip([g["id"] for g in games], ex.map(props_for, [g["id"] for g in games])))
     logs = {}
     for ab, evs in ev_by_team.items():
         for _, e in sorted(evs, reverse=True):
@@ -160,23 +198,111 @@ def main(date, out):
     for v in form.values():
         v.sort(key=lambda x: -x["PTS5"])
 
+    # 선수 id ↔ (팀, 이름)
+    key_of = {}
+    for (ab, name), L in logs.items():
+        key_of[L[0]["id"]] = (ab, name)
+    id_of = {v: k for k, v in key_of.items()}
+    inj_s = {i["n"]: i["s"] for g in games for v in g["inj"].values() for i in v}
+    all_lines = {}
+    for g in games:
+        for (aid, cat), ln in lines_by_game.get(g["id"], {}).items():
+            all_lines[(aid, cat)] = ln
+    for r in stat80:
+        ln = all_lines.get((id_of.get((r["t"], r["n"])), r["cat"]))
+        r["dk"] = ln[0] if ln else None
+
+    # 라인 vs 기록: DraftKings 기본 라인과 시즌 로그 비교(오버 = 라인 초과)
+    props = []
+    for g in games:
+        for (aid, cat), (line, opn) in lines_by_game.get(g["id"], {}).items():
+            if aid not in key_of:
+                continue
+            ab, name = key_of[aid]
+            if ab not in (g["away"], g["home"]) or name in out_names:
+                continue
+            L = logs[(ab, name)]
+            vals = [l[cat] for l in L]
+            last = vals[:5]
+            hit = sum(v > line for v in vals)
+            flags = []
+            mf = minutes_flag(L)
+            if mf:
+                flags.append(mf)
+            if len(vals) < 5:
+                flags.append(f"표본 적음({len(vals)}경기)")
+            if opn is not None and opn != line:
+                flags.append(f"라인 이동 {opn} → {line}")
+            if name in q_names:
+                flags.append(f"부상 리포트 {inj_s.get(name, 'DTD/Q')}")
+            if g["abs"] >= 12:
+                flags.append(f"스프레드 {g['abs']} 블로아웃 위험")
+            props.append({"id": aid, "n": name, "t": ab, "g": g["m"], "gid": g["id"], "cat": cat, "line": line, "open": opn,
+                          "N": len(vals), "hit": hit, "rate": round(100 * hit / len(vals)), "last": last,
+                          "h5": sum(v > line for v in last), "avg": round(sum(vals) / len(vals), 1),
+                          "a5": round(sum(last) / len(last), 1), "mn": min(vals), "mx": max(vals),
+                          "min": round(sum(l["min"] for l in L) / len(L), 1), "min3": round(sum(l["min"] for l in L[:3]) / min(3, len(L)), 1),
+                          "flags": flags})
+
+    # 출전시간 변화: 최근 3경기 vs 시즌 (오늘 경기 선수, 5경기 이상, 시즌 평균 12분 이상)
+    minutes = []
+    playing = {t for g in games for t in (g["away"], g["home"])}
+    for (ab, name), L in logs.items():
+        if ab not in playing or name in out_names or len(L) < 5:
+            continue
+        ms = sum(l["min"] for l in L) / len(L)
+        m3 = sum(l["min"] for l in L[:3]) / 3
+        if ms < 12 and m3 < 20:
+            continue
+        minutes.append({"n": name, "t": ab, "g": teams[ab][1], "N": len(L), "ms": round(ms, 1), "m3": round(m3, 1),
+                        "d": round(m3 - ms, 1), "lastM": [l["min"] for l in L[:5]], "pts3": round(sum(l["PTS"] for l in L[:3]) / 3, 1),
+                        "pts": round(sum(l["PTS"] for l in L) / len(L), 1), "q": inj_s.get(name, "")})
+    minutes.sort(key=lambda m: -abs(m["d"]))
+
     prev = (datetime.strptime(date, "%Y%m%d") - timedelta(days=1)).strftime("%Y%m%d")
-    results = []
+    results, final_box = [], {}
     for ev in get(f"{B}/scoreboard?dates={prev}")["events"]:
         c = ev["competitions"][0]
         if not c["status"]["type"]["completed"]:
             continue
         s = summary(ev["id"])
+        final_box[ev["id"]] = {r["id"]: r for rows in box_rows(s).values() for r in rows}
         pc = (s.get("pickcenter") or [{}])[0]
         results.append({"m": ev["shortName"], "close": f"{pc.get('details', '')} / {pc.get('overUnder', '')}",
                         "score": {t["team"]["abbreviation"]: int(t["score"]) for t in c["competitors"]},
                         "q": {t["team"]["abbreviation"]: [int(q["value"]) for q in t.get("linescores", [])] for t in c["competitors"]},
                         "headline": (s.get("article") or {}).get("headline", "")})
 
-    json.dump({"date": date, "prev": prev, "games": games, "stat80": stat80, "form": form, "results": results, "nfl": [],  # NFL은 build_nfl.py로 분리
+    # 어제 위젯 라인 vs 실제 기록
+    prop_review, pr_from = [], None
+    pf = sorted(f for f in glob.glob(os.path.join(HERE, "archive", "nba_*_props.json")) if os.path.basename(f)[4:12] < date)
+    if pf:
+        pr_from = os.path.basename(pf[-1])[4:12]
+        for p in json.load(open(pf[-1], encoding="utf-8")):
+            box = final_box.get(p["gid"])
+            if box is None:
+                continue
+            r = box.get(p["id"])
+            act = r[p["cat"]] if r else None
+            prop_review.append({**{k: p.get(k) for k in ("n", "t", "g", "cat", "line", "rate")}, "act": act,
+                                "r": "-" if act is None else ("O" if act > p["line"] else "U")})
+
+    json.dump({"date": date, "prev": prev, "games": games, "stat80": stat80, "form": form, "results": results,
+               "props": props, "minutes": minutes[:40], "propReview": prop_review, "propReviewFrom": pr_from,
 
                "built": datetime.now().strftime("%Y-%m-%d %H:%M")}, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    print(f"games={len(games)} stat80={len(stat80)} players={sum(len(v) for v in form.values())} results={len(results)} events={len(all_ev)}")
+    print(f"games={len(games)} stat80={len(stat80)} props={len(props)} minutes={len(minutes)} propReview={len(prop_review)} "
+          f"players={sum(len(v) for v in form.values())} results={len(results)} events={len(all_ev)}")
+
+
+def snapshot(date, auto):
+    """게시한 DraftKings 라인을 archive/nba_D_props.json 에 남김 → 다음 날 '어제 라인 vs 실제' 리뷰용."""
+    P = json.load(open(auto, encoding="utf-8")).get("props", [])
+    os.makedirs(os.path.join(HERE, "archive"), exist_ok=True)
+    out = os.path.join(HERE, "archive", f"nba_{date}_props.json")
+    json.dump([{k: p.get(k) for k in ("id", "n", "t", "g", "gid", "cat", "line", "rate")} for p in P],
+              open(out, "w", encoding="utf-8"), ensure_ascii=False)
+    print(f"snapshot {len(P)} props → {os.path.relpath(out, HERE)}")
 
 
 def et(utc):
@@ -204,6 +330,8 @@ def first_tip(date):
 if __name__ == "__main__":
     if sys.argv[2] == "--first-tip":
         print(first_tip(sys.argv[1]))
+    elif sys.argv[2] == "--snapshot":
+        snapshot(sys.argv[1], sys.argv[3])
     elif sys.argv[2] == "--tips":
         print(" ".join(str(t) for t in tips(sys.argv[1])))
     else:
