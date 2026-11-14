@@ -1,0 +1,10 @@
+.cache/
+.claude/
+recipients.txt
+logs/
+auto.json
+nfl_auto.json
+/nba_*.html
+/nfl_*.html
+__pycache__/
+sent/

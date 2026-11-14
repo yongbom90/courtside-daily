@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>코트사이드 데일리</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="코트사이드">
+<meta name="theme-color" content="#0d1017">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--line:#d9dee8;--text:#121826;--muted:#5b6474;--nba:#0b74c4;--nfl:#11833f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1017;--card:#171b26;--line:#2c3346;--text:#e7ebf3;--muted:#97a1b4;--nba:#4cb8ff;--nfl:#3ddc84}}
+:root[data-theme="dark"]{--bg:#0d1017;--card:#171b26;--line:#2c3346;--text:#e7ebf3;--muted:#97a1b4;--nba:#4cb8ff;--nfl:#3ddc84}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Noto Sans KR",system-ui,sans-serif;padding:20px 16px 40px}
+.wrap{max-width:720px;margin:0 auto}
+h1{font-family:"Barlow Condensed","Noto Sans KR";font-size:34px;margin:0}
+.sub{color:var(--muted);font-size:13px;margin:4px 0 20px}
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+@media(max-width:520px){.hero{grid-template-columns:1fr}}
+a.big{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:12px;padding:16px}
+a.big b{font-family:"Barlow Condensed","Noto Sans KR";font-size:26px;color:var(--c)}
+a.big span{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+a.big.off{opacity:.5;pointer-events:none}
+h2{font-size:16px;margin:18px 0 8px;color:var(--muted)}
+ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+li a{display:inline-block;padding:6px 10px;border:1px solid var(--line);border-radius:16px;text-decoration:none;color:var(--text);font-size:13px;background:var(--card)}
+.tip{margin-top:28px;font-size:12px;color:var(--muted);line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏀🏈 코트사이드 데일리</h1>
+  <div class="sub" id="upd">불러오는 중…</div>
+  <div class="hero">
+    <a class="big off" id="nbaNow" style="--c:var(--nba)"><b>NBA 오늘</b><span>아직 없음</span></a>
+    <a class="big off" id="nflNow" style="--c:var(--nfl)"><b>NFL 이번 주</b><span>아직 없음</span></a>
+  </div>
+  <h2>🏀 NBA 지난 날짜</h2><ul id="nbaList"></ul>
+  <h2>🏈 NFL 지난 위젯</h2><ul id="nflList"></ul>
+  <div class="tip">📱 <b>앱처럼 쓰기:</b> 아이폰은 사파리 공유 버튼 → "홈 화면에 추가", 안드로이드는 크롬 메뉴 → "홈 화면에 추가".<br>NBA는 평일 오후 3시, 주말 오전 11시 또는 오후 3시(ET)에, NFL은 목·토·월 오후 3시에 자동으로 업데이트돼요. 분석은 참고용이고 결과를 보장하지 않아요.</div>
+</div>
+<script>
+const fmt=d=>`${+d.slice(4,6)}/${+d.slice(6)}`;
+fetch('pages.json?'+Date.now()).then(r=>r.json()).then(P=>{
+  for(const k of ['nba','nfl']){
+    const L=(P[k]||[]).slice().sort((a,b)=>b.d.localeCompare(a.d));
+    if(L[0]){const a=document.getElementById(k+'Now');a.href=L[0].f;a.classList.remove('off');
+      a.querySelector('span').innerText=`${fmt(L[0].d)} · ${L[0].t||''}`;}
+    document.getElementById(k+'List').innerHTML=L.slice(1,31).map(x=>`<li><a href="${x.f}">${fmt(x.d)}</a></li>`).join('')||'<li style="color:var(--muted);font-size:13px">아직 없음</li>';
+  }
+  document.getElementById('upd').innerText='마지막 업데이트: '+(P.updated||'—')+' (ET)';
+}).catch(()=>{document.getElementById('upd').innerText='목록을 불러오지 못했어요. 잠시 후 새로고침해 주세요.';});
+</script>
+</body>
+</html>
