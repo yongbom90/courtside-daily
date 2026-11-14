@@ -15,6 +15,7 @@ body{padding-bottom:40px}
 </style>
 <body>
 <div class="wrap">
+<nav class="topnav"><a href="../index.html#nfl">← 홈</a><a href="../index.html#nba">🏀 NBA로</a></nav>
 <header>
   <div><h1 id="ttl"></h1><p id="sub"></p></div>
   <button class="themebtn" onclick="toggleTheme()">☀︎ / ☾ 테마</button>
@@ -22,15 +23,23 @@ body{padding-bottom:40px}
 <div class="tabs">
   <button class="tab active" data-t="slate">📊 슬레이트</button>
   <button class="tab" data-t="teams">🏈 팀별 분석</button>
-  <button class="tab" data-t="props">📈 Prop 라인 vs 기록</button>
+  <button class="tab" data-t="s80">⭐ 80~100% 판정</button>
+  <button class="tab" data-t="props">📋 라인 vs 기록</button>
   <button class="tab" data-t="td">🎯 터치다운</button>
   <button class="tab" data-t="usage">🔄 역할 변화</button>
   <button class="tab" data-t="review">🔍 지난 경기 리뷰</button>
 </div>
 <section class="panel active" id="slate"><div class="note" id="slateNote"></div><div class="grid" id="slateGrid"></div></section>
 <section class="panel" id="teams"><div class="note">경기별로 두 팀을 나란히 보여줘요. 경기당 기록·최근 5경기·부상은 ESPN 자동 집계예요. 스타일·강점·약점·매치업 포인트는 분석 의견이에요.</div><div id="teamWrap"></div></section>
+<section class="panel" id="s80">
+  <div class="note"><b>계산 방식:</b> 이번 시즌 실제 경기 로그에서 "기준선 이상 경기 ÷ 출전 경기"가 80% 이상인 가장 높은 기준선을 보여줘요(5경기 이상 출전, 이 경기에 DraftKings 라인이 열린 선수만).<br><b>판정 (NBA와 같은 규칙, 오버 기준):</b> ⭐강력추천 = 시즌 90%↑ + 최근 5경기 5/5 + 최근 평균이 기준선보다 25%↑ + 경고 없음 · ✅추천 = 80%↑ + 최근 4/5↑ + 경고 없음 · ⚠️주의 = 경고가 하나라도 있을 때.<br><b>경고:</b> 최근 폼 하락, 최근 5경기 3/5 이하, 부상 리포트 Q, 백업 QB 가능성, 스프레드 10+ 점수차(우세 팀 패스·열세 팀 러시 감소), 돌풍 15mph+. OUT/Doubtful 선수는 뺐어요. <b>DK</b>는 같은 항목의 DraftKings 기본 라인이에요(기준선이 DK 라인보다 낮으면 대체 라인 배당이 낮아요). 결과를 보장하지 않아요.</div>
+  <div class="filters" id="s80cat"></div><div class="filters" id="s80rec"></div>
+  <div class="filters"><select class="sel" id="s80game"></select></div>
+  <div class="shead"><span>선수 · 경기</span><span style="text-align:center">기준선</span><span>시즌 적중</span><span>최근 5경기 (최신→)</span><span>시즌 평균 → 최근5</span><span style="text-align:center">판정</span></div>
+  <div id="s80list"></div>
+</section>
 <section class="panel" id="props">
-  <div class="note"><b>무엇을 보여주나:</b> DraftKings가 정한 선수 기록 라인(ESPN 제공)과, 그 선수의 이번 시즌 실제 경기 기록을 나란히 놓은 표예요. <b>오버 x/N</b> = 시즌 출전 경기 중 라인보다 높게 기록한 경기 수예요. 칩은 최근 5경기 기록(최신→)이고 초록이 라인 초과예요.<br><b>주의:</b> 픽이나 추천이 아니에요. 기록이 없는 경기(출전했지만 패스·러시·리시빙 기록 0)는 집계에서 빠질 수 있고, 시즌 중 이적한 선수는 현 소속팀 경기만 셌어요. OUT/Doubtful 선수는 뺐어요.</div>
+  <div class="note"><b>무엇을 보여주나:</b> DraftKings가 정한 선수 기록 라인(ESPN 제공)과, 그 선수의 이번 시즌 실제 경기 기록을 나란히 놓은 표예요. <b>오버 x/N</b> = 시즌 출전 경기 중 라인보다 높게 기록한 경기 수예요. 칩은 최근 5경기 기록(최신→)이고 초록이 라인 초과예요.<br><b>주의:</b> 이 표는 라인 비교용이에요(판정은 ⭐80~100% 판정 탭). 기록이 없는 경기(출전했지만 패스·러시·리시빙 기록 0)는 집계에서 빠질 수 있고, 시즌 중 이적한 선수는 현 소속팀 경기만 셌어요. OUT/Doubtful 선수는 뺐어요.</div>
   <div class="filters" id="pcat"></div>
   <div class="filters"><select class="sel" id="pgame"></select><select class="sel" id="psort">
     <option value="over">정렬: 오버 비율 높은 순(표본 보정)</option><option value="under">정렬: 언더 비율 높은 순(표본 보정)</option><option value="gap">정렬: 최근5 평균 − 라인 큰 순</option><option value="move">정렬: 라인 이동 큰 순</option></select></div>
@@ -85,9 +94,34 @@ $('teamWrap').innerHTML=AUTO.games.map(g=>`<h2 class="sec">${g.m} <span class="s
  <table>${(g.inj[t]||[]).map(i=>`<tr><td>${i.n} <span class="muted small">${i.pos}</span></td><td class="${injCls(i.s)}">${i.s}</td><td>${i.d}</td></tr>`).join('')||'<tr><td class="muted">부상자 없음</td></tr>'}</table>
  </div>`}).join('')}</div>`).join('');
 
+
+/* 80~100% 판정 */
+const S80=AUTO.stat80||[];
+const RECN={top:"⭐ 강력추천",rec:"✅ 추천",caution:"⚠️ 주의"};
+const ORD80=['PYD','PTD','TD','RYD','REYD','REC'];
+let sc=ORD80.find(c=>S80.some(r=>r.cat===c))||'PYD',sr='all',sg='all';
+$('s80cat').innerHTML=ORD80.filter(c=>S80.some(r=>r.cat===c)).map(c=>`<button class="fbtn ${c===sc?'on':''}" data-c="${c}">${C[c]} (${S80.filter(r=>r.cat===c).length})</button>`).join('');
+$('s80rec').innerHTML=[["all","전체"],["top","⭐ 강력추천만"],["rec","✅ 추천 이상"],["caution","⚠️ 주의"]].map(([k,l])=>`<button class="fbtn ${k===sr?'on':''}" data-r="${k}">${l}</button>`).join('');
+$('s80game').innerHTML='<option value="all">모든 경기</option>'+AUTO.games.map(g=>`<option>${g.m}</option>`).join('');
+document.querySelectorAll('#s80cat .fbtn').forEach(b=>b.onclick=()=>{sc=b.dataset.c;document.querySelectorAll('#s80cat .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawS80();});
+document.querySelectorAll('#s80rec .fbtn').forEach(b=>b.onclick=()=>{sr=b.dataset.r;document.querySelectorAll('#s80rec .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawS80();});
+$('s80game').onchange=e=>{sg=e.target.value;drawS80();};
+function drawS80(){const ord={top:0,rec:1,caution:2};
+ const L=S80.filter(r=>(sg==='all'?r.cat===sc:true)&&(sg==='all'||r.g===sg)).filter(r=>sr==="all"||(sr==="rec"?r.rec!=="caution":r.rec===sr)).sort((a,b)=>ord[a.rec]-ord[b.rec]||b.rate-a.rate||b.th-a.th);
+ $('s80list').innerHTML=L.length?L.map(r=>{
+  const ar=r.a5>r.avg?'<span style="color:var(--good)">▲</span>':r.a5<r.avg?'<span style="color:var(--bad)">▼</span>':'＝';
+  return `<div class="srow"><div class="nm">${r.n}<small>${r.pos} · ${r.t} · ${r.g}</small></div>
+  <div class="thv">${r.th}+<div class="small muted" style="font-family:Noto Sans KR;font-size:11px;font-weight:400">${sg==='all'?'':C[r.cat]+' · '}${r.dk!=null?'DK '+r.dk:'DK 없음'}</div></div>
+  <div class="c-rate"><b>${r.rate}%</b> <span class="small muted">(${r.hit}/${r.N})</span><div class="bar" style="margin-top:4px"><i style="width:${r.rate}%;background:var(--${r.rate>=90?'good':'primary'})"></i></div></div>
+  <div class="c-form"><div class="chips">${r.last.map(v=>`<i class="${v>=r.th?'y':''}">${v}</i>`).join('')}</div><div class="small muted" style="margin-top:3px">L5 ${r.h5}/${r.last.length}</div></div>
+  <div class="c-avg small"><span class="muted">시즌</span> ${r.avg} → <span class="muted">최근5</span> <b>${r.a5}</b> ${ar}</div>
+  <div><div class="rec ${r.rec}">${RECN[r.rec]}</div></div>
+  ${r.flags.length?`<div class="flags">⚠️ ${r.flags.join(' · ')}</div>`:''}</div>`}).join(''):'<div class="muted">해당 조건의 선수가 없어요.</div>';}
+drawS80();
+
 /* PROPS */
-const ORDER=['PYD','RYD','REYD','REC','RRY','PRY','CMP','ATT','PTD','INT','CAR'];
-let pc='REYD',pg='all',ps='over';
+const ORDER=['PYD','PTD','RYD','REYD','REC'];
+let pc='PYD',pg='all',ps='over';
 const cnt=c=>AUTO.props.filter(p=>p.cat===c).length;
 $('pcat').innerHTML=ORDER.filter(cnt).map(c=>`<button class="fbtn ${c===pc?'on':''}" data-c="${c}">${C[c]} (${cnt(c)})</button>`).join('');
 $('pgame').innerHTML='<option value="all">모든 경기</option>'+AUTO.games.map(g=>`<option>${g.m}</option>`).join('');
@@ -132,6 +166,10 @@ $('revWrap').innerHTML=(R.summary?`<div class="note">${R.summary}</div>`:'')+
  (AUTO.results.length?`<h2 class="sec">지난 경기 결과 (${AUTO.back.map(md).join('~')}, 마감 라인 대비)</h2><div class="tblwrap"><table><tr><th>경기</th><th>스코어 (쿼터)</th><th>마감 라인</th><th>결과</th><th>헤드라인</th></tr>
  ${AUTO.results.map(r=>`<tr><td>${r.m}</td><td>${Object.entries(r.score).map(([t,s])=>`<b>${t} ${s}</b> <span class="muted small">(${(r.q[t]||[]).join('-')})</span>`).join('<br>')}</td><td>${r.close}</td><td class="small">${r.res}</td><td class="small">${r.headline}</td></tr>`).join('')}</table></div>`:'<div class="muted">이 구간에 끝난 경기가 없어요.</div>')+
  ((R.items||[]).length?`<h2 class="sec">왜 그렇게 됐나</h2><div class="grid">${R.items.map(x=>`<div class="card"><h3 style="font-size:20px">${x.t}</h3><div class="small">${x.why}</div>${x.lesson?`<div class="lean"><b>참고:</b> ${x.lesson}</div>`:''}</div>`).join('')}</div>`:'')+
+ (()=>{const G=AUTO.grades||[];if(!G.length)return AUTO.gradeFrom?'':'<div class="note">아직 채점할 지난 위젯 픽이 없어요. 다음 실행부터 직전 위젯의 ⭐·✅ 픽을 실제 기록으로 채점해요.</div>';
+ const sm=k=>{const x=G.filter(g=>g.rec===k&&g.r!=='-');return `${RECN[k]} ${x.filter(g=>g.r==='O').length}/${x.length}`;};
+ return `<h2 class="sec">지난 위젯 픽 채점 (${md(AUTO.gradeFrom)} 위젯)</h2><div class="filters"><span class="tag t-good">${sm('top')}</span> <span class="tag t-pri">${sm('rec')}</span></div>
+ <div class="tblwrap"><table><tr><th>픽</th><th>판정</th><th>실제</th><th>결과</th></tr>${G.map(x=>`<tr><td>${x.n} ${x.th}+ ${C[x.cat]} <span class="muted small">${x.t} · ${x.g}</span></td><td>${RECN[x.rec]}</td><td>${x.act??'—'}</td><td class="${x.r==='O'?'ok':x.r==='X'?'ng':'muted'}">${x.r==='O'?'적중':x.r==='X'?'실패':'무효(미출전)'}</td></tr>`).join('')}</table></div>`;})()+
  (PR.length?`<h2 class="sec">지난 위젯 라인 vs 실제 기록 (${md(AUTO.propReviewFrom)} 수집 라인)</h2>
  <div class="filters">${prSum.map(([c,[o,u]])=>`<span class="tag t-pri">${C[c]} 오버 ${o} · 언더 ${u}</span>`).join(' ')}</div>
  <div class="tblwrap"><table><tr><th>선수</th><th>라인</th><th>실제</th><th>결과</th><th>당시 시즌 오버 비율</th></tr>${PR.map(p=>`<tr><td>${p.n} <span class="muted small">${p.t} · ${p.g}</span></td><td>${C[p.cat]} ${p.line}</td><td>${f1(p.act)}</td><td class="${p.r==='O'?'ok':'ng'}">${p.r==='O'?'오버':'언더'}</td><td>${p.rate!=null?p.rate+'%':'—'}</td></tr>`).join('')}</table></div>`:'');

@@ -1,5 +1,6 @@
 <body>
 <div class="wrap">
+<nav class="topnav"><a href="../index.html#nba">← 홈</a><a href="../index.html#nfl">🏈 NFL로</a></nav>
 <header>
   <div><h1 id="ttl"></h1><p id="sub"></p></div>
   <button class="themebtn" onclick="toggleTheme()">☀︎ / ☾ 테마</button>
@@ -10,7 +11,6 @@
   <button class="tab" data-t="review">🔍 어제 리뷰</button>
   <button class="tab" data-t="stat80">📈 80~100% 스탯</button>
   <button class="tab" data-t="hot">🔥 폼 좋은 선수</button>
-  <button class="tab" data-t="nfl">🏈 NFL</button>
 </div>
 <section class="panel active" id="slate"><div class="note" id="slateNote"></div><div class="grid" id="slateGrid"></div></section>
 <section class="panel" id="teams"><div class="note">경기별로 두 팀을 나란히 보여줘요. 최근 5경기·부상·주요 선수 수치는 ESPN 자동 집계예요. 스타일·강점·약점·공략은 분석 의견이에요.</div><div id="teamWrap"></div></section>
@@ -22,7 +22,6 @@
   <div id="s80list"></div>
 </section>
 <section class="panel" id="hot"><div class="note">최근 5경기 평균 득점이 시즌 평균보다 높은 순서예요. 출전시간 20분 이상인 선수만 넣었어요(ESPN 박스스코어 자동 집계).</div><div class="grid" id="hotGrid"></div></section>
-<section class="panel" id="nfl"><div class="note" id="nflNote"></div><div class="grid" id="nflGrid"></div></section>
 </div>
 <div class="slip"><div class="slip-in">
   <div><div class="cond" style="font-weight:800;font-size:16px">MY SLIP · <span id="cnt">0</span>폴드</div><div class="slip-odds" id="odds">—</div><div class="slip-list" id="slipList">픽을 담으면 배당으로 계산돼요.</div></div>
@@ -46,7 +45,7 @@ const b2b=(g,t)=>{const l=(g.l5[t]||[]).slice(-1)[0];return l&&l.d===dateISO;}; 
 const l5html=a=>`<div class="l5">${(a||[]).map(e=>`<i class="${e.r}" title="${e.d}">${e.r} ${e.sc} ${e.at==='@'?'@':'v'}${e.opp}</i>`).join('')}</div>`;
 
 $('ttl').innerText=`NBA ${D} 데일리 위젯`;
-$('sub').innerText=`${AUTO.games.length}경기 · 라인 DraftKings(ESPN, ${AUTO.built} 수집) · 부상 ESPN 리포트 · 어제(${P}) 리뷰${AUTO.nfl.length?' · NFL '+AUTO.nfl.length+'경기':''}`;
+$('sub').innerText=`${AUTO.games.length}경기 · 라인 DraftKings(ESPN, ${AUTO.built} 수집) · 부상 ESPN 리포트 · 어제(${P}) 리뷰`;
 if((AUTO.injchk||[]).length){const C=AUTO.injchg||[];$('slate').insertAdjacentHTML('afterbegin',`<div class="note" style="background:var(--bad-bg);border-color:var(--bad)"><b>🚨 부상·라인 재확인 ${AUTO.injchk.join(', ')} (경기 2시간 전)</b>${C.length?'<ul class="tight">'+C.map(c=>`<li><b>${c.m}</b> [${c.k}] ${c.txt}</li>`).join('')+'</ul>':' · 아침 대비 변동 없음'}</div>`);}
 $('slateNote').innerHTML=`라인과 부상은 ${AUTO.built}(ET) 기준이라 팁오프 전까지 바뀔 수 있어요. 가비지 리스크는 스프레드 크기로 정한 규칙이에요(≥13 높음 · 8~12.5 중간 · &lt;8 낮음). <b>B2B</b>는 어제도 경기한 팀이에요. 확률을 보장하지 않아요.`;
 
@@ -86,14 +85,6 @@ $('hotGrid').innerHTML=hot.map(h=>`<div class="card"><h3 style="font-size:20px">
  <div class="small muted">시즌 ${h.PTSs}점 → 최근5 ${h.PTS5}점 (+${(h.PTS5-h.PTSs).toFixed(1)}) · ${h.min5}분 · 3점 ${h['3PM5']}개</div>
  <div class="bar"><i style="width:${Math.min(100,(h.PTS5-h.PTSs)*10)}%;background:var(--primary)"></i></div>
  <div class="small">직전 경기: ${h.last.PTS}점 ${h.last.REB}리바 ${h.last.AST}어시 (${h.last.min}분)</div></div>`).join('');
-
-if(!AUTO.nfl.length)document.querySelector('[data-t=nfl]').style.display='none';
-$('nflNote').innerHTML=(AN.nflNote||'')+` 라인은 DraftKings(ESPN) 기준이고, 부상은 OUT/Doubtful/Questionable만 최대 8명까지 보여줘요.`;
-$('nflGrid').innerHTML=AUTO.nfl.map(g=>{const a=(AN.nfl||{})[g.m];const dt=new Date(g.date);
- return `<div class="card"><h3>${g.m}</h3><div class="small muted">${dt.toLocaleString('ko-KR',{timeZone:'America/New_York',weekday:'short',month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})} ET · ${Object.entries(g.rec).map(([t,r])=>t+' '+r).join(' / ')}</div>
- <div class="lines"><div class="ln"><b>${g.sp||'—'}</b><span>스프레드</span></div><div class="ln"><b>${g.tot||'—'}</b><span>토탈</span></div><div class="ln"><b>${Object.values(g.inj).flat().length}</b><span>부상자</span></div></div>
- ${Object.entries(g.inj).map(([t,v])=>`<div class="small"><b>${t}:</b> ${v.join(', ')||'없음'}</div>`).join('')}
- ${a?`<div class="lean">${a}</div>`:''}</div>`}).join('');
 
 /* SLIP */
 let slip=[];

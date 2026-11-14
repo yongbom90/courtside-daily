@@ -61,6 +61,47 @@ PROP = {
 }
 PASS_CATS, REC_CATS = {"PYD", "CMP", "ATT", "PTD", "INT", "PRY"}, {"REC", "REYD"}
 
+# 80~100% 기준선(NBA s80 과 같은 방식): 포지션별 카테고리와 기준선 후보. 판정은 '기준선 이상'(오버 쪽)만.
+THR = {"PYD": [150, 175, 200, 225, 250, 275, 300], "CMP": [15, 18, 20, 22, 25], "PTD": [1, 2, 3],
+       "RYD": [30, 40, 50, 60, 70, 80, 100], "CAR": [8, 10, 12, 15, 18, 20],
+       "REC": [2, 3, 4, 5, 6, 7, 8], "REYD": [25, 30, 40, 50, 60, 70, 80, 100], "TD": [1]}
+POS_CATS = {"QB": ["PYD", "PTD"], "RB": ["RYD", "REC", "REYD", "TD"], "WR": ["REC", "REYD", "TD"], "TE": ["REC", "REYD", "TD"]}
+# 위젯에 보여줄 라인 종류(사용자 지정): 패스 야드·패스 TD·러시 야드·리시빙 야드·리셉션 (+ 애니타임 TD 는 별도 탭)
+FOCUS = {"PYD", "PTD", "RYD", "REYD", "REC"}
+
+
+def s80(L, cat, ctx):
+    """시즌 로그(최신순)에서 80%+ 적중하는 가장 높은 기준선 + 판정(top/rec/caution). 판정 규칙은 NBA 위젯과 같음."""
+    vals, N = [r[cat] for r in L], len(L)
+    if N < 5:
+        return None
+    best = None
+    for th in THR[cat]:
+        hit = sum(v >= th for v in vals)
+        if hit / N >= 0.8:
+            best = (th, hit)
+    if not best:
+        return None
+    th, hit = best
+    last = vals[:5]
+    h5 = sum(v >= th for v in last)
+    avg, a5 = round(sum(vals) / N, 1), round(sum(last) / len(last), 1)
+    rate = round(100 * hit / N)
+    flags = []
+    if a5 < avg * 0.9:
+        flags.append("최근 폼 하락")
+    if h5 < 4:
+        flags.append(f"최근 5경기 {h5}/5")
+    flags += ctx(cat, th, a5)
+    if rate >= 90 and h5 == 5 and a5 >= th * 1.25 and not flags:
+        rec = "top"
+    elif rate >= 80 and h5 >= 4 and not flags:
+        rec = "rec"
+    else:
+        rec = "caution"
+    return {"cat": cat, "th": th, "hit": hit, "N": N, "rate": rate, "h5": h5, "avg": avg, "a5": a5,
+            "last": [int(v) for v in last], "rec": rec, "flags": flags}
+
 
 def num(v):
     try:
@@ -207,12 +248,68 @@ def main(date, out):
              for k in ("passingYardsPerGameAllowed", "rushingYardsPerGameAllowed")}
     avg_allow = {k: round(sum(v) / len(v), 1) if v else None for k, v in allow.items()}
 
-    props, tds = [], []
+    # 팀별 직전 경기 선발 QB(패스 시도 최다)
+    last_qb = {}
+    for ab, evs in ev_by_team.items():
+        if evs:
+            rows = box_rows(sums[max(evs)[1]]).get(ab, {})
+            if rows:
+                aid, r = max(rows.items(), key=lambda kv: kv[1]["ATT"])
+                if r["ATT"] > 0:
+                    last_qb[ab] = (aid, r["n"])
+
+    props, tds, stat80 = [], [], []
     for g in games:
         lines, td_ids = prop_res.get(g["id"], ({}, set()))
         inj = {i["id"]: i for v in g["inj"].values() for i in v}
         qb_out = {t: [i["n"] for i in v if i["pos"] == "QB" and i["s"] in ("Out", "Doubtful")] for t, v in g["inj"].items()}
+        qb_chg = {}
+        # 이번 경기 QB = 패스 야드 라인이 열린 QB. 직전 경기 선발과 다르면 QB 교체로 본다(트레이드·벤치 결정 포함)
+        for ab in (g["away"], g["home"]):
+            now = next((pos[a][1] for (a, c) in lines if c == "PYD" and pos.get(a, ("",))[0] == ab), None)
+            prev = last_qb.get(ab)
+            if now and prev and prev[1] != now:
+                qb_chg[ab] = f"{prev[1]} → {now}"
+
+        # 80~100% 기준선: 이 경기에 DraftKings prop 이 하나라도 열린 선수만(실제 출전 예상 선수)
+        fav = (g["sp"] or "").split(" ")[0] if g["sp"] and g["sp"] != "EVEN" else None
+        active = {aid for (aid, _) in lines} | td_ids
+        for aid in active:
+            ab, name, ps = pos.get(aid, (None, None, ""))
+            if ab not in (g["away"], g["home"]) or ps not in POS_CATS:
+                continue
+            if aid in inj and inj[aid]["s"] in ("Out", "Doubtful"):
+                continue
+            L = logs.get((ab, aid), [])
+
+            def ctx(cat, th, a5, ab=ab, aid=aid, ps=ps):
+                f = []
+                if aid in inj:
+                    f.append(f"부상 리포트 {inj[aid]['s']}")
+                if qb_out.get(ab) and ps != "QB" and cat in ("REC", "REYD"):
+                    f.append(f"백업 QB 가능성(결장: {', '.join(qb_out[ab])})")
+                if qb_out.get(ab) and ps == "QB":
+                    f.append("QB 결장자 있음 → 선발 확인 필요")
+                if qb_chg.get(ab) and (ps == "QB" or cat in ("REC", "REYD")):
+                    f.append(f"선발 QB 교체({qb_chg[ab]})")
+                if g["abs"] >= 10 and a5 < th * 1.25:
+                    if ab == fav and cat in ("PYD", "CMP", "PTD", "REC", "REYD"):
+                        f.append(f"스프레드 {g['abs']} 큰 우세 → 후반 패스 감소 위험")
+                    elif ab != fav and cat in ("RYD", "CAR"):
+                        f.append(f"스프레드 {g['abs']} 열세 → 끌려가면 러시 감소 위험")
+                wx = g["wx"] or {}
+                if cat in ("PYD", "CMP", "PTD", "REC", "REYD") and (wx.get("gust") or 0) >= 15:
+                    f.append(f"돌풍 {wx['gust']}mph 예보")
+                return f
+            for cat in POS_CATS[ps]:
+                r = s80(L, cat, ctx)
+                if r:
+                    dk = lines.get((aid, cat))
+                    stat80.append({"id": aid, "n": name, "t": ab, "pos": ps, "g": g["m"], "gid": g["id"],
+                                   "dk": dk[0] if dk else None, **r})
         for (aid, cat), (line, opn) in lines.items():
+            if cat not in FOCUS:
+                continue
             ab, name, ps = pos.get(aid, (None, None, ""))
             if ab not in (g["away"], g["home"]):
                 continue
@@ -242,6 +339,8 @@ def main(date, out):
                 flags.append(f"부상 리포트 {inj[aid]['s']}")
             if cat in PASS_CATS | REC_CATS | {"RRY"} and qb_out.get(ab) and ps != "QB":
                 flags.append(f"팀 QB 결장: {', '.join(qb_out[ab])}")
+            if qb_chg.get(ab) and (ps == "QB" or cat in REC_CATS | {"RRY"}):
+                flags.append(f"선발 QB 교체({qb_chg[ab]})")
             wx = g["wx"] or {}
             if cat in PASS_CATS | REC_CATS and (wx.get("gust") or 0) >= 15:
                 flags.append(f"돌풍 {wx['gust']}mph 예보")
@@ -308,14 +407,31 @@ def main(date, out):
                 prop_review.append({**{k: p[k] for k in ("n", "t", "cat", "line", "g")}, "act": act,
                                     "r": "O" if act > p["line"] else "U", "rate": p.get("rate")})
 
+    # 직전 위젯 픽(⭐·✅) 채점: 기준선 이상이면 적중
+    grades, grade_from = [], None
+    pick_files = sorted(f for f in glob.glob(os.path.join(HERE, "archive", "nfl_*_picks.json")) if os.path.basename(f)[4:12] < date)
+    if pick_files:
+        grade_from = os.path.basename(pick_files[-1])[4:12]
+        for p in json.load(open(pick_files[-1], encoding="utf-8")):
+            box = final_box.get(p["gid"])
+            if box is None:
+                continue  # 아직 안 끝난 경기
+            act = box[p["id"]].get(p["cat"]) if p["id"] in box else None
+            grades.append({**{k: p[k] for k in ("n", "t", "g", "cat", "th", "rec")}, "act": act,
+                           "r": "-" if act is None else ("O" if act >= p["th"] else "X")})
+
     for g in games:
         g.pop("tid", None)
     A = {"date": date, "slate": slate_days, "back": back_days, "games": games, "props": props, "td": tds, "usage": usage[:30],
+         "stat80": stat80, "grades": grades, "gradeFrom": grade_from,
          "results": results, "propReview": prop_review, "propReviewFrom": os.path.basename(prev_files[-1])[4:12] if prev_files else None,
-         "cats": {v[0]: v[1] for v in PROP.values()}, "avgAllow": avg_allow,
+         "cats": {**{v[0]: v[1] for v in PROP.values()}, "TD": "애니타임 TD"}, "avgAllow": avg_allow,
          "built": datetime.now().strftime("%Y-%m-%d %H:%M")}
     json.dump(A, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    print(f"games={len(games)} props={len(props)} td={len(tds)} usage={len(usage)} results={len(results)} "
+    from collections import Counter
+    rc = Counter(r["rec"] for r in stat80)
+    print(f"games={len(games)} props={len(props)} td={len(tds)} stat80={len(stat80)} (top={rc['top']} rec={rc['rec']} "
+          f"caution={rc['caution']}) usage={len(usage)} results={len(results)} grades={len(grades)} "
           f"propReview={len(prop_review)} events={len(all_ev)}")
 
 
@@ -325,8 +441,25 @@ def count(date):
                for d in days for e in get(f"{B}/scoreboard?dates={d}")["events"])
 
 
+def snapshot(date, auto):
+    """게시한 라인을 archive/nfl_D_props.json 에 남김 → 다음 실행의 '라인 vs 실제 기록' 리뷰에 쓰임."""
+    A = json.load(open(auto, encoding="utf-8"))
+    P = A["props"]
+    picks = [s for s in A.get("stat80", []) if s["rec"] in ("top", "rec")]
+    os.makedirs(os.path.join(HERE, "archive"), exist_ok=True)
+    out = os.path.join(HERE, "archive", f"nfl_{date}_props.json")
+    json.dump([{k: p.get(k) for k in ("id", "n", "t", "g", "gid", "cat", "line", "rate")} for p in P],
+              open(out, "w", encoding="utf-8"), ensure_ascii=False)
+    out2 = os.path.join(HERE, "archive", f"nfl_{date}_picks.json")
+    json.dump([{k: p.get(k) for k in ("id", "n", "t", "g", "gid", "cat", "th", "rec")} for p in picks],
+              open(out2, "w", encoding="utf-8"), ensure_ascii=False)
+    print(f"snapshot {len(P)} props → {os.path.relpath(out, HERE)}; {len(picks)} picks → {os.path.relpath(out2, HERE)}")
+
+
 if __name__ == "__main__":
     if sys.argv[2] == "--count":
         print(count(sys.argv[1]))
+    elif sys.argv[2] == "--snapshot":
+        snapshot(sys.argv[1], sys.argv[3])
     else:
         main(sys.argv[1], sys.argv[2])

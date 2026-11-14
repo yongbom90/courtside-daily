@@ -30,21 +30,46 @@ h2{font-size:16px;margin:18px 0 8px;color:var(--muted)}
 ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
 li a{display:inline-block;padding:6px 10px;border:1px solid var(--line);border-radius:16px;text-decoration:none;color:var(--text);font-size:13px;background:var(--card)}
 .tip{margin-top:28px;font-size:12px;color:var(--muted);line-height:1.6}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:5px;margin-bottom:16px;position:sticky;top:8px;z-index:5}
+.seg button{font-family:"Barlow Condensed","Noto Sans KR";font-size:20px;font-weight:800;border:none;border-radius:9px;padding:10px;background:none;color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--c);color:#fff}
+:root[data-theme="dark"] .seg button.on{color:#001}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .seg button.on{color:#001}}
+.sport{display:none;border-top:4px solid var(--c);background:var(--card);border-radius:12px;padding:16px;border-left:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.sport.on{display:block}
+.sport h2.t{font-family:"Barlow Condensed","Noto Sans KR";font-size:26px;color:var(--c);margin:0 0 4px}
+.sport .sched{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+.sport a.big{background:var(--bg)}
+.sport li a{background:var(--bg)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>🏀🏈 코트사이드 데일리</h1>
   <div class="sub" id="upd">불러오는 중…</div>
-  <div class="hero">
-    <a class="big off" id="nbaNow" style="--c:var(--nba)"><b>NBA 오늘</b><span>아직 없음</span></a>
-    <a class="big off" id="nflNow" style="--c:var(--nfl)"><b>NFL 이번 주</b><span>아직 없음</span></a>
+  <div class="seg">
+    <button id="tab-nba" style="--c:var(--nba)" onclick="show('nba')">🏀 NBA</button>
+    <button id="tab-nfl" style="--c:var(--nfl)" onclick="show('nfl')">🏈 NFL</button>
   </div>
-  <h2>🏀 NBA 지난 날짜</h2><ul id="nbaList"></ul>
-  <h2>🏈 NFL 지난 위젯</h2><ul id="nflList"></ul>
-  <div class="tip">📱 <b>앱처럼 쓰기:</b> 아이폰은 사파리 공유 버튼 → "홈 화면에 추가", 안드로이드는 크롬 메뉴 → "홈 화면에 추가".<br>NBA는 평일 오후 3시, 주말 오전 11시 또는 오후 3시(ET)에, NFL은 목·토·월 오후 3시에 자동으로 업데이트돼요. 분석은 참고용이고 결과를 보장하지 않아요.</div>
+  <section class="sport" id="sec-nba" style="--c:var(--nba)">
+    <h2 class="t">🏀 NBA</h2>
+    <div class="sched">매일 오전 11시(첫 경기가 오후 6시 전일 때) · 오후 3시(ET) 업데이트 · 경기 2시간 전 부상·라인 재확인</div>
+    <a class="big off" id="nbaNow"><b>오늘 위젯</b><span>아직 없음</span></a>
+    <h2>지난 날짜</h2><ul id="nbaList"></ul>
+  </section>
+  <section class="sport" id="sec-nfl" style="--c:var(--nfl)">
+    <h2 class="t">🏈 NFL</h2>
+    <div class="sched">목·토·월 오후 3시(ET) 업데이트 · 선수 라인과 시즌 기록 비교(데이터형)</div>
+    <a class="big off" id="nflNow"><b>이번 주 위젯</b><span>아직 없음</span></a>
+    <h2>지난 위젯</h2><ul id="nflList"></ul>
+  </section>
+  <div class="tip">📱 <b>앱처럼 쓰기:</b> 아이폰은 사파리 공유 버튼 → "홈 화면에 추가", 안드로이드는 크롬 메뉴 → "홈 화면에 추가".<br>분석과 데이터는 참고용이고 결과를 보장하지 않아요.</div>
 </div>
 <script>
+function show(k){for(const x of ['nba','nfl']){document.getElementById('sec-'+x).classList.toggle('on',x===k);document.getElementById('tab-'+x).classList.toggle('on',x===k);}
+  try{localStorage.setItem('sport',k)}catch(e){} if(location.hash!=='#'+k)history.replaceState(null,'','#'+k);}
+let first=location.hash.slice(1);if(!['nba','nfl'].includes(first)){try{first=localStorage.getItem('sport')}catch(e){}}
+show(['nba','nfl'].includes(first)?first:'nba');
 const fmt=d=>`${+d.slice(4,6)}/${+d.slice(6)}`;
 fetch('pages.json?'+Date.now()).then(r=>r.json()).then(P=>{
   for(const k of ['nba','nfl']){
