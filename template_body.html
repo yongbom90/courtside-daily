@@ -5,6 +5,9 @@
 .lnv{text-align:center}.lnv b{font-family:"Barlow Condensed";font-size:24px;font-weight:800;color:var(--primary);display:block;line-height:1}.lnv span{font-size:11px;color:var(--muted)}
 .split{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:4px;background:var(--bad-bg)}.split i{display:block;height:100%;background:var(--good)}
 .sel{background:var(--surface);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 10px;font-size:13px}
+.vb{display:inline-block;margin-top:4px;padding:3px 7px;border-radius:7px;font-size:11.5px;font-weight:800;line-height:1.25;text-align:center;font-family:"Noto Sans KR"}
+.vb small{font-weight:600;font-size:11px}
+.vb.good{background:#16a34a22;color:var(--good)}.vb.warn{background:#eab30826;color:var(--warn)}.vb.fair{background:#64748b22;color:var(--muted)}.vb.bad{background:#dc262622;color:var(--bad)}
 .dk{display:block;font-family:"Noto Sans KR";font-size:11px;font-weight:400;color:var(--muted)}
 @media(max-width:760px){.prow{grid-template-columns:1fr 80px}.phead{display:none}.prow .c-rate,.prow .c-form,.prow .c-avg,.prow .c-btn{grid-column:1/-1}}
 </style>
@@ -20,6 +23,8 @@
   <button class="tab" data-t="teams">🏀 팀별 분석</button>
   <button class="tab" data-t="review">🔍 어제 리뷰</button>
   <button class="tab" data-t="stat80">📈 80~100% 스탯</button>
+  <button class="tab" data-t="value">💰 가성비</button>
+  <button class="tab" data-t="combo">🧩 콤보</button>
   <button class="tab" data-t="lines">📋 라인 vs 기록</button>
   <button class="tab" data-t="mins">⏱️ 출전시간 변화</button>
   <button class="tab" data-t="hot">🔥 폼 좋은 선수</button>
@@ -41,6 +46,19 @@
     <option value="over">정렬: 오버 비율 높은 순(표본 보정)</option><option value="gap">정렬: 최근5 평균 − 라인 큰 순</option><option value="min">정렬: 출전시간 증가 큰 순</option><option value="move">정렬: 라인 이동 큰 순</option></select></div>
   <div class="phead"><span>선수 · 경기</span><span style="text-align:center">라인</span><span>시즌 오버 / 언더</span><span>최근 5경기 (최신→)</span><span>평균 · 출전시간</span><span></span></div>
   <div id="llist"></div>
+</section>
+<section class="panel" id="value">
+  <div class="note"><b>가성비 = 배당이 실제 확률보다 후한가?</b> DraftKings 단계별 오버 라인(예: 득점 20+)의 배당을 확률로 바꾼 값(<b>배당 확률</b>)과, 이 선수가 그 기준선 이상을 기록할 <b>추정 확률</b>을 비교해요. 추정 확률 = 시즌 적중률과 최근 5경기 적중률을 반반 섞고 표본이 적은 만큼 50% 쪽으로 당긴 값이에요.<br><b>적정 배당</b> = 추정 확률대로라면 받아야 할 배당이에요. 실제 배당이 적정 배당보다 후하면 가성비가 좋아요.<br>💰 <b>가성비 좋음</b> = 추정이 배당 확률보다 5%p 이상 높고 경고 없음 · 🟡 <b>가성비(경고)</b> = 차이는 크지만 출전시간 감소·부상·블로아웃·최근 부진 경고가 있음 · ⚖️ <b>적정</b> = ±5%p 이내 · 💸 <b>비쌈</b> = 5%p 이상 낮음. 추정은 과거 기록 기반이라 보장이 아니에요.</div>
+  <div class="filters" id="vcat"></div><div class="filters" id="vval"></div>
+  <div class="filters"><select class="sel" id="vgame"></select></div>
+  <div class="shead"><span>선수 · 경기</span><span style="text-align:center">기준선 · 배당</span><span>배당 확률 vs 추정</span><span>최근 5경기 (최신→)</span><span>적정 배당 · 출전</span><span style="text-align:center">가성비</span></div>
+  <div id="vlist"></div>
+</section>
+<section class="panel" id="combo">
+  <div class="note"><b>콤보</b> = 득점+리바+어시(PRA), 득점+리바(PR), 득점+어시(PA), 리바+어시(RA) 합계예요. 판정·가성비·라인 계산 방식은 단일 항목 탭과 같아요. <b>⭐ 판정</b>은 시즌 80%↑ 기준선, <b>💰 가성비</b>는 DraftKings 단계별 콤보 배당, <b>📋 라인</b>은 DraftKings 기본 콤보 라인 대비 시즌 오버 비율이에요.</div>
+  <div class="filters" id="ccat"></div><div class="filters" id="cview"></div>
+  <div class="filters" id="csub"></div>
+  <div id="clist"></div>
 </section>
 <section class="panel" id="mins"><div class="note">오늘 경기하는 선수의 최근 3경기 평균 출전시간을 시즌 평균과 비교했어요(5경기 이상, 변화 큰 순). 출전시간이 늘면 기록 기준선도 올라갈 수 있고, 줄면 80% 판정에 ⚠️ 경고가 붙어요.</div><div class="grid" id="minsGrid"></div></section>
 <section class="panel" id="hot"><div class="note">최근 5경기 평균 득점이 시즌 평균보다 높은 순서예요. 출전시간 20분 이상인 선수만 넣었어요(ESPN 박스스코어 자동 집계).</div><div class="grid" id="hotGrid"></div></section>
@@ -101,9 +119,14 @@ $('revWrap').innerHTML=`<div class="note">${R.summary||''}</div>
  <h2 class="sec">왜 그렇게 됐나</h2><div class="grid">${(R.items||[]).map(x=>`<div class="card"><h3 style="font-size:20px">${x.t}</h3><div class="small">${x.why}</div>${x.lesson?`<div class="lean"><b>교훈:</b> ${x.lesson}</div>`:''}</div>`).join('')}</div>
  ${(()=>{const PR=(AUTO.propReview||[]).filter(p=>p.r!=='-');if(!PR.length)return '';
   const sm=Object.entries(PR.reduce((m,p)=>{(m[p.cat]=m[p.cat]||[0,0])[p.r==='O'?0:1]++;return m;},{}));
-  const CN={PTS:"득점",REB:"리바운드",AST:"어시스트","3PM":"3점슛"};
+  const CN={PTS:"득점",REB:"리바운드",AST:"어시스트","3PM":"3점슛",PRA:"PRA",PR:"PR",PA:"PA",RA:"RA"};
   return `<h2 class="sec">어제 라인 vs 실제 기록 (${md(AUTO.propReviewFrom)} 수집 DraftKings 라인)</h2><div class="filters">${sm.map(([c,[o,u]])=>`<span class="tag t-pri">${CN[c]} 오버 ${o} · 언더 ${u}</span>`).join(' ')}</div>
   <div class="tblwrap"><table><tr><th>선수</th><th>라인</th><th>실제</th><th>결과</th><th>당시 시즌 오버 비율</th></tr>${PR.map(p=>`<tr><td>${p.n} <span class="muted small">${p.t} · ${p.g}</span></td><td>${CN[p.cat]} ${p.line}</td><td>${p.act}</td><td class="${p.r==='O'?'ok':'ng'}">${p.r==='O'?'오버':'언더'}</td><td>${p.rate!=null?p.rate+'%':'—'}</td></tr>`).join('')}</table></div>`;})()}
+ ${(()=>{const G=(AUTO.vgrades||[]).filter(p=>p.r!=='-');if(!G.length)return '';
+  const CN={PTS:"득점",REB:"리바운드",AST:"어시스트","3PM":"3점슛",PRA:"PRA",PR:"PR",PA:"PA",RA:"RA"};
+  const o=G.filter(p=>p.r==='O'),pnl=G.reduce((a,p)=>a+(p.r==='O'?(p.am>0?p.am/100:100/-p.am):-1),0);
+  return `<h2 class="sec">어제 💰 가성비 픽 채점 (${md(AUTO.vgFrom)} 배당)</h2><div class="filters"><span class="tag t-pri">적중 ${o.length}/${G.length}</span> <span class="tag ${pnl>=0?'t-good':'t-bad'}">픽마다 1유닛 걸었다면 ${pnl>=0?'+':''}${pnl.toFixed(2)}유닛</span></div>
+  <div class="tblwrap"><table><tr><th>선수</th><th>기준선</th><th>배당</th><th>실제</th><th>결과</th></tr>${G.map(p=>`<tr><td>${p.n} <span class="muted small">${p.t} · ${p.g}</span></td><td>${CN[p.cat]} ${p.th}+</td><td>${fmtO(p.am)}</td><td>${p.act}</td><td class="${p.r==='O'?'ok':'ng'}">${p.r==='O'?'적중':'실패'}</td></tr>`).join('')}</table></div>`;})()}
  ${(R.grades||[]).length?`<h2 class="sec">어제 위젯 픽 채점</h2><div class="tblwrap"><table><tr><th>픽</th><th>결과</th><th></th></tr>${R.grades.map(x=>`<tr><td>${x[0]}</td><td>${x[1]}</td><td class="${x[2]==='O'?'ok':x[2]==='X'?'ng':'muted'}">${x[2]==='O'?'적중':x[2]==='X'?'실패':'무효'}</td></tr>`).join('')}</table></div>`:''}`;
 
 const hot=Object.entries(AUTO.form).flatMap(([t,v])=>v.map(p=>({...p,t}))).filter(p=>p.PTS5-p.PTSs>=2).sort((a,b)=>(b.PTS5-b.PTSs)-(a.PTS5-a.PTSs)).slice(0,12);
@@ -134,27 +157,29 @@ function copySlip(){if(!slip.length){toast('픽을 먼저 담아주세요');retu
 
 /* 80%+ STAT */
 const S80=AUTO.stat80.filter(r=>r.th>1||r.cat!=='3PM');
-const CATN={PTS:"득점",REB:"리바운드",AST:"어시스트","3PM":"3점슛"},RECN={top:"⭐ 강력추천",rec:"✅ 추천",caution:"⚠️ 주의"};
+const CATN={PTS:"득점",REB:"리바운드",AST:"어시스트","3PM":"3점슛",PRA:"득+리+어(PRA)",PR:"득+리(PR)",PA:"득+어(PA)",RA:"리+어(RA)"},
+ VALN={good:"💰 가성비 좋음",warn:"🟡 가성비(경고)",fair:"⚖️ 적정",bad:"💸 비쌈"},CMB=['PRA','PR','PA','RA'],SING=['PTS','REB','AST','3PM'],RECN={top:"⭐ 강력추천",rec:"✅ 추천",caution:"⚠️ 주의"};
 let s80c="PTS",s80r="all";
-$('s80cat').innerHTML=Object.keys(CATN).map(c=>`<button class="fbtn ${c===s80c?'on':''}" data-c="${c}">${CATN[c]} (${S80.filter(r=>r.cat===c).length})</button>`).join('');
+$('s80cat').innerHTML=SING.map(c=>`<button class="fbtn ${c===s80c?'on':''}" data-c="${c}">${CATN[c]} (${S80.filter(r=>r.cat===c).length})</button>`).join('');
 $('s80rec').innerHTML=[["all","전체"],["top","⭐ 강력추천만"],["rec","✅ 추천 이상"],["caution","⚠️ 주의"]].map(([k,l])=>`<button class="fbtn ${k===s80r?'on':''}" data-r="${k}">${l}</button>`).join('');
 document.querySelectorAll('#s80cat .fbtn').forEach(b=>b.onclick=()=>{s80c=b.dataset.c;document.querySelectorAll('#s80cat .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawS80();});
 document.querySelectorAll('#s80rec .fbtn').forEach(b=>b.onclick=()=>{s80r=b.dataset.r;document.querySelectorAll('#s80rec .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawS80();});
 function drawS80(){const ord={top:0,rec:1,caution:2};
  const L=S80.filter(r=>r.cat===s80c).filter(r=>s80r==="all"||(s80r==="rec"?r.rec!=="caution":r.rec===s80r)).sort((a,b)=>ord[a.rec]-ord[b.rec]||b.th-a.th||b.rate-a.rate);
- $('s80list').innerHTML=L.length?L.map(r=>{const key=`${r.n} ${r.th}+ ${CATN[r.cat]}`;
+ $('s80list').innerHTML=L.length?L.map(s80Row).join(''):'<div class="muted">해당 조건의 선수가 없어요.</div>';
+ sync();}
+function s80Row(r){const key=`${r.n} ${r.th}+ ${CATN[r.cat]}`;
   const ar=r.a5>r.avg?'<span style="color:var(--good)">▲</span>':r.a5<r.avg?'<span style="color:var(--bad)">▼</span>':'＝';
-  return `<div class="srow"><div class="nm">${r.n}<small>${r.t} · ${r.g}</small></div><div class="thv">${r.th}+<span class="dk">${r.dk!=null?'DK '+r.dk:'DK 없음'}</span></div>
+  return `<div class="srow"><div class="nm">${r.n}<small>${r.t} · ${r.g}</small></div><div class="thv">${CMB.includes(r.cat)?`<span class="dk"><b>${r.cat}</b></span>`:''}${r.th}+<span class="dk">${r.dk!=null?'DK '+r.dk:'DK 없음'}</span>${r.am!=null?`<span class="dk"><b>${fmtO(r.am)}</b> · 적정 ${fmtO(r.fair)}</span><span class="vb ${r.val}">${VALN[r.val]}</span>`:''}</div>
   <div class="c-rate"><b>${r.rate}%</b> <span class="small muted">(${r.hit}/${r.N})</span><div class="bar" style="margin-top:4px"><i style="width:${r.rate}%;background:var(--${r.rate>=90?'good':'primary'})"></i></div></div>
   <div class="c-form"><div class="chips">${r.last.map(v=>`<i class="${v>=r.th?'y':''}">${v}</i>`).join('')}</div><div class="small muted" style="margin-top:3px">L5 ${r.h5}/5</div></div>
   <div class="c-avg small">${r.avg} → <b>${r.a5}</b> ${ar}</div>
-  <div><div class="rec ${r.rec}">${RECN[r.rec]}</div><button class="btn mini" data-k="${key}" data-o="" onclick="toggle(this)">+ 슬립 담기</button></div>
-  ${r.flags.length?`<div class="flags">• ${r.flags.join(' · ')}</div>`:''}</div>`}).join(''):'<div class="muted">해당 조건의 선수가 없어요.</div>';
- sync();}
+  <div><div class="rec ${r.rec}">${RECN[r.rec]}</div><button class="btn mini" data-k="${key}" data-o="${r.am??''}" onclick="toggle(this)">+ 슬립 담기</button></div>
+  ${r.flags.length?`<div class="flags">• ${r.flags.join(' · ')}</div>`:''}</div>`}
 drawS80();
 
 /* 라인 vs 기록 */
-const LP=AUTO.props||[],LCAT=['PTS','REB','AST','3PM'],LCN={PTS:"득점",REB:"리바운드",AST:"어시스트","3PM":"3점슛"};
+const LP=AUTO.props||[],LCAT=SING,LCN=CATN;
 let lc='PTS',lg='all',ls='over';
 $('lcat').innerHTML=LCAT.filter(c=>LP.some(p=>p.cat===c)).map(c=>`<button class="fbtn ${c===lc?'on':''}" data-c="${c}">${LCN[c]} (${LP.filter(p=>p.cat===c).length})</button>`).join('');
 $('lgame').innerHTML='<option value="all">모든 경기</option>'+AUTO.games.map(g=>`<option>${g.m}</option>`).join('');
@@ -163,18 +188,63 @@ $('lgame').onchange=e=>{lg=e.target.value;drawL();};$('lsort').onchange=e=>{ls=e
 function drawL(){
  const key={over:p=>-(p.hit+1)/(p.N+2),gap:p=>-(p.a5-p.line)/Math.max(1,p.line),min:p=>-(p.min3-p.min),move:p=>-Math.abs((p.open??p.line)-p.line)};
  const L=LP.filter(p=>p.cat===lc&&(lg==='all'||p.g===lg)).sort((a,b)=>key[ls](a)-key[ls](b)||b.N-a.N);
- $('llist').innerHTML=L.length?L.map(p=>{const key2=`${p.n} ${p.line} 오버 ${LCN[p.cat]}`;
+ $('llist').innerHTML=L.length?L.map(propRow).join(''):'<div class="muted">해당 조건의 라인이 없어요.</div>';
+ sync();}
+function propRow(p){const key2=`${p.n} ${p.line} 오버 ${LCN[p.cat]}`;
   const ar=p.a5>p.avg?'<span style="color:var(--good)">▲</span>':p.a5<p.avg?'<span style="color:var(--bad)">▼</span>':'＝';
   const mr=p.min3>p.min*1.15?'<span style="color:var(--good)">▲</span>':p.min3<p.min*0.85?'<span style="color:var(--bad)">▼</span>':'';
   return `<div class="prow"><div class="nm">${p.n}<small>${p.t} · ${p.g}</small></div>
-  <div class="lnv"><b>${p.line}</b><span>${p.open!=null&&p.open!==p.line?'오픈 '+p.open:'오픈 동일'}</span></div>
+  <div class="lnv">${CMB.includes(p.cat)?`<span><b>${p.cat}</b></span>`:''}<b>${p.line}</b><span>${p.open!=null&&p.open!==p.line?'오픈 '+p.open:'오픈 동일'}</span></div>
   <div class="c-rate"><b>오버 ${p.hit}/${p.N}</b> <span class="muted small">· 언더 ${p.N-p.hit}/${p.N}</span><div class="split"><i style="width:${p.rate}%"></i></div></div>
   <div class="c-form"><div class="chips">${p.last.map(v=>`<i class="${v>p.line?'y':''}">${v}</i>`).join('')}</div><div class="small muted" style="margin-top:3px">최근5 오버 ${p.h5}/${p.last.length} · 범위 ${p.mn}~${p.mx}</div></div>
   <div class="c-avg small"><span class="muted">평균</span> ${p.avg} → <b>${p.a5}</b> ${ar}<br><span class="muted">출전</span> ${p.min} → <b>${p.min3}분</b> ${mr}</div>
   <div class="c-btn"><button class="btn mini" data-k="${key2}" data-o="" onclick="toggle(this)">+ 슬립 담기</button></div>
-  ${p.flags.length?`<div class="flags">⚠️ ${p.flags.join(' · ')}</div>`:''}</div>`}).join(''):'<div class="muted">해당 조건의 라인이 없어요.</div>';
- sync();}
+  ${p.flags.length?`<div class="flags">⚠️ ${p.flags.join(' · ')}</div>`:''}</div>`}
 drawL();
+
+/* 💰 가성비 */
+function valRow(v){const key=`${v.n} ${v.th}+ ${CATN[v.cat]}`;const gap=v.p-v.imp;
+ return `<div class="srow"><div class="nm">${v.n}<small>${v.t} · ${v.g}</small></div>
+  <div class="thv"><span class="dk"><b>${CMB.includes(v.cat)?v.cat:CATN[v.cat]}</b></span>${v.th}+<span class="dk"><b style="font-size:14px;color:var(--text)">${fmtO(v.am)}</b></span></div>
+  <div class="c-rate small">배당 확률 <b>${v.imp}%</b> → 추정 <b style="color:var(--${gap>=5?'good':gap<=-5?'bad':'text'})">${v.p}%</b><br><span class="muted">시즌 ${v.hit}/${v.N} · 최근5 ${v.h5}/5</span>
+   <div class="bar" style="margin-top:4px;position:relative"><i style="width:${v.p}%;background:var(--${gap>=5?'good':gap<=-5?'bad':'primary'})"></i><b style="position:absolute;left:${v.imp}%;top:-3px;width:2px;height:12px;background:var(--text)"></b></div></div>
+  <div class="c-form"><div class="chips">${v.last.map(x=>`<i class="${x>=v.th?'y':''}">${x}</i>`).join('')}</div></div>
+  <div class="c-avg small"><span class="muted">적정 배당</span> <b>${fmtO(v.fair)}</b><br><span class="muted">출전</span> ${v.min} → <b>${v.min3}분</b></div>
+  <div><div class="vb ${v.val}">${VALN[v.val]}<br><small>${v.edge>0?'+':''}${v.edge}%p</small></div><button class="btn mini" data-k="${key}" data-o="${v.am}" onclick="toggle(this)">+ 슬립 담기</button></div>
+  ${v.flags.length?`<div class="flags">⚠️ ${v.flags.join(' · ')}</div>`:''}</div>`}
+function valFilter(L,vv){return L.filter(v=>vv==='all'||(vv==='good+'?(v.val==='good'||v.val==='warn'):v.val===vv));}
+const VV=[["good","💰 가성비 좋음"],["good+","💰+🟡 (경고 포함)"],["fair","⚖️ 적정"],["bad","💸 비쌈"],["all","전체"]];
+const VL=AUTO.value||[];let vc='all',vv='good',vg='all';
+$('vcat').innerHTML=[['all','전체']].concat(SING.map(c=>[c,CATN[c]])).map(([c,l])=>`<button class="fbtn ${c===vc?'on':''}" data-c="${c}">${l} (${VL.filter(v=>c==='all'||v.cat===c).length})</button>`).join('');
+$('vval').innerHTML=VV.map(([k,l])=>`<button class="fbtn ${k===vv?'on':''}" data-v="${k}">${l}</button>`).join('');
+$('vgame').innerHTML='<option value="all">모든 경기</option>'+AUTO.games.map(g=>`<option>${g.m}</option>`).join('');
+document.querySelectorAll('#vcat .fbtn').forEach(b=>b.onclick=()=>{vc=b.dataset.c;document.querySelectorAll('#vcat .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawV();});
+document.querySelectorAll('#vval .fbtn').forEach(b=>b.onclick=()=>{vv=b.dataset.v;document.querySelectorAll('#vval .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawV();});
+$('vgame').onchange=e=>{vg=e.target.value;drawV();};
+function drawV(){const L=valFilter(VL.filter(v=>(vc==='all'||v.cat===vc)&&(vg==='all'||v.g===vg)),vv);
+ $('vlist').innerHTML=L.length?L.slice(0,80).map(valRow).join(''):'<div class="muted">해당 조건의 라인이 없어요.</div>';sync();}
+drawV();
+
+/* 🧩 콤보 */
+const CS80=AUTO.stat80.filter(r=>CMB.includes(r.cat)),CVL=AUTO.cvalue||[],CLP=LP.filter(p=>CMB.includes(p.cat));
+let cc='all',cv='s80',cs='all';
+const CSUB={s80:[["all","전체"],["top","⭐ 강력추천만"],["rec","✅ 추천 이상"]],val:VV,lines:[["all","오버 비율 높은 순"]]};
+$('ccat').innerHTML=[['all','전체']].concat(CMB.map(c=>[c,CATN[c]])).map(([c,l])=>`<button class="fbtn ${c===cc?'on':''}" data-c="${c}">${l}</button>`).join('');
+$('cview').innerHTML=[["s80",`⭐ 판정 (${CS80.length})`],["val",`💰 가성비 (${CVL.length})`],["lines",`📋 라인 vs 기록 (${CLP.length})`]].map(([k,l])=>`<button class="fbtn ${k===cv?'on':''}" data-v="${k}">${l}</button>`).join('');
+document.querySelectorAll('#ccat .fbtn').forEach(b=>b.onclick=()=>{cc=b.dataset.c;document.querySelectorAll('#ccat .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawC();});
+document.querySelectorAll('#cview .fbtn').forEach(b=>b.onclick=()=>{cv=b.dataset.v;cs=cv==='val'?'good':'all';document.querySelectorAll('#cview .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawC();});
+function drawC(){
+ $('csub').innerHTML=CSUB[cv].map(([k,l])=>`<button class="fbtn ${k===cs?'on':''}" data-s="${k}">${l}</button>`).join('');
+ document.querySelectorAll('#csub .fbtn').forEach(b=>b.onclick=()=>{cs=b.dataset.s;drawC();});
+ const ok=x=>cc==='all'||x.cat===cc,ord={top:0,rec:1,caution:2};let h;
+ if(cv==='s80'){const L=CS80.filter(ok).filter(r=>cs==='all'||(cs==='rec'?r.rec!=='caution':r.rec===cs)).sort((a,b)=>ord[a.rec]-ord[b.rec]||b.rate-a.rate||b.th-a.th);
+  h=`<div class="shead"><span>선수 · 경기</span><span style="text-align:center">기준선</span><span>시즌 적중</span><span>최근 5경기 (최신→)</span><span>시즌 평균 → 최근5</span><span style="text-align:center">판정</span></div>`+(L.map(s80Row).join('')||'<div class="muted">해당 조건의 선수가 없어요.</div>');}
+ else if(cv==='val'){const L=valFilter(CVL.filter(ok),cs);
+  h=`<div class="shead"><span>선수 · 경기</span><span style="text-align:center">기준선 · 배당</span><span>배당 확률 vs 추정</span><span>최근 5경기 (최신→)</span><span>적정 배당 · 출전</span><span style="text-align:center">가성비</span></div>`+(L.slice(0,80).map(valRow).join('')||'<div class="muted">해당 조건의 라인이 없어요.</div>');}
+ else{const L=CLP.filter(ok).sort((a,b)=>(b.hit+1)/(b.N+2)-(a.hit+1)/(a.N+2)||b.N-a.N);
+  h=`<div class="phead"><span>선수 · 경기</span><span style="text-align:center">라인</span><span>시즌 오버 / 언더</span><span>최근 5경기 (최신→)</span><span>평균 · 출전시간</span><span></span></div>`+(L.map(propRow).join('')||'<div class="muted">해당 조건의 라인이 없어요.</div>');}
+ $('clist').innerHTML=h;sync();}
+drawC();
 
 /* 출전시간 변화 */
 $('minsGrid').innerHTML=(AUTO.minutes||[]).slice(0,24).map(m=>{const up=m.d>0;

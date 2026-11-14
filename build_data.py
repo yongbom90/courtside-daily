@@ -49,12 +49,18 @@ def box_rows(s):
             rows.append({"n": a["athlete"]["displayName"], "id": a["athlete"]["id"], "min": mins,
                          "PTS": int(d.get("points") or 0), "REB": int(d.get("rebounds") or 0),
                          "AST": int(d.get("assists") or 0), "3PM": int(tpm or 0)})
+            r = rows[-1]
+            r.update(PR=r["PTS"] + r["REB"], PA=r["PTS"] + r["AST"], RA=r["REB"] + r["AST"], PRA=r["PTS"] + r["REB"] + r["AST"])
         out[t["team"]["abbreviation"]] = rows
     return out
 
 
 THR = {"PTS": [10, 12, 15, 18, 20, 22, 25, 28, 30, 35], "REB": [4, 5, 6, 8, 10, 12, 14],
-       "AST": [3, 4, 5, 6, 8, 10], "3PM": [1, 2, 3, 4]}
+       "AST": [3, 4, 5, 6, 8, 10], "3PM": [1, 2, 3, 4],
+       # 콤보
+       "PRA": [15, 20, 25, 30, 35, 40, 45, 50], "PR": [12, 15, 20, 25, 30, 35, 40],
+       "PA": [12, 15, 20, 25, 30, 35, 40], "RA": [6, 8, 10, 12, 15, 18, 20]}
+COMBO = {"PRA", "PR", "PA", "RA"}
 
 
 def s80(name, team, game, logs, spread):
@@ -110,16 +116,73 @@ def minutes_flag(logs):
     return None
 
 
-PROP = {"Total Points": "PTS", "Total Rebounds": "REB", "Total Assists": "AST", "Total 3-Point Field Goals": "3PM"}
+PROP = {"Total Points": "PTS", "Total Rebounds": "REB", "Total Assists": "AST", "Total 3-Point Field Goals": "3PM",
+        "Total Points, Rebounds, and Assists": "PRA", "Total Points and Rebounds": "PR",
+        "Total Points and Assists": "PA", "Total Assists and Rebounds": "RA"}
+
+
+_ITEMS = {}
+
+
+def prop_items(eid):
+    """DraftKings 선수 prop 원본(ESPN core API). 경기당 한 번만 받음."""
+    if eid not in _ITEMS:
+        try:
+            _ITEMS[eid] = get(f"{CORE}/events/{eid}/competitions/{eid}/odds/100/propBets?limit=1000").get("items", [])
+        except Exception as e:
+            print(f"  props {eid}: {e}", file=sys.stderr)
+            _ITEMS[eid] = []
+    return _ITEMS[eid]
+
+
+MILE = {"Points Milestones": "PTS", "Rebounds Milestones": "REB", "Assists Milestones": "AST", "3-Point Field Goals Milestones": "3PM",
+        "Points + Assists + Rebounds Milestones": "PRA", "Points + Rebounds Milestones": "PR",
+        "Points + Assists Milestones": "PA", "Rebounds + Assists Milestones": "RA"}
+
+
+def miles_for(eid):
+    """DraftKings 단계별 오버 라인(마일스톤)과 배당. {(선수id, 항목): [(기준선, 소수 배당, 미국식 배당)]}"""
+    out = {}
+    for i in prop_items(eid):
+        cat = MILE.get(i.get("type", {}).get("name", ""))
+        aid = i.get("athlete", {}).get("$ref", "").split("/athletes/")[-1].split("?")[0]
+        t = (i.get("current") or {}).get("target", {}).get("value")
+        o = i.get("odds") or {}
+        try:
+            dec, am = float(o["decimal"]["value"]), int(o["american"]["value"].replace("+", ""))
+        except (KeyError, ValueError, TypeError, AttributeError):
+            continue
+        if cat and aid and t is not None and dec > 1:
+            out.setdefault((aid, cat), []).append((t, dec, am))
+    # 같은 이름의 마일스톤에 경기 전체가 아닌 묶음(쿼터·하프로 추정)이 섞여 있음 → 경기 전체 배당만 남긴다.
+    # 1) 기준선이 높을수록 확률이 낮아야 함(위에서부터 내려오며 확률이 줄어드는 항목은 버림)
+    # 2) 기본 라인(예: 리바운드 9.5)보다 낮은 기준선인데 확률 35% 미만이면 버림
+    base = props_for(eid)
+    clean = {}
+    for key, arr in out.items():
+        line = (base.get(key) or (None,))[0]
+        keep, pmax = [], 0.0
+        for t, dec, am in sorted(set(arr), key=lambda x: (-x[0], x[1])):
+            imp = 1 / dec
+            if imp + 1e-9 < pmax or (line is not None and t < line and imp < 0.35):
+                continue
+            if keep and keep[-1][0] == t:
+                continue  # 같은 기준선은 확률 높은(경기 전체) 쪽 하나만
+            keep.append((t, dec, am))
+            pmax = imp
+        clean[key] = keep
+    return clean
+
+
+def fair_am(p):
+    """확률 → 공정 미국식 배당."""
+    p = min(max(p, 0.01), 0.99)
+    return -round(100 * p / (1 - p)) if p >= 0.5 else round(100 * (1 - p) / p)
 
 
 def props_for(eid):
-    """DraftKings 선수 기본 라인(ESPN core API). {(선수id, 항목): (현재 라인, 오픈 라인)}"""
-    try:
-        items = get(f"{CORE}/events/{eid}/competitions/{eid}/odds/100/propBets?limit=1000").get("items", [])
-    except Exception as e:
-        print(f"  props {eid}: {e}", file=sys.stderr)
-        return {}
+    """DraftKings 선수 기본 라인. {(선수id, 항목): (현재 라인, 오픈 라인)}"""
+    items = prop_items(eid)
     out = {}
     for i in items:
         cat = PROP.get(i.get("type", {}).get("name", ""))
@@ -169,7 +232,9 @@ def main(date, out):
     all_ev = sorted({e for v in ev_by_team.values() for _, e in v})
     with ThreadPoolExecutor(8) as ex:
         sums = dict(zip(all_ev, ex.map(summary, all_ev)))
-        lines_by_game = dict(zip([g["id"] for g in games], ex.map(props_for, [g["id"] for g in games])))
+        list(ex.map(prop_items, [g["id"] for g in games]))
+    lines_by_game = {g["id"]: props_for(g["id"]) for g in games}
+    miles_by_game = {g["id"]: miles_for(g["id"]) for g in games}
     logs = {}
     for ab, evs in ev_by_team.items():
         for _, e in sorted(evs, reverse=True):
@@ -244,6 +309,56 @@ def main(date, out):
                           "min": round(sum(l["min"] for l in L) / len(L), 1), "min3": round(sum(l["min"] for l in L[:3]) / min(3, len(L)), 1),
                           "flags": flags})
 
+    # 💰 가성비: DraftKings 마일스톤(오버) 배당의 내재 확률 vs 시즌 적중률(표본 보정)
+    value = []
+    for g in games:
+        for (aid, cat), arr in miles_by_game.get(g["id"], {}).items():
+            if aid not in key_of:
+                continue
+            ab, name = key_of[aid]
+            if ab not in (g["away"], g["home"]) or name in out_names:
+                continue
+            L = logs[(ab, name)]
+            N = len(L)
+            if N < 5:
+                continue
+            vals = [l[cat] for l in L]
+            for th, dec, am in sorted(set(arr)):
+                hit = sum(v >= th for v in vals)
+                last = vals[:5]
+                h5 = sum(v >= th for v in last)
+                # 적중 확률 추정 = 시즌(표본 보정)과 최근 5경기(표본 보정)를 반반
+                ps, p5 = (hit + 1) / (N + 2), (h5 + 1) / (len(last) + 2)
+                p = (ps + p5) / 2
+                imp = 1 / dec
+                if imp > 0.95 or p < 0.4:
+                    continue
+                edge = p - imp
+                flags = []
+                mf = minutes_flag(L)
+                if mf and "감소" in mf:
+                    flags.append(mf)
+                if name in q_names:
+                    flags.append(f"부상 리포트 {inj_s.get(name, 'DTD/Q')}")
+                if g["abs"] >= 12:
+                    flags.append(f"스프레드 {g['abs']} 블로아웃 위험")
+                if h5 <= 2:
+                    flags.append(f"최근 5경기 {h5}/5")
+                value.append({"id": aid, "n": name, "t": ab, "g": g["m"], "gid": g["id"], "cat": cat, "th": th,
+                              "am": am, "dec": dec, "imp": round(100 * imp), "hit": hit, "N": N, "p": round(100 * p),
+                              "ps": round(100 * ps), "p5": round(100 * p5),
+                              "fair": fair_am(p), "edge": round(100 * edge, 1),
+                              "val": ("good" if not flags else "warn") if edge >= 0.05 else "bad" if edge <= -0.05 else "fair",
+                              "last": last, "h5": h5,
+                              "min": round(sum(l["min"] for l in L) / N, 1), "min3": round(sum(l["min"] for l in L[:3]) / 3, 1),
+                              "flags": flags})
+    value.sort(key=lambda v: -v["edge"])
+    vidx = {(v["id"], v["cat"], v["th"]): v for v in value}
+    for r in stat80:
+        v = vidx.get((id_of.get((r["t"], r["n"])), r["cat"], r["th"]))
+        if v:
+            r.update(am=v["am"], fair=v["fair"], edge=v["edge"], val=v["val"])
+
     # 출전시간 변화: 최근 3경기 vs 시즌 (오늘 경기 선수, 5경기 이상, 시즌 평균 12분 이상)
     minutes = []
     playing = {t for g in games for t in (g["away"], g["home"])}
@@ -287,10 +402,28 @@ def main(date, out):
             prop_review.append({**{k: p.get(k) for k in ("n", "t", "g", "cat", "line", "rate")}, "act": act,
                                 "r": "-" if act is None else ("O" if act > p["line"] else "U")})
 
+    vgrades, vg_from = [], None
+    vf = sorted(f for f in glob.glob(os.path.join(HERE, "archive", "nba_*_value.json")) if os.path.basename(f)[4:12] < date)
+    if vf:
+        vg_from = os.path.basename(vf[-1])[4:12]
+        for p in json.load(open(vf[-1], encoding="utf-8")):
+            box = final_box.get(p["gid"])
+            if box is None:
+                continue
+            r = box.get(p["id"])
+            act = r[p["cat"]] if r else None
+            vgrades.append({**{k: p.get(k) for k in ("n", "t", "g", "cat", "th", "am", "edge")}, "act": act,
+                            "r": "-" if act is None else ("O" if act >= p["th"] else "X")})
+
     json.dump({"date": date, "prev": prev, "games": games, "stat80": stat80, "form": form, "results": results,
+               "value": [v for v in value if v["cat"] not in COMBO][:300],
+               "cvalue": [v for v in value if v["cat"] in COMBO][:200], "vgrades": vgrades, "vgFrom": vg_from,
                "props": props, "minutes": minutes[:40], "propReview": prop_review, "propReviewFrom": pr_from,
 
                "built": datetime.now().strftime("%Y-%m-%d %H:%M")}, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    print(f"combo: stat80={sum(r['cat'] in COMBO for r in stat80)} props={sum(p['cat'] in COMBO for p in props)} "
+          f"value={sum(v['cat'] in COMBO for v in value)} (good={sum(v['cat'] in COMBO and v['val'] == 'good' for v in value)})")
+    print(f"value={len(value)} (good={sum(v['val'] == 'good' for v in value)}) vgrades={len(vgrades)}")
     print(f"games={len(games)} stat80={len(stat80)} props={len(props)} minutes={len(minutes)} propReview={len(prop_review)} "
           f"players={sum(len(v) for v in form.values())} results={len(results)} events={len(all_ev)}")
 
@@ -302,7 +435,12 @@ def snapshot(date, auto):
     out = os.path.join(HERE, "archive", f"nba_{date}_props.json")
     json.dump([{k: p.get(k) for k in ("id", "n", "t", "g", "gid", "cat", "line", "rate")} for p in P],
               open(out, "w", encoding="utf-8"), ensure_ascii=False)
-    print(f"snapshot {len(P)} props → {os.path.relpath(out, HERE)}")
+    A = json.load(open(auto, encoding="utf-8"))
+    V = [v for v in A.get("value", []) + A.get("cvalue", []) if v["val"] == "good"]  # 경고 없는 가성비만 채점
+    out2 = os.path.join(HERE, "archive", f"nba_{date}_value.json")
+    json.dump([{k: v.get(k) for k in ("id", "n", "t", "g", "gid", "cat", "th", "am", "edge")} for v in V],
+              open(out2, "w", encoding="utf-8"), ensure_ascii=False)
+    print(f"snapshot {len(P)} props → {os.path.relpath(out, HERE)}; {len(V)} value → {os.path.relpath(out2, HERE)}")
 
 
 def et(utc):

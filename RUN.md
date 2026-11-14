@@ -10,7 +10,7 @@ PY = Mac 은 `python3`, Windows 는 `python -I`. D = 오늘 날짜 YYYYMMDD(로�
 - 오늘 NBA 경기가 없으면(first-tip -1) 종료.
 
 ## 1. 데이터 (매번 새로 수집)
-- `PY build_data.py D auto.json` → 라인·부상·L5·선수 시즌 로그·80% 스탯(DraftKings 라인·출전시간 경고 포함)·라인 vs 기록·출전시간 변화·어제 결과·어제 라인 vs 실제.
+- `PY build_data.py D auto.json` → 라인·부상·L5·선수 시즌 로그·80% 스탯(DraftKings 라인·출전시간 경고 포함)·라인 vs 기록·💰 가성비(DraftKings 단계별 오버 배당 vs 추정 확률)·🧩 콤보(PRA·PR·PA·RA 판정·가성비·라인)·출전시간 변화·어제 결과·어제 라인 vs 실제·어제 가성비 픽 채점(vgrades).
 - `PY espn_brief.py nba D` (프리뷰: ATS·팀 스탯·부상) / `PY espn_brief.py nba Y review` (어제 박스·쿼터 점수).
 - 어제 경기 AP 리캡: `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=<id>` 의 article.story.
 
@@ -25,7 +25,7 @@ PY = Mac 은 `python3`, Windows 는 `python -I`. D = 오늘 날짜 YYYYMMDD(로�
  "review":{"summary":"","items":[{"t":"","why":"","lesson":""}],"grades":[["픽","결과","O|X|-"]]}}
 - 경기 키는 auto.json games[].m 과 정확히 같게.
 - grades: `archive/Y_analysis.json` 이 있으면 그 picks·lean 을 어제 박스로 채점.
-- 원칙: 수치는 데이터·기사에 있는 것만. 가비지 규칙(스프레드 ≥13 언더·낮은 기준선, 스타 득점 오버 금지 / 8~12.5 중간). B2B·핵심 OUT 으로 인한 매치업 변화를 팀 카드 '공략'에 반영. auto.json minutes(출전시간 변화) 상위 선수는 이유(부상 복귀·선발 변경·트레이드)를 확인해서 ctx 나 lean 에 반영. 시장 라인과 ESPN BPI 가 엇갈리면 사이드 패스.
+- 원칙: 수치는 데이터·기사에 있는 것만. 가비지 규칙(스프레드 ≥13 언더·낮은 기준선, 스타 득점 오버 금지 / 8~12.5 중간). B2B·핵심 OUT 으로 인한 매치업 변화를 팀 카드 '공략'에 반영. 가성비·판정은 build_data.py 가 계산한 그대로 두고 바꾸지 않음. auto.json minutes(출전시간 변화) 상위 선수는 이유(부상 복귀·선발 변경·트레이드)를 확인해서 ctx 나 lean 에 반영. 시장 라인과 ESPN BPI 가 엇갈리면 사이드 패스.
 
 ## 4. 렌더 + 검증
 - `PY render.py auto.json analysis.json nba_MMDD.html` → "분석 없는 경기: 없음" 확인(아니면 보완 후 다시).
@@ -34,7 +34,7 @@ PY = Mac 은 `python3`, Windows 는 `python -I`. D = 오늘 날짜 YYYYMMDD(로�
 
 ## 5. 내보내기 (프롬프트가 지정한 모드만)
 ### 웹 모드
-- `PY build_data.py D --snapshot auto.json` → archive/nba_D_props.json (다음 날 '어제 라인 vs 실제' 리뷰용).
+- `PY build_data.py D --snapshot auto.json` → archive/nba_D_props.json·nba_D_value.json (다음 날 '어제 라인 vs 실제'·'가성비 픽 채점' 리뷰용).
 - `PY publish.py nba D nba_MMDD.html "<N경기 · 핵심 한 줄>"` → docs/ 에 등록. git push 는 하지 않음(run.sh 가 처리).
 - 끝나면 `sent/D.txt` 에 "web" 기록.
 ### 메일 모드 (Gmail send_message)
