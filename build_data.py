@@ -179,17 +179,32 @@ def main(date, out):
     print(f"games={len(games)} stat80={len(stat80)} players={sum(len(v) for v in form.values())} results={len(results)} events={len(all_ev)}")
 
 
-def first_tip(date):
-    """오늘 첫 NBA 팁오프 시각(ET 시, 0~23). 경기 없으면 -1. 주말 11시 실행 여부 판단용."""
+def et(utc):
+    """UTC → 미국 동부(서머타임 반영). zoneinfo 데이터가 없으면(Windows) EST 고정."""
+    try:
+        from zoneinfo import ZoneInfo
+        from datetime import timezone
+        return utc.replace(tzinfo=timezone.utc).astimezone(ZoneInfo("America/New_York")).replace(tzinfo=None)
+    except Exception:
+        return utc - timedelta(hours=5)
+
+
+def tips(date):
+    """오늘 NBA 팁오프 시각들(ET, 자정부터 분), 정렬·중복 제거."""
     ev = get(f"{B}/scoreboard?dates={date}")["events"]
-    if not ev:
-        return -1
-    utc = min(datetime.strptime(e["date"], "%Y-%m-%dT%H:%MZ") for e in ev)
-    return (utc - timedelta(hours=5)).hour  # ponytail: EST 고정(-5). 3월 서머타임(EDT -4) 기간엔 1시간 늦게 나옴, 판단 기준(18시)엔 영향 미미
+    return sorted({(lambda t: t.hour * 60 + t.minute)(et(datetime.strptime(e["date"], "%Y-%m-%dT%H:%MZ"))) for e in ev})
+
+
+def first_tip(date):
+    """오늘 첫 NBA 팁오프 시각(ET 시, 0~23). 경기 없으면 -1."""
+    t = tips(date)
+    return t[0] // 60 if t else -1
 
 
 if __name__ == "__main__":
     if sys.argv[2] == "--first-tip":
         print(first_tip(sys.argv[1]))
+    elif sys.argv[2] == "--tips":
+        print(" ".join(str(t) for t in tips(sys.argv[1])))
     else:
         main(sys.argv[1], sys.argv[2])

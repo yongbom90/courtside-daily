@@ -8,3 +8,4 @@ nfl_auto.json
 /nfl_*.html
 __pycache__/
 sent/
+auto_prev.json
