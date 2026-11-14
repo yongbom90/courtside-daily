@@ -12,9 +12,14 @@ D=$(date +%Y%m%d)
 LOG="logs/${KIND}_${D}_$(date +%H%M).log"
 exec >>"$LOG" 2>&1
 echo "== $(date) $KIND start"
+git pull --rebase -q || echo "git pull 실패 (계속 진행)"
 
 if [ "$KIND" = nba ]; then
   [ -f "sent/$D.txt" ] && { echo "already done"; exit 0; }
+  TIP=$(python3 build_data.py "$D" --first-tip)
+  [ "$TIP" -lt 0 ] && { echo "오늘 NBA 경기 없음"; exit 0; }
+  # 오전 실행은 첫 경기가 18시(ET) 전일 때만 (주말·공휴일 낮 경기). 아니면 오후 3시 실행이 처리.
+  [ "$(date +%H)" -lt 13 ] && [ "$TIP" -ge 18 ] && { echo "첫 경기 ${TIP}시 → 오후 실행에서 처리"; exit 0; }
   PROMPT="RUN.md 를 읽고 절차를 처음부터 끝까지 그대로 수행해. PY 는 python3 야. 내보내기는 '웹 모드'만 하고 메일은 보내지 마. git push 는 하지 마."
 else
   [ -f "sent/nfl_$D.txt" ] && { echo "already done"; exit 0; }

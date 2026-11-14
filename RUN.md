@@ -6,7 +6,7 @@ PY = Mac 은 `python3`, Windows 는 `python -I`. D = 오늘 날짜 YYYYMMDD(로�
 
 ## 0. 실행 여부
 - `sent/D.txt` 가 있으면 이미 처리함 → 종료.
-- 토·일 오전 11시대 실행: `PY build_data.py D --first-tip` 이 -1 이거나 18 이상이면 종료(오후 3시 실행이 처리).
+- 오전 11시대 실행(매일): `PY build_data.py D --first-tip` 이 -1 이거나 18 이상이면 종료(오후 3시 실행이 처리).
 - 오늘 NBA 경기가 없으면(first-tip -1) 종료.
 
 ## 1. 데이터 (매번 새로 수집)
