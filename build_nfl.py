@@ -1,6 +1,7 @@
 """NFL 자동 데이터(nfl_auto.json): 이번 실행 구간 경기·라인·부상·날씨·팀 스탯 + 선수 prop 라인 대비 시즌 기록 + 지난 경기 결과.
 usage: python build_nfl.py YYYYMMDD out.json
-       python build_nfl.py YYYYMMDD --count   (이번 구간 경기 수만 출력. 0이면 실행할 필요 없음)
+       python build_nfl.py YYYYMMDD --count   (오늘 예정 경기 수. 0이면 실행할 필요 없음)
+       python build_nfl.py YYYYMMDD --tips    (오늘 남은 킥오프 시각, 자정부터 분)
 데이터형 위젯: 픽·방향은 만들지 않는다. 숫자는 전부 ESPN(라인은 DraftKings via ESPN)에서 온 값.
 분석 문장(경기 맥락, 팀 카드, 리뷰 원인)은 Claude가 nfl_analysis.json에 따로 쓴다.
 """
@@ -42,12 +43,27 @@ def et(iso):
 
 
 def windows(date):
-    """(이번 슬레이트 날짜들, 결과 리뷰 날짜들). 예약 실행: 목·토·월 15시."""
+    """(이번 슬레이트 날짜들, 결과 리뷰 날짜들). 매일 아침·오후 실행: 슬레이트 = 오늘 경기,
+    리뷰 = 오늘 이전 가장 최근 경기일(최대 7일 전까지, 예: 일→목, 월→일, 목→월)."""
     d = datetime.strptime(date, "%Y%m%d")
-    wd = d.weekday()  # 월0 … 일6
-    ahead, back = {3: (2, 3), 5: (3, 2), 0: (2, 2)}.get(wd, (3, 4))
     f = lambda k: (d + timedelta(days=k)).strftime("%Y%m%d")
-    return [f(k) for k in range(ahead)], [f(-k) for k in range(back, 0, -1)]
+    back = []
+    for k in range(1, 8):
+        if any(e["competitions"][0]["status"]["type"]["state"] == "post"
+               for e in get(f"{B}/scoreboard?dates={f(-k)}")["events"]):
+            back = [f(-k)]
+            break
+    return [date], back
+
+
+def tips(date):
+    """오늘 아직 시작 안 한 NFL 킥오프 시각들(ET, 자정부터 분)."""
+    out = set()
+    for e in get(f"{B}/scoreboard?dates={date}")["events"]:
+        if e["competitions"][0]["status"]["type"]["state"] == "pre":
+            t = et(e["date"])
+            out.add(t.hour * 60 + t.minute)
+    return sorted(out)
 
 
 # prop 종류 → (짧은 코드, 한국어)
@@ -480,7 +496,7 @@ def main(date, out):
          "stat80": stat80, "early": early_by, "grades": grades, "gradeFrom": grade_from,
          "results": results, "propReview": prop_review, "propReviewFrom": os.path.basename(prev_files[-1])[4:12] if prev_files else None,
          "cats": {**{v[0]: v[1] for v in PROP.values()}, "TD": "애니타임 TD"}, "avgAllow": avg_allow,
-         "built": datetime.now().strftime("%Y-%m-%d %H:%M")}
+         "built": datetime.now().strftime("%Y-%m-%d %H:%M"), "phase": os.environ.get("CS_PHASE", "")}
     json.dump(A, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     from collections import Counter
     rc = Counter(r["rec"] for r in stat80)
@@ -490,9 +506,8 @@ def main(date, out):
 
 
 def count(date):
-    days, _ = windows(date)
-    return sum(e["competitions"][0]["status"]["type"]["state"] == "pre"
-               for d in days for e in get(f"{B}/scoreboard?dates={d}")["events"])
+    return len([e for e in get(f"{B}/scoreboard?dates={date}")["events"]
+                if e["competitions"][0]["status"]["type"]["state"] == "pre"])
 
 
 def snapshot(date, auto):
@@ -513,6 +528,8 @@ def snapshot(date, auto):
 if __name__ == "__main__":
     if sys.argv[2] == "--count":
         print(count(sys.argv[1]))
+    elif sys.argv[2] == "--tips":
+        print(" ".join(str(t) for t in tips(sys.argv[1])))
     elif sys.argv[2] == "--snapshot":
         snapshot(sys.argv[1], sys.argv[3])
     else:

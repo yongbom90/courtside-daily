@@ -420,7 +420,7 @@ def main(date, out):
                "cvalue": [v for v in value if v["cat"] in COMBO][:200], "vgrades": vgrades, "vgFrom": vg_from,
                "props": props, "minutes": minutes[:40], "propReview": prop_review, "propReviewFrom": pr_from,
 
-               "built": datetime.now().strftime("%Y-%m-%d %H:%M")}, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+               "built": datetime.now().strftime("%Y-%m-%d %H:%M"), "phase": os.environ.get("CS_PHASE", "")}, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"combo: stat80={sum(r['cat'] in COMBO for r in stat80)} props={sum(p['cat'] in COMBO for p in props)} "
           f"value={sum(v['cat'] in COMBO for v in value)} (good={sum(v['cat'] in COMBO and v['val'] == 'good' for v in value)})")
     print(f"value={len(value)} (good={sum(v['val'] == 'good' for v in value)}) vgrades={len(vgrades)}")

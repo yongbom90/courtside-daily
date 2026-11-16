@@ -85,7 +85,8 @@ const b2b=(g,t)=>{const l=(g.l5[t]||[]).slice(-1)[0];return l&&l.d===dateISO;}; 
 const l5html=a=>`<div class="l5">${(a||[]).map(e=>`<i class="${e.r}" title="${e.d}">${e.r} ${e.sc} ${e.at==='@'?'@':'v'}${e.opp}</i>`).join('')}</div>`;
 
 $('ttl').innerText=`NBA ${D} 데일리 위젯`;
-$('sub').innerText=`${AUTO.games.length}경기 · 라인 DraftKings(ESPN, ${AUTO.built} 수집) · 부상 ESPN 리포트 · 어제(${P}) 리뷰`;
+const PH={am:'🌅 아침 버전',pm:'🔄 오후 업데이트',inj:'🩹 부상 재확인'}[AUTO.phase]||'';
+$('sub').innerText=(PH?PH+' '+AUTO.built.slice(11)+' ET · ':'')+`${AUTO.games.length}경기 · 라인 DraftKings(ESPN, ${AUTO.built} 수집) · 부상 ESPN 리포트 · 어제(${P}) 리뷰`;
 if((AUTO.injchk||[]).length){const C=AUTO.injchg||[];$('slate').insertAdjacentHTML('afterbegin',`<div class="note" style="background:var(--bad-bg);border-color:var(--bad)"><b>🚨 부상·라인 재확인 ${AUTO.injchk.join(', ')} (경기 2시간 전)</b>${C.length?'<ul class="tight">'+C.map(c=>`<li><b>${c.m}</b> [${c.k}] ${c.txt}</li>`).join('')+'</ul>':' · 아침 대비 변동 없음'}</div>`);}
 $('slateNote').innerHTML=`라인과 부상은 ${AUTO.built}(ET) 기준이라 팁오프 전까지 바뀔 수 있어요. 가비지 리스크는 스프레드 크기로 정한 규칙이에요(≥13 높음 · 8~12.5 중간 · &lt;8 낮음). <b>B2B</b>는 어제도 경기한 팀이에요. 확률을 보장하지 않아요.`;
 

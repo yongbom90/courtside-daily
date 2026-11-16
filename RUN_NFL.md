@@ -2,7 +2,7 @@
 
 작업 폴더 = 이 RUN_NFL.md 가 있는 폴더. 모든 명령은 여기서 실행.
 PY = Mac 은 `python3`, Windows 는 `python -I`. D = 오늘 날짜 YYYYMMDD(로컬 ET). MMDD = D 의 월일.
-예약: 목·토·월 15:00. 실행 구간은 build_nfl.py 가 정함(목 → 목·금 경기, 토 → 토~월 경기, 월 → 월·화 경기).
+예약: 경기 있는 날 아침(9시) + 오후 업데이트(16시, 첫 킥오프가 일찍이면 2시간 전 — 일요일은 11시). 언제 돌지는 mac/run.sh 가 정해요. 슬레이트 = 오늘 경기, 리뷰 = 오늘 이전 가장 최근 경기일(build_nfl.py 가 정함).
 분석 문장은 한국어 존댓말("~해요")로.
 
 ## 판정과 픽 (중요)
@@ -11,7 +11,7 @@ PY = Mac 은 `python3`, Windows 는 `python -I`. D = 오늘 날짜 YYYYMMDD(로�
 - 수치는 nfl_auto.json·ESPN·기사에 있는 것만. 확인 못 한 건 "확인 필요", 추측은 "추정"이라고 표시.
 
 ## 0. 실행 여부
-- `sent/nfl_D.txt` 가 있으면 이미 처리함 → 종료.
+- 불렀으면 sent/ 파일과 상관없이 절차를 처음부터 끝까지 수행해요(오후 실행도 데이터·리서치·분석 전부 새로).
 - `PY build_nfl.py D --count` 가 0 이면(이번 구간 예정 경기 없음) 종료.
 
 ## 1. 데이터 (매번 새로 수집)
@@ -44,4 +44,4 @@ PY = Mac 은 `python3`, Windows 는 `python -I`. D = 오늘 날짜 YYYYMMDD(로�
 ### 웹 모드
 - `PY build_nfl.py D --snapshot nfl_auto.json` → archive/nfl_D_props.json·nfl_D_picks.json (다음 실행의 픽 채점·'라인 vs 실제' 리뷰용).
 - `PY publish.py nfl D nfl_MMDD.html "<N경기 · 핵심 한 줄>"` → docs/ 에 등록. git push 는 하지 않음(run.sh 가 처리).
-- 끝나면 `sent/nfl_D.txt` 에 "web" 기록.
+- 끝나면 `sent/nfl_D.txt` 에 "web" 기록(덮어써도 됨).

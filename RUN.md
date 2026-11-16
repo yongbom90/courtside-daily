@@ -5,9 +5,8 @@ PY = Mac 은 `python3`, Windows 는 `python -I`. D = 오늘 날짜 YYYYMMDD(로�
 분석 문장은 한국어 존댓말("~해요")로.
 
 ## 0. 실행 여부
-- `sent/D.txt` 가 있으면 이미 처리함 → 종료.
-- 오전 11시대 실행(매일): `PY build_data.py D --first-tip` 이 -1 이거나 18 이상이면 종료(오후 3시 실행이 처리).
-- 오늘 NBA 경기가 없으면(first-tip -1) 종료.
+- 하루 두 번 전체 실행: 아침(9시) + 오후 업데이트(16시, 첫 경기가 일찍이면 첫 경기 2시간 전). 언제 돌지는 mac/run.sh 가 정해요. 불렀으면 sent/ 파일과 상관없이 아래 절차를 처음부터 끝까지 수행해요(오후 실행도 데이터·리서치·분석 전부 새로).
+- 오늘 NBA 경기가 없으면(`PY build_data.py D --first-tip` 이 -1) 종료.
 
 ## 1. 데이터 (매번 새로 수집)
 - `PY build_data.py D auto.json` → 라인·부상·L5·선수 시즌 로그·80% 스탯(DraftKings 라인·출전시간 경고 포함)·라인 vs 기록·💰 가성비(DraftKings 단계별 오버 배당 vs 추정 확률)·🧩 콤보(PRA·PR·PA·RA 판정·가성비·라인)·출전시간 변화·어제 결과·어제 라인 vs 실제·어제 가성비 픽 채점(vgrades).
@@ -36,7 +35,7 @@ PY = Mac 은 `python3`, Windows 는 `python -I`. D = 오늘 날짜 YYYYMMDD(로�
 ### 웹 모드
 - `PY build_data.py D --snapshot auto.json` → archive/nba_D_props.json·nba_D_value.json (다음 날 '어제 라인 vs 실제'·'가성비 픽 채점' 리뷰용).
 - `PY publish.py nba D nba_MMDD.html "<N경기 · 핵심 한 줄>"` → docs/ 에 등록. git push 는 하지 않음(run.sh 가 처리).
-- 끝나면 `sent/D.txt` 에 "web" 기록.
+- 끝나면 `sent/D.txt` 에 "web" 기록(덮어써도 됨).
 ### 메일 모드 (Gmail send_message)
 - 수신자: `recipients.txt` 의 주소들(이 파일 외 주소로는 보내지 않음).
 - subject: "[NBA] M/D 데일리 위젯"

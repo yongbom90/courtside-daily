@@ -85,7 +85,8 @@ const wxText=g=>g.indoor?'실내(돔)':g.wx&&g.wx.temp!=null?`${g.wx.temp}°F ·
 const f1=v=>v==null?'—':(+v).toFixed(1).replace(/\.0$/,'');
 
 $('ttl').innerText=`NFL ${days} 데일리 위젯`;
-$('sub').innerText=`${AUTO.games.length}경기 · prop 라인 ${AUTO.props.length}개 · 라인 DraftKings(ESPN, ${AUTO.built} 수집) · 부상 ESPN 리포트${AUTO.results.length?' · 지난 경기 '+AUTO.results.length+'개 리뷰':''}`;
+const PH={am:'🌅 아침 버전',pm:'🔄 오후 업데이트',inj:'🩹 부상 재확인'}[AUTO.phase]||'';
+$('sub').innerText=(PH?PH+' '+AUTO.built.slice(11)+' ET · ':'')+`${AUTO.games.length}경기 · prop 라인 ${AUTO.props.length}개 · 라인 DraftKings(ESPN, ${AUTO.built} 수집) · 부상 ESPN 리포트${AUTO.results.length?' · 지난 경기 '+AUTO.results.length+'개 리뷰':''}`;
 $('slateNote').innerHTML=`라인·부상·날씨는 ${AUTO.built}(ET) 기준이라 킥오프 전까지 바뀔 수 있어요. 승률은 ESPN Matchup Predictor예요. 이 위젯은 데이터 정리용이고 결과를 보장하지 않아요.`;
 
 $('slateGrid').innerHTML=AUTO.games.map(g=>{const a=(AN.games||{})[g.m]||{};
