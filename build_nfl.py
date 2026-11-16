@@ -619,6 +619,45 @@ def main(date, out):
             for a in grp.get("items", []):
                 pos[a["id"]] = (ab, a["displayName"], a.get("position", {}).get("abbreviation", ""))
 
+    # 트레이드·이적 선수: 오늘 팀 경기만으로는 기록이 모자라니 이전 팀 경기도 합친다(ESPN 개인 경기 로그)
+    gdate = lambda e: ((sums[e].get("header") or {}).get("competitions") or [{}])[0].get("date", "")
+    cand = set()
+    for g in games:
+        lines0, td0 = prop_res.get(g["id"], ({}, set()))
+        for aid in {a for (a, _) in lines0} | td0 | {a for (a, _) in miles_nfl(g["id"])}:
+            ab = pos.get(aid, (None,))[0]
+            if ab in (g["away"], g["home"]) and len(logs.get((ab, aid), [])) < len(ev_by_team.get(ab, [])) - 1:
+                cand.add((ab, aid))
+    def glog(aid):
+        try:
+            gl = get(f"https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/{aid}/gamelog")
+        except Exception:
+            return []
+        st = next((x for x in gl.get("seasonTypes", []) if "Regular" in x.get("displayName", "")), None)
+        return [e["eventId"] for c in (st or {}).get("categories", []) for e in c.get("events", [])]
+    with ThreadPoolExecutor(8) as ex:
+        gl_by = dict(zip(cand, ex.map(lambda k: glog(k[1]), cand)))
+    need = sorted({e for k, evs in gl_by.items() for e in evs if e not in sums})
+    with ThreadPoolExecutor(8) as ex:
+        sums.update(dict(zip(need, ex.map(summary, need))))
+    traded = {}
+    for (ab, aid), evs in gl_by.items():
+        have = {r["e"] for r in logs.get((ab, aid), [])}
+        add = []
+        for e in set(evs) - have:
+            if e not in sums:
+                continue
+            for tm, rows in box_rows(sums[e]).items():
+                if aid in rows and tm != ab:
+                    add.append({**rows[aid], "e": e, "tm": tm})
+        if add:
+            L = logs.get((ab, aid), []) + add
+            L.sort(key=lambda r: gdate(r["e"]), reverse=True)
+            logs[(ab, aid)] = L
+            traded[aid] = sorted({r["tm"] for r in add})
+    if traded:
+        print(f"  이적 선수 이전 팀 기록 합침: {len(traded)}명", file=sys.stderr)
+
     # 이번 슬레이트 평균(상대 허용 수치 비교용)
     allow = {k: [g["stats"][t].get(k) for g in games for t in g["stats"] if g["stats"][t].get(k)]
              for k in ("passingYardsPerGameAllowed", "rushingYardsPerGameAllowed")}
@@ -802,6 +841,8 @@ def main(date, out):
             if len(L) < 3:
                 continue
             fl = ([f"부상 리포트 {inj[aid]['s']}"] if aid in inj else []) + ([f"표본 적음({len(L)}경기)"] if len(L) < 5 else [])
+            if aid in traded:
+                fl.append(f"이전 팀({'/'.join(traded[aid])}) 경기 {sum(1 for r in L if r.get('tm'))}개 포함")
             cats = [c for c in LAD_POS[ps] if c != "RYD" or ps != "QB" or (aid, "RYD") in lines or sum(r["RYD"] for r in L) / len(L) >= 15]
             for cat in cats:
                 vals = [r[cat] for r in L]
