@@ -52,8 +52,8 @@
 .lhd{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;font-size:14px}.lhd .dk{padding:1px 6px;font-size:11px}
 .lfl{font-size:11px;color:var(--warn);margin-top:2px}
 .lrow{display:flex;gap:4px;margin-top:5px;overflow-x:auto;padding-bottom:2px}
-.lt{flex:0 0 auto;min-width:50px;display:flex;flex-direction:column;align-items:center;gap:0;padding:3px 4px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--text);cursor:pointer;font:inherit;line-height:1.15}
-.lt .lth{font-size:11px;color:var(--muted);font-weight:700}.lt .ltp{font-size:15px;font-weight:800}.lt .lto{font-size:11px}.lt .lth2{font-size:10.5px;color:var(--muted);white-space:nowrap}.lt .ltv{font-size:11px;min-height:13px}
+.lt{flex:0 0 auto;min-width:58px;display:flex;flex-direction:column;align-items:center;gap:0;padding:3px 4px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--text);cursor:pointer;font:inherit;line-height:1.15}
+.lt .lth{font-size:11px;color:var(--muted);font-weight:700}.lt .ltp{font-size:15px;font-weight:800}.lt .lto{font-size:12px;line-height:1.1}.lt .lto small{font-size:10px;color:var(--muted)}.lt .ltl{font-size:9.5px;color:var(--muted);margin-top:2px}.lt .lth2{font-size:10.5px;color:var(--muted);white-space:nowrap}.lt .ltv{font-size:11px;min-height:13px}
 .lt.good .ltp{color:var(--good)}.lt.bad .ltp{color:var(--bad)}.lt.warn .ltp{color:var(--warn)}.lt.dim{opacity:.45}
 .lt.best{border-color:var(--good);background:#16a34a14}.lt.on{outline:2px solid var(--primary)}
 .bar.mini2{height:5px;margin-top:3px;min-width:70px}
@@ -249,12 +249,12 @@ function ladCard(d){const R=d.r.map(lv),best=R.filter(r=>r.val==='good'||r.val==
  <div class="lrow">${R.map(r=>{const key=`${d.n} ${r.th}+ ${CATN[d.cat]}`,has=r.am!=null,c=r.val==='good'?'good':r.val==='bad'?'bad':r.val==='warn'?'warn':'';
   const tip=`${r.th}+ · 시즌 ${r.hit}/${d.N} · 최근5 ${r.h5}/5 · 추정 ${r.p}%${has?` · 배당확률 ${r.imp}% · ${VALN[r.val]||(r.val==='low'?'확률 낮음':'배당 무거움')} ${r.edge>0?'+':''}${r.edge}%p`:' · DK 배당 없음'} · 적정 ${fmtO(r.fair)}`;
   return `<button class="lt ${c} ${best&&r===best?'best':''} ${r.val==='low'||r.val==='heavy'?'dim':''}" title="${tip}" data-k="${key}" data-o="${has?r.am:''}" onclick="toggle(this)">
-   <span class="lth">${r.th}+</span><span class="ltp">${r.p}%</span><span class="lth2">${r.hit}/${d.N}·${r.h5}/5</span><span class="lto">${has?fmtO(r.am):'—'}</span><span class="ltv">${best&&r===best?'👉':VI[r.val]||''}</span></button>`}).join('')}</div></div>`;}
+   <span class="lth">${r.th}+</span><span class="ltl">추정</span><span class="ltp">${r.p}%</span><span class="lth2">시즌 ${r.hit}/${d.N}<br>최근5 ${r.h5}/5</span><span class="ltl">배당</span><span class="lto">${has?`<b>${fmtO(r.am)}</b><br><small>(${r.imp}%)</small>`:'없음'}</span><span class="ltv">${best&&r===best?'👉':VI[r.val]||''}</span></button>`}).join('')}</div></div>`;}
 function drawV(){const lad=vw==='lad';$('vhead').style.display=lad?'none':'';$('vlad').style.display=lad?'':'none';$('vlist').style.display=lad?'none':'';
  if(lad){const ok=d=>vv==='all'||d.r.some(r=>vv==='good+'?(r[10]==='good'||r[10]==='warn'):r[10]===vv);
   const best=d=>Math.max(...d.r.filter(r=>r[9]!=null&&r[3]>=40&&r[2]<=95).map(r=>r[9]),-99);
   const L=LAD.filter(d=>(vc==='all'||d.cat===vc)&&(vg==='all'||d.g===vg)&&(!vq||d.n.toLowerCase().includes(vq))&&ok(d)).sort((a,b)=>best(b)-best(a));
-  $('vlad').innerHTML=L.length?`<div class="small muted" style="margin:4px 0 8px">${L.length}개 (선수·스탯) · 기준선 간격은 FanDuel 대체 라인처럼 고정(득점 10·15·20…, 리바 4·6·8…, 어시 2·4·6…, 3점 1·2·3…, PRA 15·20·25…). 줄마다 그 기준선 이상 기록할 추정 확률(시즌·최근5 반반)이고, 같은 단계에 DraftKings 배당이 있으면 배당 확률·가성비도 붙여요. 👉 = 가성비가 가장 좋은 단계.<br>칸 = <b>기준선 / 추정 확률 / 시즌·최근5 적중 / DK 배당 / 판정</b> (💰좋음 🟡경고 ⚖️적정 💸비쌈, 흐린 칸 = 확률 40% 미만). 칸을 누르면 슬립에 담겨요. 마우스를 올리면 배당 확률·적정 배당이 보여요.</div><div class="lgrid">`+L.slice(0,vn).map(ladCard).join('')+'</div>'+(L.length>vn?`<button class="btn" style="width:100%;margin:6px 0" onclick="vn+=60;drawV()">더 보기 (${L.length-vn}개 남음)</button>`:''):'<div class="muted">해당 조건의 선수가 없어요.</div>';}
+  $('vlad').innerHTML=L.length?`<div class="small muted" style="margin:4px 0 8px">${L.length}개 (선수·스탯) · 기준선 간격은 FanDuel 대체 라인처럼 고정(득점 10·15·20…, 리바 4·6·8…, 어시 2·4·6…, 3점 1·2·3…, PRA 15·20·25…). 줄마다 그 기준선 이상 기록할 추정 확률(시즌·최근5 반반)이고, 같은 단계에 DraftKings 배당이 있으면 배당 확률·가성비도 붙여요. 👉 = 가성비가 가장 좋은 단계.<br>칸 = <b>기준선 · 추정 확률(시즌·최근5 반반) · 시즌/최근5 적중 · DK 배당(배당이 뜻하는 확률) · 판정</b>. 추정 확률이 배당 확률보다 5%p 이상 높으면 가성비 좋음 (💰좋음 🟡경고 ⚖️적정 💸비쌈, 흐린 칸 = 확률 40% 미만). 칸을 누르면 슬립에 담겨요. 마우스를 올리면 배당 확률·적정 배당이 보여요.</div><div class="lgrid">`+L.slice(0,vn).map(ladCard).join('')+'</div>'+(L.length>vn?`<button class="btn" style="width:100%;margin:6px 0" onclick="vn+=60;drawV()">더 보기 (${L.length-vn}개 남음)</button>`:''):'<div class="muted">해당 조건의 선수가 없어요.</div>';}
  else{const L=valFilter(VL.filter(v=>(vc==='all'||v.cat===vc)&&(vg==='all'||v.g===vg)),vv).sort((a,b)=>b.edge-a.edge);
   $('vlist').innerHTML=L.length?L.slice(0,80).map(valRow).join(''):'<div class="muted">해당 조건의 라인이 없어요.</div>';}
  sync();}
