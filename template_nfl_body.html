@@ -92,7 +92,7 @@ body{padding-bottom:40px}
   <div id="s80list"></div>
 </section>
 <section class="panel" id="lad">
-  <div class="note"><b>선수별 묶어보기:</b> 선수마다 카드 하나, 스탯마다 한 줄. 기준선 간격은 FanDuel 대체 라인처럼 고정(패스 야드 150·175·200…, 러시·리시빙 야드 25·40·50·60·75·100, 리셉션 2~8, 타깃 3~10, 캐리 10~20, 패스 시도 25~40, TD 1+·2+).<br>칸 = <b>기준선 · 추정 확률(시즌·최근5 반반, 보정) · 시즌/최근5 적중</b>. <b style="color:var(--good)">추정 75% 이상 단계만</b> 보여줘요(그 아래는 숨김). 같은 포지션 순위끼리(QB↔QB, RB 1번째↔RB 1번째…) 원정 왼쪽·홈 오른쪽에 나란히 놓았어요.<br><b>적정 배당</b> = 추정 확률을 배당으로 바꾼 값 → 스포츠북 배당이 이보다 좋으면(예: 적정 -300인데 -250) 가성비예요. <b style="color:var(--primary)">DK ✓</b> = DraftKings가 그 단계를 열어 둔 것(ESPN에 NFL 배당이 없어 배당 비교는 직접 해야 해요).<br><b>판정(⭐80~100% 탭과 같은 규칙, 단계마다):</b> <b style="color:var(--good)">강력추천</b> = 시즌 90%↑ + 최근5 5/5 + 최근 평균이 기준선보다 25%↑ + 경고 없음 · <b style="color:var(--good)">추천</b> = 시즌 80%↑ + 최근5 4/5↑ + 경고 없음 · <b style="color:#d97706">주의</b> = 80%↑지만 경고 있음(최근 폼 하락, 부상, 백업 QB·QB 교체, 큰 점수차, 돌풍). 5경기 미만이면 판정 없음. ★ 최적 = 추천 이상 중 가장 높은 단계. 결과를 보장하지 않아요.<br><b>쿼터별 평균</b> = ESPN 플레이 기록으로 센 쿼터별 평균(연장 OT 따로). NFL은 표본이 적어요(보통 8~10경기) — 카드 오른쪽 위 경기 수를 같이 보세요.</div>
+  <div class="note"><b>선수별 묶어보기:</b> 선수마다 카드 하나, 스탯마다 한 줄. 기준선 간격은 FanDuel 대체 라인처럼 고정(패스 야드 150·175·200…, 러시·리시빙 야드 25·40·50·60·75·100, 리셉션 2~8, 타깃 3~10, 캐리 10~20, 패스 시도 25~40, TD 1+·2+).<br>칸 = <b>기준선 · 추정 확률(시즌·최근5 반반, 보정) · 시즌/최근5 적중</b>. <b style="color:var(--good)">추정 70% 이상 단계만</b> 보여줘요(그 아래는 숨김). 같은 포지션 순위끼리(QB↔QB, RB 1번째↔RB 1번째…) 원정 왼쪽·홈 오른쪽에 나란히 놓았어요.<br><b>적정 배당</b> = 추정 확률을 배당으로 바꾼 값 → 스포츠북 배당이 이보다 좋으면(예: 적정 -300인데 -250) 가성비예요. <b style="color:var(--primary)">DK ✓</b> = DraftKings가 그 단계를 열어 둔 것(ESPN에 NFL 배당이 없어 배당 비교는 직접 해야 해요).<br><b>판정(⭐80~100% 탭과 같은 규칙, 단계마다):</b> <b style="color:var(--good)">강력추천</b> = 시즌 90%↑ + 최근5 5/5 + 최근 평균이 기준선보다 25%↑ + 경고 없음 · <b style="color:var(--good)">추천</b> = 시즌 80%↑ + 최근5 4/5↑ + 경고 없음 · <b style="color:#d97706">주의</b> = 80%↑지만 경고 있음(최근 폼 하락, 부상, 백업 QB·QB 교체, 큰 점수차, 돌풍). 5경기 미만이면 판정 없음. ★ 최적 = 추천 이상 중 가장 높은 단계. 결과를 보장하지 않아요.<br><b>쿼터별 평균</b> = ESPN 플레이 기록으로 센 쿼터별 평균(연장 OT 따로). NFL은 표본이 적어요(보통 8~10경기) — 카드 오른쪽 위 경기 수를 같이 보세요.</div>
   <div class="filters"><select class="sel" id="lgame"></select><select class="sel" id="lrecf"><option value="all">모든 단계</option><option value="rec">추천 이상 있는 선수만</option><option value="top">강력추천 있는 선수만</option></select><select class="sel" id="lpos"><option value="all">모든 포지션</option><option value="QB">QB</option><option value="RB">RB</option><option value="WR">WR</option><option value="TE">TE</option></select><select class="sel" id="lplayer" style="max-width:240px"></select><input class="sel" id="lsearch" type="search" placeholder="🔍 선수 이름" style="min-width:160px"></div>
   <div id="lwrap"></div>
 </section>
@@ -338,7 +338,7 @@ function lcard(G){const d=G[0];return `<div class="lcard"><div class="lhd"><b st
  $('lgame').innerHTML='<option value="all">모든 경기</option>'+[...new Set(LADN.map(d=>d.g))].map(g=>`<option>${g}</option>`).join('');
  $('lplayer').innerHTML=`<option value="all">👤 모든 선수 (${new Set(LADN.map(d=>d.id)).size}명)</option>`+Object.keys(pl).map(g=>`<optgroup label="${g}">${Object.entries(pl[g]).sort((a,b)=>a[1].localeCompare(b[1])).map(([id,n])=>`<option value="${id}">${n}</option>`).join('')}</optgroup>`).join('');}
 function drawL(){LZ={};const F=LADN.filter(d=>(lg==='all'||d.g===lg)&&(lp==='all'||d.pos===lp)&&(lpl==='all'||d.id===lpl)&&(!lq||d.n.toLowerCase().includes(lq)));
- const by={};F.map(d=>({...d,r:d.r.filter(r=>r[1]>=75)})).filter(d=>d.r.length).forEach(d=>(by[d.id]=by[d.id]||[]).push(d));
+ const by={};F.map(d=>({...d,r:d.r.filter(r=>r[1]>=70)})).filter(d=>d.r.length).forEach(d=>(by[d.id]=by[d.id]||[]).push(d));
  const okR=G=>lrf==='all'||G.some(d=>d.r.some(r=>lrf==='top'?r[6]==='top':(r[6]==='top'||r[6]==='rec')));
  const P=Object.values(by).filter(okR).map(G=>G.sort((a,b)=>LORD.indexOf(a.cat)-LORD.indexOf(b.cat)));
  const PO={QB:0,RB:1,WR:2,TE:3},imp=G=>{const q=QTN[G[0].id];return q?q[q.main].reduce((a,b)=>a+b,0):0;};
@@ -347,7 +347,7 @@ function drawL(){LZ={};const F=LADN.filter(d=>(lg==='all'||d.g===lg)&&(lp==='all
    const r={};Object.entries(o).forEach(([ps,X])=>X.forEach((G,i)=>r[ps+(i+1)]=G));return r;};
   const A=slots(aw),H=slots(hm),K=[...new Set([...Object.keys(A),...Object.keys(H)])].sort((x,y)=>(+x.slice(2))-(+y.slice(2))||PO[x.slice(0,2)]-PO[y.slice(0,2)]);
   const th=t=>`<div class="thd">${t} <span class="ha ${t===hm?'h':'a'}">${t===hm?'🏠 홈':'✈️ 원정'}</span></div>`;
-  const cell=G=>G?lcard(G):'<div class="lempty">75% 이상 단계 없음</div>';
+  const cell=G=>G?lcard(G):'<div class="lempty">70% 이상 단계 없음</div>';
   const body=()=>`<div class="pair throw">${th(aw)}${th(hm)}</div>`+K.map(k=>`<div class="slab">${k.slice(0,2)} ${k.slice(2)}번째 · 원정 vs 홈</div><div class="pair">${cell(A[k])}${cell(H[k])}</div>`).join('');
   LZ[m]=body;
   return `<div class="lsec"><b>${aw}</b> <span class="muted small">원정</span> @ <b>${hm}</b> <span class="muted small">홈</span></div><div class="gcols lz" data-m="${m}" style="min-height:900px"></div>`;}).join(''):'<div class="muted">해당 조건의 선수가 없어요.</div>';lzObs();}
