@@ -46,7 +46,7 @@ def box_rows(s):
             if mins <= 0:
                 continue
             tpm = (d.get("threePointFieldGoalsMade-threePointFieldGoalsAttempted") or "0-0").split("-")[0]
-            rows.append({"n": a["athlete"]["displayName"], "id": a["athlete"]["id"], "min": mins,
+            rows.append({"n": a["athlete"]["displayName"], "id": a["athlete"]["id"], "min": mins, "st": bool(a.get("starter")),
                          "PTS": int(d.get("points") or 0), "REB": int(d.get("rebounds") or 0),
                          "AST": int(d.get("assists") or 0), "3PM": int(tpm or 0)})
             r = rows[-1]
@@ -376,6 +376,7 @@ def main(date, out):
                 base.append(f"스프레드 {g['abs']} 블로아웃 위험")
             lad = {"id": aid, "n": name, "t": ab, "g": g["m"], "cat": cat, "N": N, "last": vals[:5],
                    "min": round(sum(l["min"] for l in L) / N, 1), "min3": round(sum(l["min"] for l in L[:3]) / 3, 1),
+                   "st": sum(l.get("st", False) for l in L), "st5": sum(l.get("st", False) for l in L[:5]),
                    "avg": round(sum(vals) / N, 1), "a5": round(sum(vals[:5]) / len(vals[:5]), 1), "mx": max(vals), "mn": min(vals),
                    "fl": base, "r": []}
             dk = {}
