@@ -96,6 +96,34 @@ LAD_POS = {"QB": ["PYD", "PTD", "ATT", "RYD"], "RB": ["RYD", "CAR", "RRY", "REC"
 QKEYS = ("PYD", "PTD", "ATT", "RYD", "CAR", "REC", "REYD", "TGT", "TD")
 
 
+def ctx_flags(g, ab, aid, ps, cat, th, a5, inj, qb_out, qb_chg, fav):
+    """판정 경고(부상·백업 QB·QB 교체·큰 점수차·돌풍). 80~100% 판정과 선수별 묶어보기가 같이 씀."""
+    f = []
+    if aid in inj:
+        f.append(f"부상 리포트 {inj[aid]['s']}")
+    if qb_out.get(ab) and ps != "QB" and cat in ("REC", "REYD", "TGT"):
+        f.append(f"백업 QB 가능성(결장: {', '.join(qb_out[ab])})")
+    if qb_out.get(ab) and ps == "QB":
+        f.append("QB 결장자 있음 → 선발 확인 필요")
+    if qb_chg.get(ab) and (ps == "QB" or cat in ("REC", "REYD", "TGT")):
+        f.append(f"선발 QB 교체({qb_chg[ab]})")
+    if g["abs"] >= 10 and a5 < th * 1.25:
+        if ab == fav and cat in ("PYD", "CMP", "PTD", "REC", "REYD"):
+            f.append(f"스프레드 {g['abs']} 큰 우세 → 후반 패스 감소 위험")
+        elif ab != fav and cat in ("RYD", "CAR"):
+            f.append(f"스프레드 {g['abs']} 열세 → 끌려가면 러시 감소 위험")
+    wx = g["wx"] or {}
+    if cat in ("PYD", "CMP", "PTD", "REC", "REYD") and (wx.get("gust") or 0) >= 15:
+        f.append(f"돌풍 {wx['gust']}mph 예보")
+    return f
+
+
+def fair_am(p):
+    """확률 → 적정 미국식 배당."""
+    p = min(max(p, 0.01), 0.99)
+    return -round(100 * p / (1 - p)) if p >= 0.5 else round(100 * (1 - p) / p)
+
+
 def s80(L, cat, ctx):
     """시즌 로그(최신순)에서 80%+ 적중하는 가장 높은 기준선 + 판정(top/rec/caution). 판정 규칙은 NBA 위젯과 같음."""
     vals, N = [r[cat] for r in L], len(L)
@@ -607,6 +635,7 @@ def main(date, out):
                     last_qb[ab] = (aid, r["n"])
 
     props, tds, stat80 = [], [], []
+    gctx = {}
     for g in games:
         lines, td_ids = prop_res.get(g["id"], ({}, set()))
         inj = {i["id"]: i for v in g["inj"].values() for i in v}
@@ -621,6 +650,7 @@ def main(date, out):
 
         # 80~100% 기준선: 이 경기에 DraftKings prop 이 하나라도 열린 선수만(실제 출전 예상 선수)
         fav = (g["sp"] or "").split(" ")[0] if g["sp"] and g["sp"] != "EVEN" else None
+        gctx[g["id"]] = (inj, qb_out, qb_chg, fav)
         active = {aid for (aid, _) in lines} | td_ids
         for aid in active:
             ab, name, ps = pos.get(aid, (None, None, ""))
@@ -631,24 +661,7 @@ def main(date, out):
             L = logs.get((ab, aid), [])
 
             def ctx(cat, th, a5, ab=ab, aid=aid, ps=ps):
-                f = []
-                if aid in inj:
-                    f.append(f"부상 리포트 {inj[aid]['s']}")
-                if qb_out.get(ab) and ps != "QB" and cat in ("REC", "REYD"):
-                    f.append(f"백업 QB 가능성(결장: {', '.join(qb_out[ab])})")
-                if qb_out.get(ab) and ps == "QB":
-                    f.append("QB 결장자 있음 → 선발 확인 필요")
-                if qb_chg.get(ab) and (ps == "QB" or cat in ("REC", "REYD")):
-                    f.append(f"선발 QB 교체({qb_chg[ab]})")
-                if g["abs"] >= 10 and a5 < th * 1.25:
-                    if ab == fav and cat in ("PYD", "CMP", "PTD", "REC", "REYD"):
-                        f.append(f"스프레드 {g['abs']} 큰 우세 → 후반 패스 감소 위험")
-                    elif ab != fav and cat in ("RYD", "CAR"):
-                        f.append(f"스프레드 {g['abs']} 열세 → 끌려가면 러시 감소 위험")
-                wx = g["wx"] or {}
-                if cat in ("PYD", "CMP", "PTD", "REC", "REYD") and (wx.get("gust") or 0) >= 15:
-                    f.append(f"돌풍 {wx['gust']}mph 예보")
-                return f
+                return ctx_flags(g, ab, aid, ps, cat, th, a5, inj, qb_out, qb_chg, fav)
             for cat in POS_CATS[ps]:
                 r = s80(L, cat, ctx)
                 if r:
@@ -803,7 +816,13 @@ def main(date, out):
                     if p > 0.97 or (hit == 0 and zero):
                         continue
                     zero = zero or hit == 0
-                    rows.append([th, round(100 * p), hit, h5, th in miles.get((aid, cat), set())])
+                    rec, rf = None, []
+                    if N >= 5 and hit / N >= 0.8:
+                        a5v = sum(last) / len(last)
+                        rf = (["최근 폼 하락"] if a5v < (sum(vals) / N) * 0.9 else []) + ([f"최근 5경기 {h5}/5"] if h5 < 4 else [])
+                        rf += ctx_flags(g, ab, aid, ps, cat, th, a5v, *gctx.get(g["id"], ({}, {}, {}, None)))
+                        rec = "top" if hit / N >= 0.9 and h5 == 5 and a5v >= th * 1.25 and not rf else "rec" if h5 >= 4 and not rf else "caution"
+                    rows.append([th, round(100 * p), hit, h5, th in miles.get((aid, cat), set()), fair_am(p), rec, rf])
                 if not rows:
                     continue
                 dk = lines.get((aid, cat))
