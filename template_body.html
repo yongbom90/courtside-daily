@@ -60,10 +60,11 @@
 .lcard{content-visibility:auto;contain-intrinsic-size:auto 700px;border:1px solid var(--line);border-radius:10px;padding:7px 9px}
 .lhd{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;font-size:14px}.lhd .dk{padding:1px 6px;font-size:11px}
 .lfl{font-size:11px;color:var(--warn);margin-top:2px}
-.gcols{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}.tcol{display:flex;flex-direction:column;gap:8px;min-width:0}.ha{font-size:12px;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:4px;vertical-align:middle}.ha.h{background:var(--primary);color:#fff}.ha.a{background:#64748b33;color:var(--text)}.thd{font-size:16px;font-weight:800;padding:2px 4px;border-bottom:2px solid var(--primary)}.tsub{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}
-@media(min-width:1000px){.gcols{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tcol{display:flex;flex-direction:column;gap:8px;min-width:0}.ha{font-size:12px;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:4px;vertical-align:middle}.ha.h{background:var(--primary);color:#fff}.ha.a{background:#64748b33;color:var(--text)}.thd{font-size:16px;font-weight:800;padding:2px 4px;border-bottom:2px solid var(--primary)}.tsub{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}
+.gcols{display:flex;flex-direction:column;gap:8px}.pair{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;align-items:stretch}.pair>*{min-width:0}.slab{font-size:12px;font-weight:800;color:var(--muted);margin:6px 0 -2px;letter-spacing:.3px}.lempty{align-self:start;border:1px dashed var(--line);border-radius:10px;padding:10px;color:var(--muted);font-size:12px;display:flex;align-items:center;justify-content:center}.throw .thd{margin:0}
+@media(min-width:1000px){.pair{grid-template-columns:repeat(2,minmax(0,1fr))}.pair .lempty{min-height:60px}}
 .lsec{margin:14px 0 6px;padding:6px 10px;border-left:4px solid var(--primary);background:var(--pri-bg,#64748b14);border-radius:6px;font-size:15px}
-@media(min-width:1000px){.lgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.lgrid .pstats,.tcol .pstats{flex-basis:100%}.lgrid .qwrap,.tcol .qwrap{max-width:480px;flex-basis:100%;border-left:none;padding-left:0;border-top:1px dashed var(--line);padding-top:4px}}
+@media(min-width:1000px){.lgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.lgrid .pstats,.pair .pstats{flex-basis:100%}.lgrid .qwrap,.pair .qwrap{max-width:480px;flex-basis:100%;border-left:none;padding-left:0;border-top:1px dashed var(--line);padding-top:4px}}
 .lbody{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;margin-top:5px}.lrow{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;flex:0 1 auto;max-width:100%}
 .qbar{margin-top:4px}.qcols{display:grid;gap:4px;margin-top:3px}.qcols div{position:relative;height:46px;border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;overflow:hidden}
 .qcols i{position:absolute;left:0;right:0;bottom:0;background:var(--pri-bg,#64748b22)}.qcols b{position:relative;font-size:14px;line-height:1}.qcols em{position:relative;font-style:normal;font-size:10px;color:var(--muted)}
@@ -300,9 +301,13 @@ function sec(P,title,sub){if(!P.length||(vrole==='st'&&!isSt(P[0]))||(vrole==='b
  return `<div class="lsec"><b>${title}</b> <span class="muted small">${P.length}명 · ${sub}</span></div><div class="lgrid">`+P.slice(0,vn).map(playerCard).join('')+'</div>'+(P.length>vn?`<button class="btn" style="width:100%;margin:6px 0" onclick="vn+=40;drawV()">더 보기 (${P.length-vn}명 남음)</button>`:'');}
 function gameCols(P){LZ={};const mins=G=>G[0].min||0,R=P.filter(G=>vrole==='all'||(vrole==='st')===isSt(G));
  return AUTO.games.map(g=>g.m).filter(m=>R.some(G=>G[0].g===m)).map(m=>{const [aw,hm]=m.split(' @ ');
-  const col=t=>{const X=R.filter(G=>G[0].g===m&&G[0].t===t),S=X.filter(isSt).sort((a,b)=>mins(b)-mins(a)),B=X.filter(G=>!isSt(G)).sort((a,b)=>mins(b)-mins(a));
-   return `<div class="tcol"><div class="thd">${t}<span class="ha ${t===hm?'h':'a'}">${t===hm?'🏠 홈':'✈️ 원정'}</span> <span class="muted small">${X.length}명</span></div>${S.length?`<div class="tsub">🏀 선발 · 출전시간 순</div>`+S.map(playerCard).join(''):''}${B.length?`<div class="tsub">🔁 벤치 (식스맨)</div>`+B.map(playerCard).join(''):''}</div>`;};
-  LZ[m]=()=>col(aw)+col(hm);
+  const slots=t=>{const X=R.filter(G=>G[0].g===m&&G[0].t===t),S=X.filter(isSt).sort((a,b)=>mins(b)-mins(a)),B=X.filter(G=>!isSt(G)).sort((a,b)=>mins(b)-mins(a));
+   const r={};S.forEach((G,i)=>r['S'+(i+1)]=G);B.forEach((G,i)=>r['B'+(i+1)]=G);return r;};
+  const A=slots(aw),H=slots(hm),K=[...new Set([...Object.keys(A),...Object.keys(H)])].sort((x,y)=>(x[0]===y[0]?0:x[0]==='S'?-1:1)||(+x.slice(1))-(+y.slice(1)));
+  const th=t=>`<div class="thd">${t} <span class="ha ${t===hm?'h':'a'}">${t===hm?'🏠 홈':'✈️ 원정'}</span></div>`;
+  const cell=G=>G?playerCard(G):'<div class="lempty">해당 선수 없음</div>';
+  const body=()=>`<div class="pair throw">${th(aw)}${th(hm)}</div>`+K.map(k=>`<div class="slab">${k[0]==='S'?'🏀 선발':'🔁 벤치'} ${k.slice(1)}번째 (출전시간 순) · 원정 vs 홈</div><div class="pair">${cell(A[k])}${cell(H[k])}</div>`).join('');
+  LZ[m]=body;
   return `<div class="lsec"><b>${aw}</b> <span class="muted small">원정</span> @ <b>${hm}</b> <span class="muted small">홈</span></div><div class="gcols lz" data-m="${m}" style="min-height:900px"></div>`;}).join('');}
 /* 화면에 가까워진 경기만 그려서 가볍게 */
 let LZ={},LZO=null;
