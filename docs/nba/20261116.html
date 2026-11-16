@@ -260,7 +260,7 @@ const S80=AUTO.stat80.filter(r=>r.th>1||r.cat!=='3PM');
 const CATN={PTS:"\ub4dd\uc810",REB:"\ub9ac\ubc14\uc6b4\ub4dc",AST:"\uc5b4\uc2dc\uc2a4\ud2b8","3PM":"3\uc810\uc29b",PRA:"\ub4dd+\ub9ac+\uc5b4(PRA)",PR:"\ub4dd+\ub9ac(PR)",PA:"\ub4dd+\uc5b4(PA)",RA:"\ub9ac+\uc5b4(RA)"},
  VALN={good:"\ud83d\udcb0 \uac00\uc131\ube44 \uc88b\uc74c",warn:"\ud83d\udfe1 \uac00\uc131\ube44(\uacbd\uace0)",fair:"\u2696\ufe0f \uc801\uc815",bad:"\ud83d\udcb8 \ube44\uc308"},CMB=['PRA','PR','PA','RA'],SING=['PTS','REB','AST','3PM'],RECN={top:"\u2b50 \uac15\ub825\ucd94\ucc9c",rec:"\u2705 \ucd94\ucc9c",caution:"\u26a0\ufe0f \uc8fc\uc758"};
 let s80c="PTS",s80r="all";
-$('s80cat').innerHTML=SING.map(c=>`<button class="fbtn ${c===s80c?'on':''}" data-c="${c}">${CATN[c]} (${S80.filter(r=>r.cat===c).length})</button>`).join('');
+$('s80cat').innerHTML=SING.concat(CMB).map(c=>`<button class="fbtn ${c===s80c?'on':''}" data-c="${c}">${CATN[c]} (${S80.filter(r=>r.cat===c).length})</button>`).join('');
 $('s80rec').innerHTML=[["all","\uc804\uccb4"],["top","\u2b50 \uac15\ub825\ucd94\ucc9c\ub9cc"],["rec","\u2705 \ucd94\ucc9c \uc774\uc0c1"],["caution","\u26a0\ufe0f \uc8fc\uc758"]].map(([k,l])=>`<button class="fbtn ${k===s80r?'on':''}" data-r="${k}">${l}</button>`).join('');
 document.querySelectorAll('#s80cat .fbtn').forEach(b=>b.onclick=()=>{s80c=b.dataset.c;document.querySelectorAll('#s80cat .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawS80();});
 document.querySelectorAll('#s80rec .fbtn').forEach(b=>b.onclick=()=>{s80r=b.dataset.r;document.querySelectorAll('#s80rec .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawS80();});
