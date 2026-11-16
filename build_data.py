@@ -55,6 +55,27 @@ def box_rows(s):
     return out
 
 
+
+def qstats(s):
+    """경기 플레이 기록 → {선수id: {"PTS":[1Q..4Q], "REB":[...], "AST":[...]}} (연장은 4Q에 합산)."""
+    out = {}
+    def add(aid, k, q, v):
+        out.setdefault(aid, {"PTS": [0, 0, 0, 0], "REB": [0, 0, 0, 0], "AST": [0, 0, 0, 0]})[k][min(q, 4) - 1] += v
+    for p in s.get("plays", []):
+        q = (p.get("period") or {}).get("number") or 0
+        parts = [x["athlete"]["id"] for x in p.get("participants", []) if x.get("athlete", {}).get("id")]
+        if not q or not parts:
+            continue
+        txt = p.get("text", "")
+        if p.get("scoringPlay"):
+            add(parts[0], "PTS", q, int(p.get("scoreValue") or 0))
+            if len(parts) > 1 and "assist" in txt.lower():
+                add(parts[1], "AST", q, 1)
+        elif "rebound" in ((p.get("type") or {}).get("text", "") + " " + txt).lower() and "team" not in txt.lower():
+            add(parts[0], "REB", q, 1)
+    return out
+
+
 THR = {"PTS": [10, 12, 15, 18, 20, 22, 25, 28, 30, 35], "REB": [4, 5, 6, 8, 10, 12, 14],
        "AST": [3, 4, 5, 6, 8, 10], "3PM": [1, 2, 3, 4],
        # 콤보
@@ -247,6 +268,20 @@ def main(date, out):
             for row in box_rows(sums[e]).get(ab, []):
                 logs.setdefault((ab, row["n"]), []).append(row)
 
+    # 쿼터별 평균(플레이 기록): 출전한 경기만
+    qs_by_ev = {e: qstats(sums[e]) for e in all_ev}
+    qtr = {}
+    for (ab, name), L in logs.items():
+        aid = L[0]["id"]
+        evs = [e for _, e in sorted(ev_by_team[ab], reverse=True) if any(r["id"] == aid for r in box_rows(sums[e]).get(ab, []))]
+        Q = [qs_by_ev[e].get(aid) for e in evs]
+        Q = [x for x in Q if x]
+        if len(Q) < 3:
+            continue
+        avg = {k: [round(sum(x[k][i] for x in Q) / len(Q), 1) for i in range(4)] for k in ("PTS", "REB", "AST")}
+        q1z = sum(x["PTS"][0] == 0 for x in Q)
+        qtr[aid] = {"G": len(Q), **avg, "q1z": q1z, "l5": [x["PTS"] for x in Q[:5]]}
+
     out_names = {i["n"] for g in games for v in g["inj"].values() for i in v if i["s"] in ("Out", "Doubtful")}
     q_names = {i["n"] for g in games for v in g["inj"].values() for i in v if i["s"] not in ("Out", "Doubtful")}
     stat80, form = [], {}
@@ -340,6 +375,7 @@ def main(date, out):
                 base.append(f"스프레드 {g['abs']} 블로아웃 위험")
             lad = {"id": aid, "n": name, "t": ab, "g": g["m"], "cat": cat, "N": N, "last": vals[:5],
                    "min": round(sum(l["min"] for l in L) / N, 1), "min3": round(sum(l["min"] for l in L[:3]) / 3, 1),
+                   "avg": round(sum(vals) / N, 1), "a5": round(sum(vals[:5]) / len(vals[:5]), 1), "mx": max(vals), "mn": min(vals),
                    "fl": base, "r": []}
             dk = {}
             for th, dec, am in sorted(set(arr)):
@@ -444,7 +480,7 @@ def main(date, out):
 
     json.dump({"date": date, "prev": prev, "games": games, "stat80": stat80, "form": form, "results": results,
                "value": [v for v in value if v["cat"] not in COMBO][:300],
-               "cvalue": [v for v in value if v["cat"] in COMBO][:200], "ladders": ladders, "vgrades": vgrades, "vgFrom": vg_from,
+               "cvalue": [v for v in value if v["cat"] in COMBO][:200], "ladders": ladders, "qtr": {d["id"]: qtr[d["id"]] for d in ladders if d["id"] in qtr}, "vgrades": vgrades, "vgFrom": vg_from,
                "props": props, "minutes": minutes[:40], "propReview": prop_review, "propReviewFrom": pr_from,
 
                "built": datetime.now().strftime("%Y-%m-%d %H:%M"), "phase": os.environ.get("CS_PHASE", "")}, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
