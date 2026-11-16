@@ -9,7 +9,7 @@ PY = Mac 은 `python3`, Windows 는 `python -I`. D = 오늘 날짜 YYYYMMDD(로�
 - 오늘 NBA 경기가 없으면(`PY build_data.py D --first-tip` 이 -1) 종료.
 
 ## 1. 데이터 (매번 새로 수집)
-- `PY build_data.py D auto.json` → 라인·부상·L5·선수 시즌 로그·80% 스탯(DraftKings 라인·출전시간 경고 포함)·라인 vs 기록·💰 가성비(DraftKings 단계별 오버 배당 vs 추정 확률)·🧩 콤보(PRA·PR·PA·RA 판정·가성비·라인)·출전시간 변화·어제 결과·어제 라인 vs 실제·어제 가성비 픽 채점(vgrades).
+- `PY build_data.py D auto.json` → 라인·부상·L5·선수 시즌 로그·80% 스탯(DraftKings 라인·출전시간 경고 포함)·라인 vs 기록·💰 가성비(DraftKings 단계별 오버 배당 vs 추정 확률, 콤보 포함 · 🪜 선수별 고정 간격 사다리 ladders)·🧩 콤보(PRA·PR·PA·RA 판정·가성비·라인)·출전시간 변화·어제 결과·어제 라인 vs 실제·어제 가성비 픽 채점(vgrades).
 - `PY espn_brief.py nba D` (프리뷰: ATS·팀 스탯·부상) / `PY espn_brief.py nba Y review` (어제 박스·쿼터 점수).
 - 어제 경기 AP 리캡: `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=<id>` 의 article.story.
 

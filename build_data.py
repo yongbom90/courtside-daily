@@ -103,6 +103,12 @@ def s80(name, team, game, logs, spread):
     return res
 
 
+# 🪜 선수별 기준선 사다리 간격(FanDuel 대체 라인처럼 고정 간격). 같은 기준선에 DraftKings 배당이 있으면 배당·가성비도 붙임.
+LADDER = {"PTS": [10, 15, 20, 25, 30, 35, 40, 45, 50], "REB": [4, 6, 8, 10, 12, 14, 16], "AST": [2, 4, 6, 8, 10, 12, 14],
+          "3PM": [1, 2, 3, 4, 5, 6], "PRA": [15, 20, 25, 30, 35, 40, 45, 50, 55], "PR": [10, 15, 20, 25, 30, 35, 40, 45],
+          "PA": [10, 15, 20, 25, 30, 35, 40, 45], "RA": [5, 8, 10, 12, 15, 18, 20]}
+
+
 def minutes_flag(logs):
     """최근 3경기 평균 출전시간이 시즌보다 15% 이상 줄거나 늘면 문구."""
     if len(logs) < 5:
@@ -310,7 +316,7 @@ def main(date, out):
                           "flags": flags})
 
     # 💰 가성비: DraftKings 마일스톤(오버) 배당의 내재 확률 vs 시즌 적중률(표본 보정)
-    value = []
+    value, ladders = [], []
     for g in games:
         for (aid, cat), arr in miles_by_game.get(g["id"], {}).items():
             if aid not in key_of:
@@ -323,6 +329,19 @@ def main(date, out):
             if N < 5:
                 continue
             vals = [l[cat] for l in L]
+            # 기준선과 상관없는 경고(출전시간·부상·블로아웃)
+            base = []
+            mf = minutes_flag(L)
+            if mf and "감소" in mf:
+                base.append(mf)
+            if name in q_names:
+                base.append(f"부상 리포트 {inj_s.get(name, 'DTD/Q')}")
+            if g["abs"] >= 12:
+                base.append(f"스프레드 {g['abs']} 블로아웃 위험")
+            lad = {"id": aid, "n": name, "t": ab, "g": g["m"], "cat": cat, "N": N, "last": vals[:5],
+                   "min": round(sum(l["min"] for l in L) / N, 1), "min3": round(sum(l["min"] for l in L[:3]) / 3, 1),
+                   "fl": base, "r": []}
+            dk = {}
             for th, dec, am in sorted(set(arr)):
                 hit = sum(v >= th for v in vals)
                 last = vals[:5]
@@ -331,27 +350,33 @@ def main(date, out):
                 ps, p5 = (hit + 1) / (N + 2), (h5 + 1) / (len(last) + 2)
                 p = (ps + p5) / 2
                 imp = 1 / dec
+                edge = p - imp
+                flags = base + ([f"최근 5경기 {h5}/5"] if h5 <= 2 else [])
+                val = ("good" if not flags else "warn") if edge >= 0.05 else "bad" if edge <= -0.05 else "fair"
+                dk[th] = (am, round(100 * imp), round(100 * edge, 1), "low" if p < 0.4 else "heavy" if imp > 0.95 else val)
                 if imp > 0.95 or p < 0.4:
                     continue
-                edge = p - imp
-                flags = []
-                mf = minutes_flag(L)
-                if mf and "감소" in mf:
-                    flags.append(mf)
-                if name in q_names:
-                    flags.append(f"부상 리포트 {inj_s.get(name, 'DTD/Q')}")
-                if g["abs"] >= 12:
-                    flags.append(f"스프레드 {g['abs']} 블로아웃 위험")
-                if h5 <= 2:
-                    flags.append(f"최근 5경기 {h5}/5")
                 value.append({"id": aid, "n": name, "t": ab, "g": g["m"], "gid": g["id"], "cat": cat, "th": th,
                               "am": am, "dec": dec, "imp": round(100 * imp), "hit": hit, "N": N, "p": round(100 * p),
                               "ps": round(100 * ps), "p5": round(100 * p5),
                               "fair": fair_am(p), "edge": round(100 * edge, 1),
-                              "val": ("good" if not flags else "warn") if edge >= 0.05 else "bad" if edge <= -0.05 else "fair",
+                              "val": val,
                               "last": last, "h5": h5,
-                              "min": round(sum(l["min"] for l in L) / N, 1), "min3": round(sum(l["min"] for l in L[:3]) / 3, 1),
+                              "min": lad["min"], "min3": lad["min3"],
                               "flags": flags})
+            # 🪜 고정 간격 사다리: 각 단계 추정 확률(시즌·최근5 반반) + 같은 단계 DK 배당이 있으면 붙임
+            last = vals[:5]
+            for th in LADDER.get(cat, []):
+                hit, h5 = sum(v >= th for v in vals), sum(v >= th for v in last)
+                ps, p5 = (hit + 1) / (N + 2), (h5 + 1) / (len(last) + 2)
+                p = (ps + p5) / 2
+                if p < 0.04 or p > 0.97:
+                    continue
+                am, imp, edge, val = dk.get(float(th), dk.get(th, (None, None, None, None)))
+                lad["r"].append([th, am, imp, round(100 * p), round(100 * ps), round(100 * p5), hit, h5, fair_am(p), edge, val])
+            lad["dkx"] = sorted(t for t in dk if t not in LADDER.get(cat, []))  # 간격 밖 DK 단계(목록 보기에 있음)
+            if lad["r"]:
+                ladders.append(lad)
     value.sort(key=lambda v: -v["edge"])
     vidx = {(v["id"], v["cat"], v["th"]): v for v in value}
     for r in stat80:
@@ -417,7 +442,7 @@ def main(date, out):
 
     json.dump({"date": date, "prev": prev, "games": games, "stat80": stat80, "form": form, "results": results,
                "value": [v for v in value if v["cat"] not in COMBO][:300],
-               "cvalue": [v for v in value if v["cat"] in COMBO][:200], "vgrades": vgrades, "vgFrom": vg_from,
+               "cvalue": [v for v in value if v["cat"] in COMBO][:200], "ladders": ladders, "vgrades": vgrades, "vgFrom": vg_from,
                "props": props, "minutes": minutes[:40], "propReview": prop_review, "propReviewFrom": pr_from,
 
                "built": datetime.now().strftime("%Y-%m-%d %H:%M"), "phase": os.environ.get("CS_PHASE", "")}, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
