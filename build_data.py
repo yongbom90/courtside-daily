@@ -57,10 +57,10 @@ def box_rows(s):
 
 
 def qstats(s):
-    """경기 플레이 기록 → {선수id: {"PTS":[1Q..4Q], "REB":[...], "AST":[...]}} (연장은 4Q에 합산)."""
+    """경기 플레이 기록 → {선수id: {"PTS":[1Q,2Q,3Q,4Q,OT], "REB":[...], "AST":[...]}} (연장은 OT 칸에 합산)."""
     out = {}
     def add(aid, k, q, v):
-        out.setdefault(aid, {"PTS": [0, 0, 0, 0], "REB": [0, 0, 0, 0], "AST": [0, 0, 0, 0]})[k][min(q, 4) - 1] += v
+        out.setdefault(aid, {"PTS": [0] * 5, "REB": [0] * 5, "AST": [0] * 5})[k][min(q, 5) - 1] += v
     for p in s.get("plays", []):
         q = (p.get("period") or {}).get("number") or 0
         parts = [x["athlete"]["id"] for x in p.get("participants", []) if x.get("athlete", {}).get("id")]
@@ -278,7 +278,8 @@ def main(date, out):
         Q = [x for x in Q if x]
         if len(Q) < 3:
             continue
-        avg = {k: [round(sum(x[k][i] for x in Q) / len(Q), 1) for i in range(4)] for k in ("PTS", "REB", "AST")}
+        avg = {k: [round(sum(x[k][i] for x in Q) / len(Q), 2 if i == 4 else 1) for i in range(5)] for k in ("PTS", "REB", "AST")}
+        avg["otG"] = sum(any(x[k][4] for k in ("PTS", "REB", "AST")) for x in Q)
         q1z = sum(x["PTS"][0] == 0 for x in Q)
         qtr[aid] = {"G": len(Q), **avg, "q1z": q1z, "l5": [x["PTS"] for x in Q[:5]]}
 

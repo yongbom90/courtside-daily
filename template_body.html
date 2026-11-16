@@ -52,13 +52,18 @@
 .lhd{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;font-size:14px}.lhd .dk{padding:1px 6px;font-size:11px}
 .lfl{font-size:11px;color:var(--warn);margin-top:2px}
 .lbody{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;margin-top:5px}.lrow{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;flex:0 1 auto;max-width:100%}
-.qbar{margin-top:4px}.qcols{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:3px}.qcols div{position:relative;height:46px;border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;overflow:hidden}
+.qbar{margin-top:4px}.qcols{display:grid;gap:4px;margin-top:3px}.qcols div{position:relative;height:46px;border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;overflow:hidden}
 .qcols i{position:absolute;left:0;right:0;bottom:0;background:var(--pri-bg,#64748b22)}.qcols b{position:relative;font-size:14px;line-height:1}.qcols em{position:relative;font-style:normal;font-size:10px;color:var(--muted)}
 .qtag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:6px;font-size:11px;font-weight:700}.qtag.slow{background:#ea580c22;color:var(--warn)}.qtag.fast{background:#2563eb22;color:var(--primary)}.qtag.late{background:#dc262622;color:var(--bad)}
 .lside{flex:1 1 190px;min-width:190px;font-size:12px;line-height:1.55;border-left:2px solid var(--line);padding-left:9px}.lside .good{color:var(--good)}.lside .bad{color:var(--bad)}
 .lt{flex:0 0 auto;min-width:58px;display:flex;flex-direction:column;align-items:center;gap:0;padding:3px 4px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--text);cursor:pointer;font:inherit;line-height:1.15}
-.lt .lth{display:block;align-self:stretch;margin:-3px -4px 2px;padding:3px 0;border-radius:7px 7px 0 0;background:var(--pri-bg,#64748b18);color:var(--text);font-size:15px;font-weight:800;font-family:"Barlow Condensed",sans-serif;letter-spacing:.2px}.lt.best .lth{background:#16a34a33}.lt .ltp{font-size:15px;font-weight:800}.lt .lto{font-size:12px;line-height:1.1}.lt .lto small{font-size:10px;color:var(--muted)}.lt .ltl{font-size:9.5px;color:var(--muted);margin-top:2px}.lt .lth2{font-size:10.5px;color:var(--muted);white-space:nowrap}.lt .ltv{font-size:11px;min-height:13px}
-.lt.good .ltp{color:var(--good)}.lt.bad .ltp{color:var(--bad)}.lt.warn .ltp{color:var(--warn)}.lt.dim{opacity:.45}
+.lt .lth{display:block;align-self:stretch;margin:-3px -4px 2px;padding:3px 0;border-radius:7px 7px 0 0;background:var(--pri-bg,#64748b18);color:var(--text);font-size:15px;font-weight:800;font-family:"Barlow Condensed",sans-serif;letter-spacing:.2px}.lt.best .lth{background:#16a34a33}.lt .ltp{font-size:15px;font-weight:800}.lt .lto{font-size:12px;line-height:1.1}.lt .lto small{font-size:10px;color:var(--muted)}.lt .ltl{font-size:9.5px;color:var(--muted);margin-top:2px}.lt .lth2{font-size:10.5px;color:var(--muted);white-space:nowrap}
+.lt.good .ltp{color:var(--good)}.lt.bad .ltp{color:var(--bad)}.lt.warn .ltp{color:var(--warn)}
+.lt .ltv{display:block;align-self:stretch;margin:3px -4px -3px;padding:2px 0;border-radius:0 0 7px 7px;font-size:11.5px;font-weight:800;min-height:0}
+.ltv.good{background:var(--good);color:#fff}.ltv.warn{background:#f59e0b;color:#111}.ltv.fair{background:#64748b33;color:var(--text)}.ltv.bad{background:var(--bad);color:#fff}
+.ltv.low,.ltv.heavy,.ltv.none{background:transparent;color:var(--muted);border-top:1px dashed var(--line);font-weight:600}
+.lt.v-good{border-color:var(--good);border-width:2px}.lt.v-bad{border-color:var(--bad)}.lt.v-warn{border-color:#f59e0b}
+.lt.best .ltv{background:var(--good);color:#fff}
 .lt.best{border-color:var(--good);background:#16a34a14}.lt.on{outline:2px solid var(--primary)}
 .bar.mini2{height:5px;margin-top:3px;min-width:70px}
 </style>
@@ -245,16 +250,16 @@ document.querySelectorAll('#vcat .fbtn').forEach(b=>b.onclick=()=>{vc=b.dataset.
 document.querySelectorAll('#vval .fbtn').forEach(b=>b.onclick=()=>{vv=b.dataset.v;document.querySelectorAll('#vval .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawV();});
 $('vgame').onchange=e=>{vg=e.target.value;vn=60;drawV();};
 $('vsearch').oninput=e=>{vq=e.target.value.trim().toLowerCase();vn=60;drawV();};
-const VI={good:'💰',warn:'🟡',fair:'⚖️',bad:'💸',low:'',heavy:''};
+const VI={good:'좋음',warn:'경고',fair:'적정',bad:'비쌈',low:'확률↓',heavy:'무거움'};
 const PIDX={};(AUTO.props||[]).forEach(p=>PIDX[p.id+'|'+p.cat]=p);
 const SIDX={};AUTO.stat80.forEach(r=>{const k=r.n+'|'+r.cat,o=SIDX[k],rank={top:0,rec:1,caution:2};if(!o||rank[r.rec]<rank[o.rec]||(r.rec===o.rec&&r.th>o.th))SIDX[k]=r;});
 const QT=AUTO.qtr||{},QPART={PTS:['PTS'],REB:['REB'],AST:['AST'],PRA:['PTS','REB','AST'],PR:['PTS','REB'],PA:['PTS','AST'],RA:['REB','AST']};
 function qbox(d){const q=QT[d.id],ks=QPART[d.cat];if(!q||!ks)return '';
- const v=[0,1,2,3].map(i=>+ks.reduce((a,k)=>a+q[k][i],0).toFixed(1)),t=v.reduce((a,b)=>a+b,0)||1,mx=Math.max(...v)||1,sh=v.map(x=>x/t);
+ const n=(q.PTS||[]).length>4&&q.otG?5:4,v=[...Array(n).keys()].map(i=>+ks.reduce((a,k)=>a+(q[k][i]||0),0).toFixed(i===4?2:1)),t=v.reduce((a,b)=>a+b,0)||1,mx=Math.max(...v)||1,sh=v.map(x=>x/t);
  const tag=t<4?'':sh[0]<=0.18?'<span class="qtag slow">🐢 슬로우 스타터</span>':sh[0]>=0.32?'<span class="qtag fast">⚡ 빠른 스타터</span>':'';
  const tag4=t>=4&&sh[3]>=0.32?'<span class="qtag late">🔥 4쿼터 강세</span>':'';
- return `<div class="qbar"><span class="muted">쿼터별 평균</span>${tag}${tag4}<div class="qcols">${v.map((x,i)=>`<div><i style="height:${Math.round(100*x/mx)}%"></i><b>${x}</b><em>${i+1}Q · ${Math.round(100*sh[i])}%</em></div>`).join('')}</div>
-  <div class="small muted">${q.G}경기${ks.includes('PTS')?` · 1Q 무득점 ${q.q1z}경기`:''}${d.cat==='PTS'?` · 최근: ${q.l5.slice(0,3).map(r=>r.join('-')).join(' / ')}`:''}</div></div>`;}
+ return `<div class="qbar"><span class="muted">쿼터별 평균</span>${tag}${tag4}<div class="qcols" style="grid-template-columns:repeat(${n},1fr)">${v.map((x,i)=>`<div><i style="height:${Math.round(100*x/mx)}%"></i><b>${x}</b><em>${i<4?(i+1)+'Q':'OT'} · ${Math.round(100*sh[i])}%</em></div>`).join('')}</div>
+  <div class="small muted">${q.G}경기${n===5?` (연장 ${q.otG}경기)`:''}${ks.includes('PTS')?` · 1Q 무득점 ${q.q1z}경기`:''}${d.cat==='PTS'?` · 최근: ${q.l5.slice(0,3).map(r=>r.slice(0,4).join('-')+(r[4]?'+OT'+r[4]:'')).join(' / ')}`:''}</div></div>`;}
 function lside(d,best){const p=PIDX[d.id+'|'+d.cat],s8=SIDX[d.n+'|'+d.cat],up=d.a5-d.avg,mu=d.min3-d.min;
  return `<div class="lside">
   ${d.avg!=null?`<div><span class="muted">평균</span> <b>${d.avg}</b> → 최근5 <b class="${up>=0?'good':'bad'}">${d.a5} ${up>=0?'▲':'▼'}</b><span class="muted"> · 최고 ${d.mx} 최저 ${d.mn}</span></div>`:''}
@@ -268,13 +273,13 @@ function ladCard(d){const R=d.r.map(lv),best=R.filter(r=>r.val==='good'||r.val==
  ${d.fl.length?`<div class="lfl">⚠️ ${d.fl.join(' · ')}</div>`:''}
  <div class="lbody"><div class="lrow">${R.map(r=>{const key=`${d.n} ${r.th}+ ${CATN[d.cat]}`,has=r.am!=null,c=r.val==='good'?'good':r.val==='bad'?'bad':r.val==='warn'?'warn':'';
   const tip=`${r.th}+ · 시즌 ${r.hit}/${d.N} · 최근5 ${r.h5}/5 · 추정 ${r.p}%${has?` · 배당확률 ${r.imp}% · ${VALN[r.val]||(r.val==='low'?'확률 낮음':'배당 무거움')} ${r.edge>0?'+':''}${r.edge}%p`:' · DK 배당 없음'} · 적정 ${fmtO(r.fair)}`;
-  return `<button class="lt ${c} ${best&&r===best?'best':''} ${r.val==='low'||r.val==='heavy'?'dim':''}" title="${tip}" data-k="${key}" data-o="${has?r.am:''}" onclick="toggle(this)">
-   <span class="lth">${r.th}+</span><span class="ltl">추정</span><span class="ltp">${r.p}%</span><span class="lth2">시즌 ${r.hit}/${d.N}<br>최근5 ${r.h5}/5</span><span class="ltl">배당</span><span class="lto">${has?`<b>${fmtO(r.am)}</b><br><small>(${r.imp}%)</small>`:'없음'}</span><span class="ltv">${best&&r===best?'👉':VI[r.val]||''}</span></button>`}).join('')}</div>${lside(d,best)}</div></div>`;}
+  return `<button class="lt ${c} ${best&&r===best?'best':''} v-${r.val||'none'}" title="${tip}" data-k="${key}" data-o="${has?r.am:''}" onclick="toggle(this)">
+   <span class="lth">${r.th}+</span><span class="ltl">추정</span><span class="ltp">${r.p}%</span><span class="lth2">시즌 ${r.hit}/${d.N}<br>최근5 ${r.h5}/5</span><span class="ltl">배당</span><span class="lto">${has?`<b>${fmtO(r.am)}</b><br><small>(${r.imp}%)</small>`:'—'}</span><span class="ltv ${r.val||'none'}">${best&&r===best?'★ 최적':VI[r.val]||'배당 없음'}</span></button>`}).join('')}</div>${lside(d,best)}</div></div>`;}
 function drawV(){const lad=vw==='lad';$('vhead').style.display=lad?'none':'';$('vlad').style.display=lad?'':'none';$('vlist').style.display=lad?'none':'';
  if(lad){const ok=d=>vv==='all'||d.r.some(r=>vv==='good+'?(r[10]==='good'||r[10]==='warn'):r[10]===vv);
   const best=d=>Math.max(...d.r.filter(r=>r[9]!=null&&r[3]>=40&&r[2]<=95).map(r=>r[9]),-99);
   const L=LAD.filter(d=>(vc==='all'||d.cat===vc)&&(vg==='all'||d.g===vg)&&(!vq||d.n.toLowerCase().includes(vq))&&ok(d)).sort((a,b)=>best(b)-best(a));
-  $('vlad').innerHTML=L.length?`<div class="small muted" style="margin:4px 0 8px">${L.length}개 (선수·스탯) · 기준선 간격은 FanDuel 대체 라인처럼 고정(득점 10·15·20…, 리바 4·6·8…, 어시 2·4·6…, 3점 1·2·3…, PRA 15·20·25…). 줄마다 그 기준선 이상 기록할 추정 확률(시즌·최근5 반반)이고, 같은 단계에 DraftKings 배당이 있으면 배당 확률·가성비도 붙여요. 👉 = 가성비가 가장 좋은 단계.<br>칸 = <b>기준선 · 추정 확률(시즌·최근5 반반) · 시즌/최근5 적중 · DK 배당(배당이 뜻하는 확률) · 판정</b>. 추정 확률이 배당 확률보다 5%p 이상 높으면 가성비 좋음 (💰좋음 🟡경고 ⚖️적정 💸비쌈, 흐린 칸 = 확률 40% 미만). 칸을 누르면 슬립에 담겨요. 마우스를 올리면 배당 확률·적정 배당이 보여요.</div><div class="lgrid">`+L.slice(0,vn).map(ladCard).join('')+'</div>'+(L.length>vn?`<button class="btn" style="width:100%;margin:6px 0" onclick="vn+=60;drawV()">더 보기 (${L.length-vn}개 남음)</button>`:''):'<div class="muted">해당 조건의 선수가 없어요.</div>';}
+  $('vlad').innerHTML=L.length?`<div class="small muted" style="margin:4px 0 8px">${L.length}개 (선수·스탯) · 기준선 간격은 FanDuel 대체 라인처럼 고정(득점 10·15·20…, 리바 4·6·8…, 어시 2·4·6…, 3점 1·2·3…, PRA 15·20·25…). 줄마다 그 기준선 이상 기록할 추정 확률(시즌·최근5 반반)이고, 같은 단계에 DraftKings 배당이 있으면 배당 확률·가성비도 붙여요. 👉 = 가성비가 가장 좋은 단계.<br>칸 = <b>기준선 · 추정 확률(시즌·최근5 반반) · 시즌/최근5 적중 · DK 배당(배당이 뜻하는 확률) · 판정</b>. 추정 확률이 배당 확률보다 5%p 이상 높으면 가성비 좋음 (아래 띠: <b style="color:var(--good)">좋음</b> · <b style="color:#d97706">경고</b> · 적정 · <b style="color:var(--bad)">비쌈</b> · 확률↓ = 추정 40% 미만, ★ 최적 = 가장 좋은 단계). 칸을 누르면 슬립에 담겨요. 마우스를 올리면 배당 확률·적정 배당이 보여요.</div><div class="lgrid">`+L.slice(0,vn).map(ladCard).join('')+'</div>'+(L.length>vn?`<button class="btn" style="width:100%;margin:6px 0" onclick="vn+=60;drawV()">더 보기 (${L.length-vn}개 남음)</button>`:''):'<div class="muted">해당 조건의 선수가 없어요.</div>';}
  else{const L=valFilter(VL.filter(v=>(vc==='all'||v.cat===vc)&&(vg==='all'||v.g===vg)),vv).sort((a,b)=>b.edge-a.edge);
   $('vlist').innerHTML=L.length?L.slice(0,80).map(valRow).join(''):'<div class="muted">해당 조건의 라인이 없어요.</div>';}
  sync();}
