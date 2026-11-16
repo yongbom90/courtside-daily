@@ -10,7 +10,8 @@
 .vb.good{background:#16a34a22;color:var(--good)}.vb.warn{background:#eab30826;color:var(--warn)}.vb.fair{background:#64748b22;color:var(--muted)}.vb.bad{background:#dc262622;color:var(--bad)}
 .dk{display:block;font-family:"Noto Sans KR";font-size:11px;font-weight:400;color:var(--muted)}
 @media(max-width:760px){.prow{grid-template-columns:1fr 80px}.phead{display:none}.prow .c-rate,.prow .c-form,.prow .c-avg,.prow .c-btn{grid-column:1/-1}}
-</style>
+
+@media(max-width:600px){.qwrap{overflow-x:auto}.qc{min-width:0!important;padding:1px 3px!important}.qc small{display:block;margin:0!important}.qt{font-size:10.5px}}</style>
 <body>
 <div class="wrap">
 <nav class="topnav"><a href="../index.html#nba">← 홈</a><a href="../index.html#nfl">🏈 NFL로</a></nav>
@@ -59,8 +60,10 @@
 .lcard{border:1px solid var(--line);border-radius:10px;padding:7px 9px}
 .lhd{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;font-size:14px}.lhd .dk{padding:1px 6px;font-size:11px}
 .lfl{font-size:11px;color:var(--warn);margin-top:2px}
+.gcols{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}.tcol{display:flex;flex-direction:column;gap:8px;min-width:0}.ha{font-size:12px;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:4px;vertical-align:middle}.ha.h{background:var(--primary);color:#fff}.ha.a{background:#64748b33;color:var(--text)}.thd{font-size:16px;font-weight:800;padding:2px 4px;border-bottom:2px solid var(--primary)}.tsub{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}
+@media(min-width:1000px){.gcols{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .lsec{margin:14px 0 6px;padding:6px 10px;border-left:4px solid var(--primary);background:var(--pri-bg,#64748b14);border-radius:6px;font-size:15px}
-@media(min-width:1000px){.lgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.lgrid .pstats{flex-basis:100%}.lgrid .qwrap{max-width:480px;flex-basis:100%;border-left:none;padding-left:0;border-top:1px dashed var(--line);padding-top:4px}}
+@media(min-width:1000px){.lgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.lgrid .pstats,.tcol .pstats{flex-basis:100%}.lgrid .qwrap,.tcol .qwrap{max-width:480px;flex-basis:100%;border-left:none;padding-left:0;border-top:1px dashed var(--line);padding-top:4px}}
 .lbody{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;margin-top:5px}.lrow{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;flex:0 1 auto;max-width:100%}
 .qbar{margin-top:4px}.qcols{display:grid;gap:4px;margin-top:3px}.qcols div{position:relative;height:46px;border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;overflow:hidden}
 .qcols i{position:absolute;left:0;right:0;bottom:0;background:var(--pri-bg,#64748b22)}.qcols b{position:relative;font-size:14px;line-height:1}.qcols em{position:relative;font-style:normal;font-size:10px;color:var(--muted)}
@@ -295,13 +298,18 @@ function playerCard(G){const d0=G[0],mu=d0.min3-d0.min,fl=[...new Set(G.flatMap(
 const isSt=G=>(G[0].st5??0)>=3;let vrole='all';
 function sec(P,title,sub){if(!P.length||(vrole==='st'&&!isSt(P[0]))||(vrole==='bn'&&isSt(P[0])))return '';
  return `<div class="lsec"><b>${title}</b> <span class="muted small">${P.length}명 · ${sub}</span></div><div class="lgrid">`+P.slice(0,vn).map(playerCard).join('')+'</div>'+(P.length>vn?`<button class="btn" style="width:100%;margin:6px 0" onclick="vn+=40;drawV()">더 보기 (${P.length-vn}명 남음)</button>`:'');}
+function gameCols(P){const mins=G=>G[0].min||0,R=P.filter(G=>vrole==='all'||(vrole==='st')===isSt(G));
+ return AUTO.games.map(g=>g.m).filter(m=>R.some(G=>G[0].g===m)).map(m=>{const [aw,hm]=m.split(' @ ');
+  const col=t=>{const X=R.filter(G=>G[0].g===m&&G[0].t===t),S=X.filter(isSt).sort((a,b)=>mins(b)-mins(a)),B=X.filter(G=>!isSt(G)).sort((a,b)=>mins(b)-mins(a));
+   return `<div class="tcol"><div class="thd">${t}<span class="ha ${t===hm?'h':'a'}">${t===hm?'🏠 홈':'✈️ 원정'}</span> <span class="muted small">${X.length}명</span></div>${S.length?`<div class="tsub">🏀 선발 · 출전시간 순</div>`+S.map(playerCard).join(''):''}${B.length?`<div class="tsub">🔁 벤치 (식스맨)</div>`+B.map(playerCard).join(''):''}</div>`;};
+  return `<div class="lsec"><b>${aw}</b> <span class="muted small">원정</span> @ <b>${hm}</b> <span class="muted small">홈</span></div><div class="gcols">${col(aw)}${col(hm)}</div>`;}).join('');}
 function drawV(){const lad=vw==='lad';$('vhead').style.display=lad?'none':'';$('vlad').style.display=lad?'':'none';$('vlist').style.display=lad?'none':'';
  if(lad){const ok=d=>vv==='all'||d.r.some(r=>vv==='good+'?(r[10]==='good'||r[10]==='warn'):r[10]===vv);
   const best=d=>Math.max(...d.r.filter(r=>r[9]!=null&&r[3]>=40&&r[2]<=95).map(r=>r[9]),-99);
   const F=LAD.filter(d=>(vc==='all'||d.cat===vc)&&(vg==='all'||d.g===vg)&&(!vq||d.n.toLowerCase().includes(vq))&&(vp==='all'||d.id===vp)&&(vp!=='all'||ok(d)));
   const by={};F.forEach(d=>(by[d.id]=by[d.id]||[]).push(d));
   const P=Object.values(by).map(G=>G.sort((a,b)=>VCATS.indexOf(a.cat)-VCATS.indexOf(b.cat))).sort((a,b)=>Math.max(...b.map(best))-Math.max(...a.map(best)));
-  $('vlad').innerHTML=P.length?`<div class="small muted" style="margin:4px 0 8px">선수 ${P.length}명 · 선수마다 카드 하나에 스탯별(득점·리바·어시·3점·PRA·PR·PA·RA) 한 줄씩. 기준선 간격은 FanDuel 대체 라인처럼 고정(득점 10·15·20…, 리바 4·6·8…, 어시 2·4·6…, 3점 1·2·3…, PRA 15·20·25…).<br>칸 = <b>기준선 · 추정 확률(시즌·최근5 반반) · 시즌/최근5 적중 · DK 배당(배당이 뜻하는 확률) · 판정</b>. 추정이 배당 확률보다 5%p 이상 높으면 <b style="color:var(--good)">좋음</b> (<b style="color:#d97706">경고</b> = 좋지만 경고 있음 · 적정 · <b style="color:var(--bad)">비쌈</b> · 확률↓ = 추정 40% 미만 · ★ 최적 = 그 스탯에서 가장 좋은 단계). 칸을 누르면 슬립에 담겨요.</div>`+sec(P.filter(isSt),'🏀 선발 (에이스)','최근 5경기 중 3경기 이상 선발')+sec(P.filter(G=>!isSt(G)),'🔁 벤치 (식스맨)','최근 5경기 중 선발 2경기 이하'):'<div class="muted">해당 조건의 선수가 없어요.</div>';}
+  $('vlad').innerHTML=P.length?`<div class="small muted" style="margin:4px 0 8px">선수 ${P.length}명 · 선수마다 카드 하나에 스탯별(득점·리바·어시·3점·PRA·PR·PA·RA) 한 줄씩. 기준선 간격은 FanDuel 대체 라인처럼 고정(득점 10·15·20…, 리바 4·6·8…, 어시 2·4·6…, 3점 1·2·3…, PRA 15·20·25…).<br>칸 = <b>기준선 · 추정 확률(시즌·최근5 반반) · 시즌/최근5 적중 · DK 배당(배당이 뜻하는 확률) · 판정</b>. 추정이 배당 확률보다 5%p 이상 높으면 <b style="color:var(--good)">좋음</b> (<b style="color:#d97706">경고</b> = 좋지만 경고 있음 · 적정 · <b style="color:var(--bad)">비쌈</b> · 확률↓ = 추정 40% 미만 · ★ 최적 = 그 스탯에서 가장 좋은 단계). 칸을 누르면 슬립에 담겨요.</div>`+gameCols(P):'<div class="muted">해당 조건의 선수가 없어요.</div>';}
  else{const L=valFilter(VL.filter(v=>(vc==='all'||v.cat===vc)&&(vg==='all'||v.g===vg)),vv).sort((a,b)=>b.edge-a.edge);
   $('vlist').innerHTML=L.length?L.slice(0,80).map(valRow).join(''):'<div class="muted">해당 조건의 라인이 없어요.</div>';}
  sync();}

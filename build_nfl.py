@@ -86,6 +86,16 @@ POS_CATS = {"QB": ["PYD", "PTD"], "RB": ["RYD", "REC", "REYD", "TD"], "WR": ["RE
 FOCUS = {"PYD", "PTD", "RYD", "REYD", "REC"}
 
 
+# 🪜 선수별 묶어보기: 고정 간격 단계(FanDuel 대체 라인처럼). 추정 = (시즌 보정 + 최근5 보정) / 2
+LADDER_NFL = {"PYD": [150, 175, 200, 225, 250, 275, 300], "PTD": [1, 2, 3], "ATT": [25, 30, 35, 40],
+              "RYD": [25, 40, 50, 60, 75, 100], "CAR": [10, 12, 15, 18, 20],
+              "REYD": [25, 40, 50, 60, 75, 100], "REC": [2, 3, 4, 5, 6, 7, 8], "TGT": [3, 4, 5, 6, 7, 8, 10],
+              "RRY": [40, 50, 60, 75, 100, 125], "TD": [1, 2]}
+LAD_POS = {"QB": ["PYD", "PTD", "ATT", "RYD"], "RB": ["RYD", "CAR", "RRY", "REC", "REYD", "TGT", "TD"],
+           "WR": ["REYD", "REC", "TGT", "TD"], "TE": ["REYD", "REC", "TGT", "TD"]}
+QKEYS = ("PYD", "PTD", "ATT", "RYD", "CAR", "REC", "REYD", "TGT", "TD")
+
+
 def s80(L, cat, ctx):
     """시즌 로그(최신순)에서 80%+ 적중하는 가장 높은 기준선 + 판정(top/rec/caution). 판정 규칙은 NBA 위젯과 같음."""
     vals, N = [r[cat] for r in L], len(L)
@@ -171,12 +181,46 @@ def ats(details, total, score):
     return " · ".join(res)
 
 
+_PITEMS = {}
+
+
+def prop_all(eid):
+    """DraftKings prop 원본 전체(ESPN core API, 1000개씩 여러 페이지)."""
+    if eid not in _PITEMS:
+        items, page = [], 1
+        try:
+            while True:
+                d = get(f"{CORE}/events/{eid}/competitions/{eid}/odds/100/propBets?limit=1000&page={page}")
+                items += d.get("items", [])
+                if page >= (d.get("pageCount") or 1):
+                    break
+                page += 1
+        except Exception as e:  # prop 없는 경기(라인 미오픈)
+            print(f"  props {eid}: {e}", file=sys.stderr)
+        _PITEMS[eid] = items
+    return _PITEMS[eid]
+
+
+# DraftKings 단계별(마일스톤) 라인 — NFL 은 ESPN 에 배당이 없어서 '그 단계가 열려 있는지'만 씀
+MILE_NFL = {"Passing Yards Milestones": "PYD", "Rushing Yards Milestones": "RYD", "Receiving Yards Milestones": "REYD",
+            "Receptions Milestones": "REC", "Rushing + Receiving Yards Milestones": "RRY", "Rushing Attempts Milestones": "CAR",
+            "Passing Touchdowns Milestones": "PTD"}
+
+
+def miles_nfl(eid):
+    out = {}
+    for i in prop_all(eid):
+        cat = MILE_NFL.get(i.get("type", {}).get("name", ""))
+        aid = i.get("athlete", {}).get("$ref", "").split("/athletes/")[-1].split("?")[0]
+        t = (i.get("current") or {}).get("target", {}).get("value")
+        if cat and aid and t is not None:
+            out.setdefault((aid, cat), set()).add(float(t))
+    return out
+
+
 def props_for(eid):
-    url = f"{CORE}/events/{eid}/competitions/{eid}/odds/100/propBets?limit=1000"
-    try:
-        items = get(url).get("items", [])
-    except Exception as e:  # prop 없는 경기(라인 미오픈)
-        print(f"  props {eid}: {e}", file=sys.stderr)
+    items = prop_all(eid)
+    if not items:
         return {}, set()
     lines, td = {}, set()
     for i in items:
@@ -189,6 +233,88 @@ def props_for(eid):
         elif name in PROP and (i.get("current") or {}).get("target"):
             lines[(aid, PROP[name][0])] = (i["current"]["target"]["value"], (i.get("open") or {}).get("target", {}).get("value"))
     return lines, td
+
+
+SUFFIX = re.compile(r"\s+(Jr\.?|Sr\.?|II|III|IV|V)$")
+
+
+def abbr(full):
+    """'Amon-Ra St. Brown' → 'A.St. Brown' (ESPN 플레이 문장 표기)."""
+    f = SUFFIX.sub("", full.strip()).split(" ")
+    return f[0][0] + "." + " ".join(f[1:]) if len(f) > 1 else full
+
+
+def qparse(s):
+    """경기 플레이 문장 → {선수id: {PYD,PTD,CMP,RYD,CAR,RTD,REC,REYD,RETD: [1Q,2Q,3Q,4Q,OT]}}.
+    야드는 문장의 'for N yards'(벌칙 야드 제외), 이름은 'J.Goff'·'Bi.Robinson'·'A.St. Brown' 같은 줄임 표기."""
+    full, tmof = {}, {}
+    for t in s.get("boxscore", {}).get("players", []):
+        for g in t.get("statistics", []):
+            for a in g.get("athletes", []):
+                full[a["athlete"]["id"]] = SUFFIX.sub("", a["athlete"]["displayName"].strip())
+                tmof[a["athlete"]["id"]] = t["team"]["abbreviation"]
+    by_rest = {}
+    for aid, n in full.items():
+        f = n.split(" ")
+        if len(f) > 1:
+            by_rest.setdefault(" ".join(f[1:]), []).append((f[0], aid))
+    if not by_rest:
+        return {}
+    NM = r"[A-Z][a-z]{0,2}\.\s?(?:" + "|".join(re.escape(r) for r in sorted(by_rest, key=len, reverse=True)) + r")\b"
+    def who(tok, off=None):
+        pre, rest = tok.split(".", 1)
+        c = by_rest.get(rest.strip(), [])
+        if off and len(c) > 1 and any(tmof[a] == off for _, a in c):
+            c = [x for x in c if tmof[x[1]] == off]
+        m = [aid for f, aid in c if f.startswith(pre)] or (c and len(c) == 1 and [c[0][1]]) or []
+        return m[0] if len(m) == 1 else None
+    YD = r"for (-?\d+) yards?|for no gain"
+    pas = re.compile(r"(" + NM + r") pass (?:(?!incomplete)[^.]|\.(?=[A-Z][a-z]))*?to (" + NM + r").*?(?:" + YD + r")")
+    rus = re.compile(r"(" + NM + r") (?!pass|sacked|reported|punts|kicks|extra|spiked)(?:[^.(]|\.(?=[A-Z]))*?(?:" + YD + r")")
+    out = {}
+    def add(aid, k, q, v):
+        if aid:
+            out.setdefault(aid, {c: [0] * 5 for c in ("PYD", "PTD", "CMP", "ATT", "RYD", "CAR", "RTD", "REC", "REYD", "RETD", "TGT")})[k][min(q, 5) - 1] += v
+    for d in (s.get("drives") or {}).get("previous") or []:
+        off = (d.get("team") or {}).get("abbreviation")
+        for p in d.get("plays", []):
+            t = p.get("text", "").split("TWO-POINT CONVERSION")[0]
+            ty = (p.get("type") or {}).get("text", "")
+            q = (p.get("period") or {}).get("number") or 0
+            if not q or "NULLIFIED" in t.upper() or "No Play" in t or "Sack" in ty:
+                continue
+            m = (re.search(r"(" + NM + r") pass incomplete(?:[^.]|\.(?=[A-Z][a-z]))*?to (" + NM + r")()", t)
+                 or re.search(r"(" + NM + r") pass (?:[^.]|\.(?=[A-Z][a-z]))*?intended for (" + NM + r")()", t)
+                 or re.search(r"(" + NM + r") pass incomplete()()", t)) if ("incomplete" in t or "INTERCEPTED" in t) else None
+            if m and ("Incompletion" in ty or "Interception" in ty or "Penalty" in ty):
+                add(who(m.group(1), off), "ATT", q, 1)
+                tg = m.group(2)
+                if tg:
+                    add(who(tg, off), "TGT", q, 1)
+                continue
+            if "INTERCEPTED" in t:
+                continue
+            td = "TOUCHDOWN" in t and "FUMBLE" not in t.upper()
+            ok = ty in ("Pass Reception", "Passing Touchdown", "Rush", "Rushing Touchdown") or "Kneel" in ty or "Penalty" in ty or ("Fumble" in ty and "Return" not in ty)
+            if not ok:
+                continue
+            m = pas.search(t)
+            if m:
+                qb, rc, y = who(m.group(1), off), who(m.group(2), off), int(m.group(3) or 0)
+                add(qb, "PYD", q, y); add(qb, "CMP", q, 1); add(rc, "REC", q, 1); add(rc, "REYD", q, y)
+                add(qb, "ATT", q, 1); add(rc, "TGT", q, 1)
+                if td:
+                    add(qb, "PTD", q, 1); add(rc, "RETD", q, 1)
+                continue
+            if " pass " in t:
+                continue
+            m = rus.search(t)
+            if m:
+                r = who(m.group(1), off)
+                add(r, "CAR", q, 1); add(r, "RYD", q, int(m.group(2) or 0))
+                if td:
+                    add(r, "RTD", q, 1)
+    return out
 
 
 def drive_kind(r):
@@ -452,6 +578,7 @@ def main(date, out):
     for ab, evs in ev_by_team.items():
         for _, e in sorted(evs, reverse=True):
             for aid, row in box_rows(sums[e]).get(ab, {}).items():
+                row["e"] = e
                 logs.setdefault((ab, aid), []).append(row)
                 who.setdefault(aid, (ab, row["n"]))
 
@@ -643,11 +770,77 @@ def main(date, out):
 
     for g in games:
         g.pop("tid", None)
+    # 🪜 선수별 묶어보기 + 쿼터별 평균(플레이 문장 집계, 연장은 OT 칸)
+    miles = {}
+    for g in games:
+        for k, v in miles_nfl(g["id"]).items():
+            miles[k] = v
+    qp = {}
+    ladders, qtr = [], {}
+    for g in games:
+        lines, td_ids = prop_res.get(g["id"], ({}, set()))
+        inj = {i["id"]: i for v in g["inj"].values() for i in v}
+        act = {a for (a, _) in lines} | td_ids | {a for (a, _) in miles}
+        for aid in act:
+            ab, name, ps = pos.get(aid, (None, None, ""))
+            if ab not in (g["away"], g["home"]) or ps not in LAD_POS or (aid in inj and inj[aid]["s"] in ("Out", "Doubtful")):
+                continue
+            L = logs.get((ab, aid), [])
+            if len(L) < 3:
+                continue
+            fl = ([f"부상 리포트 {inj[aid]['s']}"] if aid in inj else []) + ([f"표본 적음({len(L)}경기)"] if len(L) < 5 else [])
+            cats = [c for c in LAD_POS[ps] if c != "RYD" or ps != "QB" or (aid, "RYD") in lines or sum(r["RYD"] for r in L) / len(L) >= 15]
+            for cat in cats:
+                vals = [r[cat] for r in L]
+                if not any(vals):
+                    continue
+                last = vals[:5]
+                N, rows, zero = len(vals), [], False
+                for th in LADDER_NFL[cat]:
+                    hit, h5 = sum(v >= th for v in vals), sum(v >= th for v in last)
+                    ps_, p5 = (hit + 1) / (N + 2), (h5 + 1) / (len(last) + 2)
+                    p = (ps_ + p5) / 2
+                    if p > 0.97 or (hit == 0 and zero):
+                        continue
+                    zero = zero or hit == 0
+                    rows.append([th, round(100 * p), hit, h5, th in miles.get((aid, cat), set())])
+                if not rows:
+                    continue
+                dk = lines.get((aid, cat))
+                if cat == "TD" and aid in td_ids:
+                    dk = (0.5, None)
+                ladders.append({"id": aid, "n": name, "t": ab, "pos": ps, "g": g["m"], "cat": cat, "N": N, "last": last,
+                                "avg": round(sum(vals) / N, 1), "a5": round(sum(last) / len(last), 1), "mx": max(vals), "mn": min(vals),
+                                "dk": dk[0] if dk else None, "dkHit": sum(v > dk[0] for v in vals) if dk else None,
+                                "dkH5": sum(v > dk[0] for v in last) if dk else None,
+                                "dkMiles": sorted(miles.get((aid, cat), set())), "fl": fl, "r": rows})
+            # 쿼터별: 이 선수가 뛴 경기마다 플레이 집계
+            Q = {k: [0.0] * 5 for k in QKEYS}
+            otG, q1z, l5 = 0, 0, []
+            for r in L:
+                if r["e"] not in qp:
+                    qp[r["e"]] = qparse(sums[r["e"]])
+                x = qp[r["e"]].get(aid)
+                if not x:
+                    continue
+                x = {**x, "TD": [a + b for a, b in zip(x["RTD"], x["RETD"])]}
+                main_k = "PYD" if ps == "QB" else "RYD" if ps == "RB" else "REYD"
+                otG += any(x[k][4] for k in QKEYS)
+                q1z += x[main_k][0] <= 0
+                if len(l5) < 5:
+                    l5.append(x[main_k])
+                for k in QKEYS:
+                    for i in range(5):
+                        Q[k][i] += x[k][i]
+            G = len(L)
+            qtr[aid] = {"G": G, "otG": otG, "q1z": q1z, "main": "PYD" if ps == "QB" else "RYD" if ps == "RB" else "REYD", "l5": l5,
+                        **{k: [round(v / G, 1) for v in Q[k]] for k in QKEYS}}
+
     A = {"date": date, "slate": slate_days, "back": back_days, "games": games, "props": props, "td": tds, "usage": usage[:30],
          "stat80": stat80, "early": early_by, "ints": int_by, "intQB": int_qb, "grades": grades, "gradeFrom": grade_from,
          "results": results, "propReview": prop_review, "propReviewFrom": os.path.basename(prev_files[-1])[4:12] if prev_files else None,
          "cats": {**{v[0]: v[1] for v in PROP.values()}, "TD": "애니타임 TD"}, "avgAllow": avg_allow,
-         "built": datetime.now().strftime("%Y-%m-%d %H:%M"), "phase": os.environ.get("CS_PHASE", "")}
+         "built": datetime.now().strftime("%Y-%m-%d %H:%M"), "phase": os.environ.get("CS_PHASE", ""), "ladders": ladders, "qtr": qtr}
     json.dump(A, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     from collections import Counter
     rc = Counter(r["rec"] for r in stat80)

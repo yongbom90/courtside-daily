@@ -35,7 +35,8 @@ body{padding-bottom:40px}
 .sel{background:var(--surface);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 10px;font-size:13px}
 .wx{font-size:12px}
 @media(max-width:760px){.prow{grid-template-columns:1fr 80px}.phead{display:none}.prow>div{grid-column:auto}.prow .c-rate,.prow .c-form,.prow .c-avg,.prow .c-opp{grid-column:1/-1}}
-</style>
+
+@media(max-width:600px){.qwrap{overflow-x:auto}.qc{min-width:0!important;padding:1px 3px!important}.qc small{display:block;margin:0!important}.qt{font-size:10.5px}}</style>
 <body>
 <div class="wrap">
 <nav class="topnav"><a href="../index.html#nfl">← 홈</a><a href="../index.html#nba">🏀 NBA로</a></nav>
@@ -43,10 +44,34 @@ body{padding-bottom:40px}
   <div><h1 id="ttl"></h1><p id="sub"></p></div>
   <button class="themebtn" onclick="toggleTheme()">☀︎ / ☾ 테마</button>
 </header>
+<style>
+.lgrid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}.lgrid>.lcard{min-width:0}
+.lcard{border:1px solid var(--line);border-radius:10px;padding:7px 9px}
+.lhd{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;font-size:14px}.lhd .r{margin-left:auto;font-size:12px;color:var(--muted)}
+.lfl{font-size:11px;color:var(--warn);margin-top:2px}
+.lstat{border-top:1px solid var(--line);padding:6px 0 4px;min-width:0}.lstat:first-of-type{border-top:none}
+.lab{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:12px;margin-bottom:4px}
+.lname{font-size:14px;font-weight:800;padding:1px 8px;border-radius:6px;background:var(--primary);color:#fff}
+.lrow{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;max-width:100%}
+.lt{flex:0 0 auto;min-width:58px;display:flex;flex-direction:column;align-items:center;padding:3px 4px;border:1px solid var(--line);border-radius:8px;line-height:1.15}
+.lt .lth{align-self:stretch;text-align:center;margin:-3px -4px 2px;padding:3px 0;border-radius:7px 7px 0 0;background:var(--pri-bg);font-size:15px;font-weight:800;font-family:"Barlow Condensed",sans-serif}
+.lt .ltl{font-size:9.5px;color:var(--muted)}.lt .ltp{font-size:15px;font-weight:800}.lt .lth2{font-size:10.5px;color:var(--muted);white-space:nowrap;text-align:center}
+.lt .ltv{align-self:stretch;text-align:center;margin:3px -4px -3px;padding:2px 0;border-radius:0 0 7px 7px;font-size:11px;font-weight:700;color:var(--muted);border-top:1px dashed var(--line)}
+.lt .ltv.dk{background:var(--primary);color:#fff;border-top:none}
+.lt.hi{border:2px solid var(--good)}.lt.hi .ltp{color:var(--good)}.lt.mid .ltp{color:var(--text)}.lt.lo .ltp{color:var(--bad)}
+.qwrap{border-top:1px dashed var(--line);padding-top:4px;margin-top:4px}
+.qt{width:auto;border-collapse:separate;border-spacing:2px;font-size:11px;margin:2px 0}.qt th,.qt td{padding:0 2px;line-height:1.25;border:none;text-align:center}.qt th{font-weight:600;color:var(--muted)}.qt tr th:first-child{text-align:left;color:var(--text);white-space:nowrap}
+.qc{display:block;min-width:44px;padding:1px 4px;border-radius:4px;background:linear-gradient(to right,var(--pri-bg) var(--w),transparent var(--w));border:1px solid var(--line);font-weight:700}.qc small{font-weight:400;color:var(--muted);font-size:9px;margin-left:2px}
+.qtag{font-size:11px;padding:1px 6px;border-radius:6px;margin-left:4px;font-weight:700}.qtag.slow{background:#64748b22}.qtag.fast{background:#16a34a2e;color:var(--good)}.qtag.late{background:#f59e0b33}
+.gcols{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}.tcol{display:flex;flex-direction:column;gap:8px;min-width:0}.ha{font-size:12px;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:4px;vertical-align:middle}.ha.h{background:var(--primary);color:#fff}.ha.a{background:#64748b33;color:var(--text)}.thd{font-size:16px;font-weight:800;padding:2px 4px;border-bottom:2px solid var(--primary)}
+@media(min-width:1000px){.gcols{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.lsec{margin:14px 0 6px;padding:6px 10px;border-left:4px solid var(--primary);background:var(--pri-bg);border-radius:6px;font-size:15px}
+</style>
 <div class="tabs">
   <button class="tab active" data-t="slate">📊 슬레이트</button>
   <button class="tab" data-t="teams">🏈 팀별 분석</button>
   <button class="tab" data-t="s80">⭐ 80~100% 판정</button>
+  <button class="tab" data-t="lad">🪜 선수별 묶어보기</button>
   <button class="tab" data-t="props">📋 라인 vs 기록</button>
   <button class="tab" data-t="td">🎯 터치다운</button>
   <button class="tab" data-t="early">🚀 첫 3드라이브 · 첫 TD</button>
@@ -62,6 +87,11 @@ body{padding-bottom:40px}
   <div class="filters"><select class="sel" id="s80game"></select></div>
   <div class="shead"><span>선수 · 경기</span><span style="text-align:center">기준선</span><span>시즌 적중</span><span>최근 5경기 (최신→)</span><span>시즌 평균 → 최근5</span><span style="text-align:center">판정</span></div>
   <div id="s80list"></div>
+</section>
+<section class="panel" id="lad">
+  <div class="note"><b>선수별 묶어보기:</b> 선수마다 카드 하나, 스탯마다 한 줄. 기준선 간격은 FanDuel 대체 라인처럼 고정(패스 야드 150·175·200…, 러시·리시빙 야드 25·40·50·60·75·100, 리셉션 2~8, 타깃 3~10, 캐리 10~20, 패스 시도 25~40, TD 1+·2+).<br>칸 = <b>기준선 · 추정 확률(시즌·최근5 반반, 보정) · 시즌/최근5 적중</b>. 아래 <b style="color:var(--primary)">DK ✓</b> = DraftKings가 그 단계를 실제로 열어 둔 것(ESPN에 NFL 배당이 없어 가성비 판정은 못 해요). 추정 70%↑ 초록, 40% 미만 빨강.<br><b>쿼터별 평균</b> = ESPN 플레이 기록으로 센 쿼터별 평균(연장 OT 따로). NFL은 표본이 적어요(보통 8~10경기) — 카드 오른쪽 위 경기 수를 같이 보세요.</div>
+  <div class="filters"><select class="sel" id="lgame"></select><select class="sel" id="lpos"><option value="all">모든 포지션</option><option value="QB">QB</option><option value="RB">RB</option><option value="WR">WR</option><option value="TE">TE</option></select><select class="sel" id="lplayer" style="max-width:240px"></select><input class="sel" id="lsearch" type="search" placeholder="🔍 선수 이름" style="min-width:160px"></div>
+  <div id="lwrap"></div>
 </section>
 <section class="panel" id="props">
   <div class="note"><b>무엇을 보여주나:</b> DraftKings가 정한 선수 기록 라인(ESPN 제공)과, 그 선수의 이번 시즌 실제 경기 기록을 나란히 놓은 표예요. <b>오버 x/N</b> = 시즌 출전 경기 중 라인보다 높게 기록한 경기 수예요. 칩은 최근 5경기 기록(최신→)이고 초록이 라인 초과예요.<br><b>주의:</b> 이 표는 라인 비교용이에요(판정은 ⭐80~100% 판정 탭). 기록이 없는 경기(출전했지만 패스·러시·리시빙 기록 0)는 집계에서 빠질 수 있고, 시즌 중 이적한 선수는 현 소속팀 경기만 셌어요. OUT/Doubtful 선수는 뺐어요.</div>
@@ -278,6 +308,39 @@ $('revWrap').innerHTML=(R.summary?`<div class="note">${R.summary}</div>`:'')+
  <div class="filters">${prSum.map(([c,[o,u]])=>`<span class="tag t-pri">${C[c]} 오버 ${o} · 언더 ${u}</span>`).join(' ')}</div>
  <div class="tblwrap"><table><tr><th>선수</th><th>라인</th><th>실제</th><th>결과</th><th>당시 시즌 오버 비율</th></tr>${PR.map(p=>`<tr><td>${p.n} <span class="muted small">${p.t} · ${p.g}</span></td><td>${C[p.cat]} ${p.line}</td><td>${f1(p.act)}</td><td class="${p.r==='O'?'ok':'ng'}">${p.r==='O'?'오버':'언더'}</td><td>${p.rate!=null?p.rate+'%':'—'}</td></tr>`).join('')}</table></div>`:'');
 
+
+/* 🪜 선수별 묶어보기 */
+const LADN=AUTO.ladders||[],QTN=AUTO.qtr||{};
+const LCAT={PYD:'패스 야드',PTD:'패스 TD',ATT:'패스 시도',RYD:'러시 야드',CAR:'캐리',REYD:'리시빙 야드',REC:'리셉션',TGT:'타깃',RRY:'러시+리시빙',TD:'TD'};
+const LORD=['PYD','PTD','ATT','RYD','CAR','RRY','REYD','REC','TGT','TD'];
+const QROWS={QB:['PYD','PTD','ATT','RYD'],RB:['RYD','CAR','REYD','TGT','TD'],WR:['REYD','REC','TGT','TD'],TE:['REYD','REC','TGT','TD']};
+let lg='all',lp='all',lpl='all',lq='';
+function lqtable(id,ps){const q=QTN[id];if(!q)return '';const n=q.otG?5:4,H=[...Array(n).keys()].map(i=>i<4?(i+1)+'Q':'OT');
+ const M=q[q.main].slice(0,n),t=M.reduce((a,b)=>a+b,0)||1,sh=M.map(x=>x/t),big=q.main==='PYD'?60:15;
+ const tag=t<big?'':(sh[0]<=0.15?'<span class="qtag slow">🐢 슬로우 스타터</span>':sh[0]>=0.32?'<span class="qtag fast">⚡ 빠른 스타터</span>':'')+(sh[3]>=0.32?'<span class="qtag late">🔥 4쿼터 강세</span>':'')+(sh[0]+sh[1]>=0.62?'<span class="qtag fast">전반 강세</span>':sh[2]+sh[3]>=0.62?'<span class="qtag late">후반 강세</span>':'');
+ const row=k=>{const v=q[k].slice(0,n),mx=Math.max(...v)||1;if(!v.some(x=>x))return '';const pc=k===q.main?sh:null;
+  return `<tr><th>${LCAT[k]}</th>${v.map((x,i)=>`<td><span class="qc" style="--w:${Math.round(100*x/mx)}%">${x}${pc?`<small>${Math.round(100*pc[i])}%</small>`:''}</span></td>`).join('')}</tr>`;};
+ return `<div class="qwrap"><div class="small"><b>쿼터별 평균</b> <span class="muted">${q.G}경기${q.otG?` · 연장 ${q.otG}경기`:''}</span> ${tag}</div>
+  <table class="qt"><tr><th></th>${H.map(h=>`<th>${h}</th>`).join('')}</tr>${(QROWS[ps]||[]).map(row).join('')}</table>
+  <div class="small muted">1Q ${LCAT[q.main]} 0 이하 ${q.q1z}경기 · 최근 ${LCAT[q.main]}(1~4Q): ${q.l5.slice(0,3).map(r=>r.slice(0,4).join('-')+(r[4]?'+OT'+r[4]:'')).join(' / ')}</div></div>`;}
+function lstat(d){const up=d.a5-d.avg;
+ const tiles=d.r.map(([th,p,hit,h5,dk])=>`<div class="lt ${p>=70?'hi':p<40?'lo':'mid'}" title="${th}+ ${LCAT[d.cat]} · 시즌 ${hit}/${d.N} · 최근5 ${h5}/${d.last.length} · 추정 ${p}%"><span class="lth">${th}+</span><span class="ltl">추정</span><span class="ltp">${p}%</span><span class="lth2">시즌 ${hit}/${d.N}<br>최근5 ${h5}/${d.last.length}</span><span class="ltv ${dk?'dk':''}">${dk?'DK ✓':'—'}</span></div>`).join('');
+ return `<div class="lstat"><div class="lab"><span class="lname">${LCAT[d.cat]}</span><span>평균 <b>${d.avg}</b> → 최근5 <b class="${up>0?'good':up<0?'bad':''}">${d.a5}${up>0?'▲':up<0?'▼':''}</b></span><span class="muted">L5 ${d.last.join('·')}</span>${d.dk!=null?`<span>DK 라인 <b>${d.dk}</b> 오버 ${d.dkHit}/${d.N}·${d.dkH5}/${d.last.length}</span>`:''}</div><div class="lrow">${tiles}</div></div>`;}
+function lcard(G){const d=G[0];return `<div class="lcard"><div class="lhd"><b style="font-size:16px">${d.n}</b><span class="muted">${d.pos} · ${d.t} · ${d.g}</span><span class="r">${d.N}경기</span></div>${d.fl.length?`<div class="lfl">⚠️ ${d.fl.join(' · ')}</div>`:''}${G.map(lstat).join('')}${lqtable(d.id,d.pos)}</div>`;}
+{const pl={};LADN.forEach(d=>{(pl[d.g]=pl[d.g]||{})[d.id]=`${d.n} (${d.pos} ${d.t})`;});
+ $('lgame').innerHTML='<option value="all">모든 경기</option>'+[...new Set(LADN.map(d=>d.g))].map(g=>`<option>${g}</option>`).join('');
+ $('lplayer').innerHTML=`<option value="all">👤 모든 선수 (${new Set(LADN.map(d=>d.id)).size}명)</option>`+Object.keys(pl).map(g=>`<optgroup label="${g}">${Object.entries(pl[g]).sort((a,b)=>a[1].localeCompare(b[1])).map(([id,n])=>`<option value="${id}">${n}</option>`).join('')}</optgroup>`).join('');}
+function drawL(){const F=LADN.filter(d=>(lg==='all'||d.g===lg)&&(lp==='all'||d.pos===lp)&&(lpl==='all'||d.id===lpl)&&(!lq||d.n.toLowerCase().includes(lq)));
+ const by={};F.forEach(d=>(by[d.id]=by[d.id]||[]).push(d));
+ const P=Object.values(by).map(G=>G.sort((a,b)=>LORD.indexOf(a.cat)-LORD.indexOf(b.cat)));
+ const PO={QB:0,RB:1,WR:2,TE:3},imp=G=>{const q=QTN[G[0].id];return q?q[q.main].reduce((a,b)=>a+b,0):0;};
+ $('lwrap').innerHTML=P.length?AUTO.games.map(g=>g.m).filter(m=>P.some(G=>G[0].g===m)).map(m=>{const [aw,hm]=m.split(' @ ');
+  const col=t=>{const X=P.filter(G=>G[0].g===m&&G[0].t===t).sort((a,b)=>(a[0].pos==='QB'?0:1)-(b[0].pos==='QB'?0:1)||imp(b)-imp(a));
+   return `<div class="tcol"><div class="thd">${t} <span class="ha ${t===hm?'h':'a'}">${t===hm?'🏠 홈':'✈️ 원정'}</span> <span class="muted small">${X.length}명 · QB → 야드 많은 순</span></div>${X.map(lcard).join('')||'<div class="muted small">선수 없음</div>'}</div>`;};
+  return `<div class="lsec"><b>${aw}</b> <span class="muted small">원정</span> @ <b>${hm}</b> <span class="muted small">홈</span></div><div class="gcols">${col(aw)}${col(hm)}</div>`;}).join(''):'<div class="muted">해당 조건의 선수가 없어요.</div>';}
+$('lgame').onchange=e=>{lg=e.target.value;drawL();};$('lpos').onchange=e=>{lp=e.target.value;drawL();};
+$('lplayer').onchange=e=>{lpl=e.target.value;drawL();};$('lsearch').oninput=e=>{lq=e.target.value.trim().toLowerCase();drawL();};
+drawL();
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));t.classList.add('active');$(t.dataset.t).classList.add('active');window.scrollTo(0,0);});
 function toggleTheme(){const r=document.documentElement;const cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=cur==='dark'?'light':'dark';}
 </script>
