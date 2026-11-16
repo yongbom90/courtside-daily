@@ -1,0 +1,36 @@
+{"games": {
+  "LAC @ BAL": {
+    "ctx": "4연패 중인 볼티모어(4-5)가 리그 유일 무승팀 LA 차저스(0-8)를 홈에서 맞는 먼데이 나이트 경기예요. BAL 은 Lamar Jackson(엄지)·Tyler Huntley(발가락)가 모두 IR 이라 애리조나에서 트레이드로 데려온 Jacoby Brissett 가 팀 합류 2주 만에 첫 선발로 나서요. LAC 는 WR Ladd McConkey(허리)·G Branson Taylor·S Kendall Williamson 이 Out 이고, 날씨는 44°F·돌풍 6mph·강수 0 으로 큰 변수가 없어요.",
+    "notes": [
+      "⚠️ 판정 재확인: BAL 판정 선수(Zay Flowers·Mark Andrews 리셉션 ⚠️주의)는 모두 Joe Fagnano 등 다른 QB 와 쌓은 기록이에요. Fagnano 는 39회 시도 패서 레이팅 28.9(CBS)였고, BAL 은 최근 4연패 동안 33-104 로 밀렸어요(The Banner). Brissett 로 바뀌면 리시버 기준선 표본이 그대로 통하지 않을 수 있어요.",
+      "Derrick Henry 러시 야드 라인은 77.5 → 80.5 로 올랐지만 최근 5경기 평균은 63.0(시즌 76.6)이고 80.5 를 넘긴 건 9경기 중 3번이에요. 다만 LAC 는 경기당 러시 122.0야드를 허용해 리그 평균(111.0)보다 약해요.",
+      "Justin Herbert 패스 야드 ✅추천(175+ 7/8)의 라인은 202.5 로 시즌 평균 198.9 와 비슷해요. Herbert 는 직전 HOU 전에서 왼손(비투구 손) 가운뎃손가락을 다쳤지만 X-레이 음성이고 첫 부상 리포트에 이름이 없었어요(ESPN). 다만 8경기 31색·인터셉션 11개(리그 최다)라 BAL 패스러시(17색, 20위)를 상대로도 경기 흐름이 흔들릴 수 있어요(추정).",
+      "🚀 첫 3드라이브: BAL 은 9경기 중 7경기에서 1쿼터에 첫 TD 가 나왔고 초반 드라이브 득점률 48%, LAC 는 공격 득점률 29%(TD 8%)로 출발이 가장 느린 편이에요. McConkey 결장으로 LAC 패스는 ✅ Tre' Harris(리셉션 2+ 6/7)·Quentin Johnston(최근 5경기 리시빙 47.2야드)에게 더 몰릴 수 있어요(추정)."
+    ]
+  }
+},
+"teams": {
+  "LAC": {
+    "style": "Mike McDaniel 공격 코디네이터 체제의 패스 위주 공격이지만 득점 리그 최하위(경기당 15.1점)이고, 수비는 경기당 27.4점 허용(28위)이에요.",
+    "str": "Herbert 의 시즌 패스 야드가 175+ 기준으로 8경기 중 7번 넘을 만큼 최소 생산량은 꾸준하고, 수비 초반 3드라이브 저지율이 62%예요.",
+    "weak": "LT Joe Alt 외 루키가 많은 오프라인이 8경기 31색을 내줬고, 턴오버 19개로 리그 최다예요. 초반 3드라이브 TD 비율이 8%로 출발이 느려요.",
+    "key": "LAC 러시 수비가 경기당 122.0야드를 허용해(리그 평균 111.0) Henry·Justice Hill 이 버티는 BAL 러시 공격(137.8야드)과 맞물려요. 반대로 BAL 패스 수비 허용 241.9야드는 평균(236.2)보다 높아 McConkey 없는 Herbert 가 Harris·Johnston·Gadsden 으로 얼마나 받아낼지가 관건이에요."
+  },
+  "BAL": {
+    "style": "Henry 중심의 러시 공격(경기당 137.8야드)에 패스는 Zay Flowers 의존도가 높고, 수비는 경기당 26.2점을 내주고 있어요.",
+    "str": "러시 수비가 경기당 99.9야드 허용으로 평균(111.0)보다 좋고, 초반 3드라이브 저지율 67%·첫 TD 1쿼터 비중(7/9경기)이 높아 출발이 빨라요.",
+    "weak": "Jackson·Huntley 이탈 후 QB 가 흔들리며 4연패, 최근 BUF·JAX 전에서 Flowers 는 합계 3캐치 6야드에 그쳤어요. 패스 수비 허용 241.9야드, 17색(20위)·턴오버 유도 9개(22위)로 압박이 약해요.",
+    "key": "LAC 가 턴오버 19개·31색으로 무너지는 팀이라 BAL 이 Brissett 로 안정적인 패스 연결만 해도 Henry 의 러시 볼륨(최근 3경기 15.0캐리)이 회복될 수 있어요(추정). Brissett 는 1주차 애리조나 시절 LAC 상대 277야드 1TD 를 기록했어요(The Banner)."
+  }
+},
+"review": {
+  "summary": "11월 15일 일요일 12경기 채점: ⭐강력추천 9/14, ✅추천 44/60(합계 53/74, 72%). 라인 기준으로는 원정 강팀이 대부분 커버(DET·KC·JAX·BUF·SEA·LAR·SF·CIN)했고, 패스 공격이 터진 경기(Burrow 409·Purdy 389·Lawrence 352·Mahomes 348야드)가 많아 QB 패스 야드 라인이 대거 오버됐어요. 실패 픽은 경기 초반 QB 부상·대량 색·RB 역할 분담 같은 경기 중 변수에 몰렸어요.",
+  "items": [
+    {"t": "NE @ DET: ⭐ Drake Maye 패스 175+ 실패(48야드), Hunter Henry 리셉션·리시빙 실패", "why": "Maye 가 첫 드라이브에서 Aidan Hutchinson 색에 발목을 다쳐 이탈했고(AP), NE 는 35-10 대패했어요. NE 패스 공격 전체가 무너지며 Henry 까지 같이 빗나갔어요.", "lesson": "QB 가 경기 중 이탈하면 같은 팀 리시버 픽이 한꺼번에 무너져요. 한 팀 패스 픽을 여러 개 겹치지 않는 게 좋아요."},
+    {"t": "MIN @ GB: Jordan Love 패스 TD 2+, Tucker Kraft 리셉션, ⭐ Christian Watson 리시빙 40+(37야드) 실패", "why": "Kirk Cousins 가 트레이드 5일 만에 복귀해 MIN 이 30-10 으로 이겼고, Love 는 8번 색을 당했어요(AP). GB 는 2.5점 홈 favorite 였지만 1·2쿼터 무득점이었어요.", "lesson": "상대 팀 QB 교체·트레이드 직후 주에는 상대 수비 압박 수치(색 허용)를 먼저 확인해요."},
+    {"t": "PIT @ CIN: Aaron Rodgers 패스 175+ 실패(143야드), ⭐ Jaylen Warren 러시 40+(15야드), Germie Bernard 리셉션 실패", "why": "CIN 이 전반 24-3 으로 앞서며 Burrow 409야드 4TD 로 경기를 지배했고, CIN 수비가 Rodgers 를 묶었어요(AP). 일찍 크게 뒤진 PIT 는 러시를 포기했어요.", "lesson": "큰 점수 차로 뒤질 위험이 있는 팀의 RB 러시 야드 픽은 게임 스크립트에 약해요."},
+    {"t": "LAR @ ARI: ⭐ Kyren Williams 러시 40+ 실패(23야드)", "why": "Blake Corum 이 100야드를 달리며 캐리를 나눠 가졌고, LAR 은 Nacua·Adams 결장 속 34-6 대승을 거뒀어요(AP).", "lesson": "대승 경기에서는 주전 RB 캐리가 백업에게 넘어갈 수 있어요. 큰 스프레드 favorite RB 는 역할 분담을 확인해요."},
+    {"t": "CAR @ NO: ⭐ Bryce Young 패스 TD 1+, Tetairoa McMillan 리셉션·리시빙 실패", "why": "Chuba Hubbard 가 러시 2TD·스크리미지 172야드로 공격을 끌었고, CAR 는 구단 최다 17개 반칙 속에 20-17 로 이겼어요(AP). 레드존 득점이 러시로 났어요.", "lesson": "RB 가 골라인 역할을 맡는 팀의 QB 패스 TD 1+ 는 기준선이 낮아도 안전하지 않아요."},
+    {"t": "KC @ ATL: Xavier Worthy 리셉션 3+ 실패(0개)", "why": "새로 합류한 Josh Downs 가 데뷔했고 루키 Emmett Johnson(6캐치 70야드 2TD)·Cyrus Allen·Andrew Armstrong 까지 타깃이 분산됐어요(AP).", "lesson": "트레이드로 새 리시버가 합류한 첫 경기에는 기존 WR2·3 의 리셉션 기준선을 낮춰 봐요."}
+  ]
+}}
