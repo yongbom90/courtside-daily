@@ -57,7 +57,7 @@
 .qt{width:auto;border-collapse:separate;border-spacing:2px;font-size:11px;margin:2px 0}.qt th,.qt td{padding:0 2px!important;line-height:1.25;border:none!important;height:auto}.qc small{font-weight:400;color:var(--muted);font-size:9px;margin-left:2px}.qt th{font-weight:600;color:var(--muted);text-align:center}.qt tr th:first-child{text-align:left;color:var(--text)}
 .qt td{text-align:center}.qc{display:block;min-width:44px;padding:1px 4px;border-radius:4px;background:linear-gradient(to right,var(--pri-bg,#64748b22) var(--w),transparent var(--w));border:1px solid var(--line);font-weight:700}
 .qt tr.qs td{font-size:10px;color:var(--muted);padding:0}
-.lcard{border:1px solid var(--line);border-radius:10px;padding:7px 9px}
+.lcard{content-visibility:auto;contain-intrinsic-size:auto 700px;border:1px solid var(--line);border-radius:10px;padding:7px 9px}
 .lhd{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;font-size:14px}.lhd .dk{padding:1px 6px;font-size:11px}
 .lfl{font-size:11px;color:var(--warn);margin-top:2px}
 .gcols{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}.tcol{display:flex;flex-direction:column;gap:8px;min-width:0}.ha{font-size:12px;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:4px;vertical-align:middle}.ha.h{background:var(--primary);color:#fff}.ha.a{background:#64748b33;color:var(--text)}.thd{font-size:16px;font-weight:800;padding:2px 4px;border-bottom:2px solid var(--primary)}.tsub{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}
@@ -298,22 +298,30 @@ function playerCard(G){const d0=G[0],mu=d0.min3-d0.min,fl=[...new Set(G.flatMap(
 const isSt=G=>(G[0].st5??0)>=3;let vrole='all';
 function sec(P,title,sub){if(!P.length||(vrole==='st'&&!isSt(P[0]))||(vrole==='bn'&&isSt(P[0])))return '';
  return `<div class="lsec"><b>${title}</b> <span class="muted small">${P.length}명 · ${sub}</span></div><div class="lgrid">`+P.slice(0,vn).map(playerCard).join('')+'</div>'+(P.length>vn?`<button class="btn" style="width:100%;margin:6px 0" onclick="vn+=40;drawV()">더 보기 (${P.length-vn}명 남음)</button>`:'');}
-function gameCols(P){const mins=G=>G[0].min||0,R=P.filter(G=>vrole==='all'||(vrole==='st')===isSt(G));
+function gameCols(P){LZ={};const mins=G=>G[0].min||0,R=P.filter(G=>vrole==='all'||(vrole==='st')===isSt(G));
  return AUTO.games.map(g=>g.m).filter(m=>R.some(G=>G[0].g===m)).map(m=>{const [aw,hm]=m.split(' @ ');
   const col=t=>{const X=R.filter(G=>G[0].g===m&&G[0].t===t),S=X.filter(isSt).sort((a,b)=>mins(b)-mins(a)),B=X.filter(G=>!isSt(G)).sort((a,b)=>mins(b)-mins(a));
    return `<div class="tcol"><div class="thd">${t}<span class="ha ${t===hm?'h':'a'}">${t===hm?'🏠 홈':'✈️ 원정'}</span> <span class="muted small">${X.length}명</span></div>${S.length?`<div class="tsub">🏀 선발 · 출전시간 순</div>`+S.map(playerCard).join(''):''}${B.length?`<div class="tsub">🔁 벤치 (식스맨)</div>`+B.map(playerCard).join(''):''}</div>`;};
-  return `<div class="lsec"><b>${aw}</b> <span class="muted small">원정</span> @ <b>${hm}</b> <span class="muted small">홈</span></div><div class="gcols">${col(aw)}${col(hm)}</div>`;}).join('');}
+  LZ[m]=()=>col(aw)+col(hm);
+  return `<div class="lsec"><b>${aw}</b> <span class="muted small">원정</span> @ <b>${hm}</b> <span class="muted small">홈</span></div><div class="gcols lz" data-m="${m}" style="min-height:900px"></div>`;}).join('');}
+/* 화면에 가까워진 경기만 그려서 가볍게 */
+let LZ={},LZO=null;
+function lzObs(){if(LZO)LZO.disconnect();const fill=el=>{if(!el.classList.contains('lz'))return;el.classList.remove('lz');el.style.minHeight='';el.innerHTML=LZ[el.dataset.m]();sync();};
+ const E=[...document.querySelectorAll('.gcols.lz')];if(E[0])fill(E[0]);
+ if(!('IntersectionObserver' in window)){E.forEach(fill);return;}
+ LZO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){fill(e.target);LZO.unobserve(e.target);}}),{rootMargin:'1200px 0px'});
+ E.slice(1).forEach(e=>LZO.observe(e));}
 function drawV(){const lad=vw==='lad';$('vhead').style.display=lad?'none':'';$('vlad').style.display=lad?'':'none';$('vlist').style.display=lad?'none':'';
  if(lad){const ok=d=>vv==='all'||d.r.some(r=>vv==='good+'?(r[10]==='good'||r[10]==='warn'):r[10]===vv);
   const best=d=>Math.max(...d.r.filter(r=>r[9]!=null&&r[3]>=40&&r[2]<=95).map(r=>r[9]),-99);
   const F=LAD.filter(d=>(vc==='all'||d.cat===vc)&&(vg==='all'||d.g===vg)&&(!vq||d.n.toLowerCase().includes(vq))&&(vp==='all'||d.id===vp)&&(vp!=='all'||ok(d)));
   const by={};F.forEach(d=>(by[d.id]=by[d.id]||[]).push(d));
   const P=Object.values(by).map(G=>G.sort((a,b)=>VCATS.indexOf(a.cat)-VCATS.indexOf(b.cat))).sort((a,b)=>Math.max(...b.map(best))-Math.max(...a.map(best)));
-  $('vlad').innerHTML=P.length?`<div class="small muted" style="margin:4px 0 8px">선수 ${P.length}명 · 선수마다 카드 하나에 스탯별(득점·리바·어시·3점·PRA·PR·PA·RA) 한 줄씩. 기준선 간격은 FanDuel 대체 라인처럼 고정(득점 10·15·20…, 리바 4·6·8…, 어시 2·4·6…, 3점 1·2·3…, PRA 15·20·25…).<br>칸 = <b>기준선 · 추정 확률(시즌·최근5 반반) · 시즌/최근5 적중 · DK 배당(배당이 뜻하는 확률) · 판정</b>. 추정이 배당 확률보다 5%p 이상 높으면 <b style="color:var(--good)">좋음</b> (<b style="color:#d97706">경고</b> = 좋지만 경고 있음 · 적정 · <b style="color:var(--bad)">비쌈</b> · 확률↓ = 추정 40% 미만 · ★ 최적 = 그 스탯에서 가장 좋은 단계). 칸을 누르면 슬립에 담겨요.</div>`+gameCols(P):'<div class="muted">해당 조건의 선수가 없어요.</div>';}
+  $('vlad').innerHTML=P.length?`<div class="small muted" style="margin:4px 0 8px">선수 ${P.length}명 · 선수마다 카드 하나에 스탯별(득점·리바·어시·3점·PRA·PR·PA·RA) 한 줄씩. 기준선 간격은 FanDuel 대체 라인처럼 고정(득점 10·15·20…, 리바 4·6·8…, 어시 2·4·6…, 3점 1·2·3…, PRA 15·20·25…).<br>칸 = <b>기준선 · 추정 확률(시즌·최근5 반반) · 시즌/최근5 적중 · DK 배당(배당이 뜻하는 확률) · 판정</b>. 추정이 배당 확률보다 5%p 이상 높으면 <b style="color:var(--good)">좋음</b> (<b style="color:#d97706">경고</b> = 좋지만 경고 있음 · 적정 · <b style="color:var(--bad)">비쌈</b> · 확률↓ = 추정 40% 미만 · ★ 최적 = 그 스탯에서 가장 좋은 단계). 칸을 누르면 슬립에 담겨요.</div>`+gameCols(P):'<div class="muted">해당 조건의 선수가 없어요.</div>';lzObs();}
  else{const L=valFilter(VL.filter(v=>(vc==='all'||v.cat===vc)&&(vg==='all'||v.g===vg)),vv).sort((a,b)=>b.edge-a.edge);
   $('vlist').innerHTML=L.length?L.slice(0,80).map(valRow).join(''):'<div class="muted">해당 조건의 라인이 없어요.</div>';}
  sync();}
-drawV();
+let vInit=false;
 
 /* 🧩 콤보 */
 const CS80=AUTO.stat80.filter(r=>CMB.includes(r.cat)),CVL=AUTO.cvalue||[],CLP=LP.filter(p=>CMB.includes(p.cat));
@@ -344,7 +352,7 @@ $('minsGrid').innerHTML=(AUTO.minutes||[]).slice(0,24).map(m=>{const up=m.d>0;
  <div class="chips">${m.lastM.map(v=>`<i class="${v>=m.ms?'y':''}">${v}</i>`).join('')}</div>
  <div class="small">득점: 시즌 ${m.pts} → 최근3 <b>${m.pts3}</b></div></div>`}).join('')||'<div class="muted">데이터가 없어요.</div>';
 
-document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));t.classList.add('active');$(t.dataset.t).classList.add('active');window.scrollTo(0,0);});
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));t.classList.add('active');$(t.dataset.t).classList.add('active');window.scrollTo(0,0);if(t.dataset.t==='value'&&!vInit){vInit=true;drawV();}});
 function toggleTheme(){const r=document.documentElement;const cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=cur==='dark'?'light':'dark';}
 </script>
 </body>
