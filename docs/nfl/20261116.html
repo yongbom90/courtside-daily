@@ -102,12 +102,18 @@ th{background:var(--surface2);font-family:"Barlow Condensed";font-size:15px}
 [class^="dk-"]{display:inline-block;padding:2px 6px;margin:0 3px 3px 0;border-radius:6px;font-size:11.5px;font-weight:700}
 .dk-TD{background:#16a34a2e;color:var(--good)}.dk-FG{background:#2563eb26;color:var(--primary)}.dk-PUNT{background:#64748b22;color:var(--muted)}
 .dk-TO{background:#dc262626;color:var(--bad)}.dk-DOWNS{background:#ea580c26;color:var(--warn)}.dk-MISS{background:#a855f726;color:#a855f7}.dk-END{background:#64748b14;color:var(--muted)}
+.qtab{border-collapse:separate;border-spacing:4px;margin-top:4px;width:100%}.qtab th{font-size:12px;color:var(--muted);font-weight:600}.qtab td.lbl{width:1%;white-space:nowrap}.qtab td.lbl .ib{writing-mode:horizontal-tb}
+.qh{position:relative;height:34px;border-radius:7px;background:#64748b14;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.qh::before{content:"";position:absolute;left:0;right:0;bottom:0;height:var(--h)}.qh.t::before{background:#dc262640}.qh.m::before{background:#16a34a45}.qh b{position:relative;font-size:15px}
+.dt{display:inline-block;width:11px;height:11px;border-radius:50%;margin:0 2px;vertical-align:middle}.dt.t{background:var(--bad)}.dt.m{background:var(--good)}
+.ihead{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:14px}
+.qstrip{display:flex;gap:4px;margin:6px 0}.qstrip span{flex:1;min-height:30px;border:1px solid var(--line);border-radius:7px;padding:2px 4px;text-align:center}.qstrip em{display:block;font-style:normal;font-size:10.5px;color:var(--muted)}
 #intGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,640px),1fr))}
 .ib{display:inline-block;min-width:22px;text-align:center;padding:1px 6px;border-radius:6px;font-weight:700;font-size:12px;background:#64748b18;color:var(--muted)}
 .ib.t{background:#dc262626;color:var(--bad)}.ib.m{background:#16a34a2e;color:var(--good)}
 .iplay{font-size:12px;border-left:3px solid var(--line);padding:3px 0 3px 8px;margin:4px 0}.iplay.t{border-color:var(--bad)}.iplay.m{border-color:var(--good)}
 b.bad,span.bad{color:var(--bad)}span.good{color:var(--good)}
-.igame{border-top:1px solid var(--line);padding:5px 0}.igame summary{cursor:pointer;display:flex;gap:8px;align-items:center;font-size:13px;list-style:none}.igame summary::-webkit-details-marker{display:none}
+.igame{border-top:1px solid var(--line);padding:5px 0}
 .qbi{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0}
 .chips2{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.chips2 span{font-size:11.5px;padding:2px 6px;border-radius:6px;border:1px solid var(--line)}.chips2 span.y{border-color:var(--bad);color:var(--bad);font-weight:700}
 #earlyGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,600px),1fr))}
@@ -167,8 +173,8 @@ body{padding-bottom:40px}
 <section class="panel" id="td"><div class="note">Anytime TD &#46972;&#51064;&#51060; &#50676;&#47536; &#49440;&#49688;(QB &#51228;&#50808;)&#51032; &#51060;&#48264; &#49884;&#51596; &#44592;&#47197;&#51060;&#50640;&#50836;. <b>TD &#44221;&#44592;</b> = &#47084;&#49884;&#183;&#47532;&#49884;&#48729; &#53552;&#52824;&#45796;&#50868;&#51012; 1&#44060; &#51060;&#49345; &#44592;&#47197;&#54620; &#44221;&#44592; &#49688;&#50696;&#50836;. &#52841;&#51008; &#52572;&#44540; 5&#44221;&#44592; TD &#49688;&#50696;&#50836;.</div>
   <div class="filters"><select class="sel" id="tdgame"></select></div><div class="grid" id="tdGrid"></div></section>
 <section class="panel" id="ints">
-  <p class="small muted">ESPN &#54540;&#47112;&#51060; &#44592;&#47197;&#51004;&#47196; &#49468; &#51060;&#48264; &#49884;&#51596; &#51064;&#53552;&#49481;&#49496;&#51060;&#50640;&#50836;. <span class="ib t">&#45912;&#51664;</span> = &#50864;&#47532; QB&#44032; &#45912;&#51652; INT(&#44277;&#44201;), <span class="ib m">&#51105;&#51020;</span> = &#50864;&#47532; &#49688;&#48708;&#44032; &#51105;&#51008; INT. &#47532;&#44536; &#49692;&#50948;&#45716; &#44221;&#44592;&#45817; &#44592;&#51456;(&#45912;&#51652; INT&#45716; &#51201;&#51008; &#49692;, &#51105;&#51008; INT&#183;&#53556;&#50724;&#48260; &#47560;&#51652;&#51008; &#47566;&#51008; &#49692;). &#44221;&#44592;&#47484; &#45572;&#47476;&#47732; &#54540;&#47112;&#51060;&#48324; &#49345;&#49464;(&#53244;&#53552;&#183;&#49884;&#44036;&#183;QB&#8594;&#45432;&#47536; &#49440;&#49688;&#183;&#51105;&#51008; &#49440;&#49688;&#183;&#54056;&#49828; &#48169;&#54693;&#183;&#47532;&#53556;&#183;&#44536;&#45796;&#51020; &#46300;&#46972;&#51060;&#48652; &#44208;&#44284;)&#44032; &#45208;&#50752;&#50836;.</p>
-  <h2 class="sec">&#50724;&#45720; &#47588;&#52824;&#50629;</h2><div class="grid" id="intGrid"></div>
+  <p class="small muted">ESPN &#54540;&#47112;&#51060; &#44592;&#47197;&#51004;&#47196; &#49468; &#51060;&#48264; &#49884;&#51596; &#51064;&#53552;&#49481;&#49496;&#51060;&#50640;&#50836;. <span class="ib t">&#45912;&#51664;</span> = &#50864;&#47532; QB&#44032; &#45912;&#51652; INT(&#44277;&#44201;), <span class="ib m">&#51105;&#51020;</span> = &#50864;&#47532; &#49688;&#48708;&#44032; &#51105;&#51008; INT. &#47532;&#44536; &#49692;&#50948;&#45716; &#44221;&#44592;&#45817; &#44592;&#51456;(&#45912;&#51652; INT&#45716; &#51201;&#51008; &#49692;, &#51105;&#51008; INT&#183;&#53556;&#50724;&#48260; &#47560;&#51652;&#51008; &#47566;&#51008; &#49692;). &#54016; &#50836;&#50557; &#50500;&#47000; '&#44221;&#44592;&#48324; &#51064;&#53552;&#49481;&#49496;'&#50640; &#44221;&#44592;&#47560;&#45796; &#47751; &#53244;&#53552;&#50640; &#45208;&#50772;&#45716;&#51648;(&#51216;)&#50752; &#54540;&#47112;&#51060; &#49444;&#47749;&#51060; &#51080;&#50612;&#50836;.</p>
+  <h2 class="sec">&#50724;&#45720; &#47588;&#52824;&#50629;</h2><div class="grid" id="intGrid" style="grid-template-columns:1fr"></div>
 </section>
 <section class="panel" id="early">
   <div class="note"><b>&#52395; 3&#46300;&#46972;&#51060;&#48652;</b> = &#44221;&#44592;&#47560;&#45796; &#44033; &#54016;&#51060; &#44277;&#44201;&#54620; &#52376;&#51020; 3&#48264;&#51032; &#46300;&#46972;&#51060;&#48652;&#50696;&#50836;(&#51060;&#48264; &#49884;&#51596; &#51204;&#52404; &#44221;&#44592;). <b>&#44277;&#44201; &#46301;&#51216;&#47456;</b> = &#44536;&#51473; TD&#183;&#54596;&#46300;&#44264;&#47196; &#45149;&#45212; &#48708;&#50984;. <b>&#49688;&#48708; &#51200;&#51648;&#50984;</b> = &#49345;&#45824;&#51032; &#52395; 3&#46300;&#46972;&#51060;&#48652;&#47484; &#47924;&#46301;&#51216;(&#54144;&#53944;&#183;&#53556;&#50724;&#48260;&#183;4&#45796;&#50868; &#51200;&#51648;&#183;&#54596;&#46300;&#44264; &#49892;&#54056;)&#51004;&#47196; &#45149;&#45240; &#48708;&#50984;&#51060;&#44256;, &#47924;&#50631;&#51004;&#47196; &#47561;&#50520;&#45716;&#51648; &#54943;&#49688;&#47484; &#44057;&#51060; &#48372;&#50668;&#51480;&#50836;. <b>&#52395; TD &#53244;&#53552;</b> = &#44536; &#54016;&#51060; &#44221;&#44592;&#50640;&#49436; &#52376;&#51020; &#53552;&#52824;&#45796;&#50868;&#51012; &#44592;&#47197;&#54620; &#53244;&#53552;&#50696;&#50836;(&#49688;&#48708;&#183;&#49828;&#54168;&#49500;&#54016; TD &#54252;&#54632;). &#47784;&#46160; ESPN &#46300;&#46972;&#51060;&#48652;&#183;&#46301;&#51216; &#44592;&#47197; &#51088;&#46041; &#51665;&#44228;&#50696;&#50836;.</div>
@@ -288,9 +294,24 @@ const IN=AUTO.ints||{},IQ=AUTO.intQB||{};
 const DIRN={left:'\uc67c\ucabd',middle:'\uac00\uc6b4\ub370',right:'\uc624\ub978\ucabd'},DEPN={short:'\uc9e7\uc740',deep:'\uae4a\uc740'};
 const NXN={PICK6:'\ud53d\uc2dd\uc2a4(\ubc14\ub85c TD)',TD:'\u2192 \uc0c1\ub300 TD',FG:'\u2192 \uc0c1\ub300 FG',PUNT:'\u2192 \ud380\ud2b8',TO:'\u2192 \ud134\uc624\ubc84',DOWNS:'\u2192 4\ub2e4\uc6b4 \uc2e4\ud328',MISS:'\u2192 FG \uc2e4\ud328',END:'\u2192 \uc804\u00b7\ud6c4\ubc18 \uc885\ub8cc'};
 const rk=n=>n?`<span class="small muted">(\ub9ac\uadf8 ${n}\uc704)</span>`:'';
-const iplay=(r,cls,me)=>`<div class="iplay ${cls}"><b>${r.q>4?'OT':r.q+'Q'} ${r.clk}</b> \u00b7 ${r.qb||'?'}${r.tgt?' \u2192 '+r.tgt:''} \u00b7 <b>${r.by||'?'}</b> \uac00\ub85c\ucc54${r.depth||r.dir?` \u00b7 ${DEPN[r.depth]||''} ${DIRN[r.dir]||''} \ud328\uc2a4`:''}${r.ret!=null?` \u00b7 \ub9ac\ud134 ${r.ret}\uc57c\ub4dc`:''} \u00b7 <span class="${cls==='t'?'bad':'good'}">${(NXN[r.nx]||r.nx).replace('\uc0c1\ub300',cls==='t'?'\uc0c1\ub300':me)}</span></div>`;
+const QK=['1','2','3','4','OT'],qk=r=>r.q>4?'OT':String(r.q);
+const pass=r=>(r.depth||r.dir)?`${DEPN[r.depth]||''} ${DIRN[r.dir]||''} \ud328\uc2a4`.replace(/\s+/g,' ').trim():'\ud328\uc2a4';
+const nxt=(r,who)=>({PICK6:'\uadf8\ub300\ub85c TD (\ud53d\uc2dd\uc2a4)',TD:`${who} TD`,FG:`${who} FG`,PUNT:'\ub4dd\uc810 \uc5c6\uc774 \ud380\ud2b8',TO:'\ub2e4\uc2dc \ud134\uc624\ubc84',DOWNS:'4\ub2e4\uc6b4 \uc2e4\ud328',MISS:`${who} FG \uc2e4\ud328`,END:'\uc804\u00b7\ud6c4\ubc18 \uc885\ub8cc'})[r.nx]||r.nx;
+const sent=(r,me,opp,thrown)=>thrown
+ ?`<div class="iplay t"><b>${qk(r)==='OT'?'OT':qk(r)+'Q'} ${r.clk}</b> \u00b7 ${r.qb||me+' QB'}\uac00 ${r.tgt?r.tgt+'\uc5d0\uac8c ':''}\ub358\uc9c4 ${pass(r)}\uc744 <b>${r.by||'?'}</b>(${opp})\uac00 \uac00\ub85c\ucc54${r.ret?`, ${r.ret}\uc57c\ub4dc \ub9ac\ud134`:''} <span class="bad">\u2192 ${nxt(r,opp)}</span></div>`
+ :`<div class="iplay m"><b>${qk(r)==='OT'?'OT':qk(r)+'Q'} ${r.clk}</b> \u00b7 <b>${r.by||'?'}</b>\uac00 ${r.qb||opp+' QB'}(${opp})\uc758 ${r.tgt?r.tgt+' \ud5a5\ud55c ':''}${pass(r)}\uc744 \uac00\ub85c\ucc54${r.ret?`, ${r.ret}\uc57c\ub4dc \ub9ac\ud134`:''} <span class="good">\u2192 ${nxt(r,me)}</span></div>`;
+function qheat(e){const T={...e.thrQ,OT:e.thrOT},M={...e.madeQ,OT:e.madeOT},mx=Math.max(1,...QK.map(k=>Math.max(T[k]||0,M[k]||0)));
+ const cell=(v,c)=>`<td><div class="qh ${c}" style="--h:${Math.round(100*(v||0)/mx)}%"><b>${v||0}</b></div></td>`;
+ return `<table class="qtab"><tr><th></th>${QK.map(k=>`<th>${k==='OT'?'OT':k+'Q'}</th>`).join('')}</tr>
+ <tr><td class="lbl"><span class="ib t">\ub358\uc9d0</span></td>${QK.map(k=>cell(T[k],'t')).join('')}</tr>
+ <tr><td class="lbl"><span class="ib m">\uc7a1\uc74c</span></td>${QK.map(k=>cell(M[k],'m')).join('')}</tr></table>`;}
+function igames(t){const e=IN[t];if(!e)return '';
+ return `<div class="eside"><h3>${t} <span class="small muted">\uacbd\uae30\ubcc4 \u00b7 \ucd5c\uc2e0\uc21c</span></h3>${e.games.map(g=>{
+  const dots=k=>g.thr.filter(r=>qk(r)===k).map(()=>'<i class="dt t"></i>').join('')+g.made.filter(r=>qk(r)===k).map(()=>'<i class="dt m"></i>').join('');
+  return `<div class="igame"><div class="ihead"><b>${g.d.slice(5).replace('-','/')} vs ${g.opp}</b><span class="ib ${g.thr.length?'t':''}">\ub358\uc9d0 ${g.thr.length}</span><span class="ib ${g.made.length?'m':''}">\uc7a1\uc74c ${g.made.length}</span></div>
+  <div class="qstrip">${QK.filter(k=>k!=='OT'||g.thr.concat(g.made).some(r=>qk(r)==='OT')).map(k=>`<span><em>${k==='OT'?'OT':k+'Q'}</em>${dots(k)}</span>`).join('')}</div>
+  ${g.thr.concat(g.made).length?[...g.thr.map(r=>[r,1]),...g.made.map(r=>[r,0])].sort((a,b)=>(a[0].q-b[0].q)||(b[0].clk.localeCompare(a[0].clk,undefined,{numeric:true}))).map(([r,th])=>sent(r,t,g.opp,th)).join(''):'<div class="small muted">\uc591 \ud300 \ubaa8\ub450 INT \uc5c6\uc74c</div>'}</div>`;}).join('')}</div>`;}
 const after=(a,who)=>{const sc=(a.PICK6||0)+(a.TD||0)+(a.FG||0),n=Object.values(a).reduce((x,y)=>x+y,0);return n?`${who} \ub4dd\uc810 ${sc}/${n} <span class="muted">(\ud53d\uc2dd\uc2a4 ${a.PICK6||0} \u00b7 TD ${a.TD||0} \u00b7 FG ${a.FG||0} \u00b7 \ubb34\ub4dd\uc810 ${n-sc})</span>`:'\u2014';};
-const qsplit=(Q,ot)=>['1','2','3','4'].map(q=>`${q}Q ${Q[q]||0}`).join(' \u00b7 ')+(ot?` \u00b7 OT ${ot}`:'');
 function iqb(q,team){if(!q.G)return `<div class="qbi"><b>${q.n}</b> \u00b7 DK INT ${q.line} <span class="muted small">(\uc774\ubc88 \uc2dc\uc98c \ud328\uc2a4 \uae30\ub85d \uc5c6\uc74c)</span></div>`;
  const moved=q.teams.some(t=>t!==team);
  return `<div class="qbi"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${q.n} <span class="small muted">${team}</span></b><span class="small">DK INT <b>${q.line}</b>${q.open!=null&&q.open!==q.line?` (\uc624\ud508 ${q.open})`:''} <span class="muted">\ubc30\ub2f9 \ubbf8\uc81c\uacf5</span></span></div>
@@ -304,18 +325,17 @@ function iside(t,o){const e=IN[t],x=IN[o];if(!e)return `<div class="eside"><h3>$
  <div class="kv"><span><span class="ib m">\uc7a1\uc74c</span> \uc218\ube44\uac00 \uc7a1\uc740 INT</span><b>${e.made} <span class="small">(\uacbd\uae30\ub2f9 ${e.madePG})</span></b></div><div class="small muted">${rk(e.madeRk)} \u00b7 INT \uc7a1\uc740 \uacbd\uae30 ${e.madeGames}/${e.G}</div>
  ${x?`<div class="kv vs"><span>vs ${o} \uacf5\uaca9\uc774 \ub358\uc9c0\ub294 INT</span><b>\uacbd\uae30\ub2f9 ${x.thrPG} ${rk(x.thrRk)}</b></div>`:''}
  ${e.toDiff!=null?`<div class="kv"><span>\ud134\uc624\ubc84 \ub9c8\uc9c4</span><b>${e.toDiff>0?'+':''}${e.toDiff} ${rk(e.toRk)}</b></div>`:''}
- <div class="small" style="margin-top:8px"><b>\ucffc\ud130\ubcc4</b><br><span class="ib t">\ub358\uc9d0</span> ${qsplit(e.thrQ,e.thrOT)}<br><span class="ib m">\uc7a1\uc74c</span> ${qsplit(e.madeQ,e.madeOT)}</div>
+ <div class="small" style="margin-top:10px"><b>\uba87 \ucffc\ud130\uc5d0 \ub098\uc654\ub098</b> <span class="muted">(\uc2dc\uc98c \ud569\uacc4)</span></div>${qheat(e)}
  <div class="small" style="margin-top:6px"><b>\ub358\uc9c4 INT \ud328\uc2a4</b> \uc9e7\uc740 ${e.thrDepth.short} \u00b7 \uae4a\uc740 ${e.thrDepth.deep} / \uc67c\ucabd ${e.thrDir.left} \u00b7 \uac00\uc6b4\ub370 ${e.thrDir.middle} \u00b7 \uc624\ub978\ucabd ${e.thrDir.right}</div>
  <div class="small" style="margin-top:6px"><b>INT \ub2e4\uc74c \ub4dc\ub77c\uc774\ube0c</b><br><span class="ib t">\ub358\uc9d0</span> ${after(e.thrAfter,'\uc0c1\ub300')}<br><span class="ib m">\uc7a1\uc74c</span> ${after(e.madeAfter,t)}</div>
  <div class="small" style="margin-top:6px"><b>QB\ubcc4</b> ${e.qbs.filter(q=>q.ATT>=5).map(q=>`${q.n} ${q.INT}INT/${q.ATT}\uc2dc\ub3c4(${q.rate}%, INT \uacbd\uae30 ${q.g1}/${q.G})`).join(' \u00b7 ')||'\u2014'}</div>
  <div class="small" style="margin-top:6px"><b>INT \ub54c \ub178\ub9b0 \uc120\uc218</b> ${e.tgts.map(([n,c])=>`${n} ${c}`).join(' \u00b7 ')||'\u2014'}</div>
  <div class="small" style="margin-top:6px"><b>\uc7a1\uc740 \uc218\ube44\uc218</b> ${e.dfs.map(f=>`${f.n} ${f.INT}${f.YDS?` (${f.YDS}\uc57c\ub4dc)`:''}${f.TD?' \ud83d\udd25TD':''}`).join(' \u00b7 ')||'\u2014'}</div>
- <div class="small muted" style="margin-top:8px">\uacbd\uae30\ubcc4 (\ucd5c\uc2e0\uc21c, \ub20c\ub7ec\uc11c \uc0c1\uc138)</div>
- ${e.games.map(g=>`<details class="igame"><summary><span class="muted" style="min-width:74px">${g.d.slice(5).replace('-','/')} vs ${g.opp}</span><span class="ib ${g.thr.length?'t':''}">\ub358\uc9d0 ${g.thr.length}</span><span class="ib ${g.made.length?'m':''}">\uc7a1\uc74c ${g.made.length}</span></summary>
-  ${g.thr.map(r=>iplay(r,'t',t)).join('')}${g.made.map(r=>iplay(r,'m',t)).join('')}${!g.thr.length&&!g.made.length?'<div class="small muted">\uc591 \ud300 INT \uc5c6\uc74c</div>':''}</details>`).join('')}</div>`;}
+ </div>`;}
 $('intGrid').innerHTML=AUTO.games.map(g=>`<div class="card"><h3 style="font-size:20px">${g.m} <span class="small muted">${g.time}</span></h3>
  <div class="small" style="margin:4px 0"><b>\uc624\ub298 QB \uc778\ud130\uc149\uc158 \ub77c\uc778</b></div>${(IQ[g.m]||[]).map(q=>iqb(q,q.tm||[g.away,g.home].find(t=>(IN[t]?.qbs||[]).some(x=>x.n===q.n))||'')).join('')||'<div class="small muted">DK INT \ub77c\uc778\uc774 \uc544\uc9c1 \uc5c6\uc5b4\uc694.</div>'}
- <div class="eduo" style="margin-top:10px">${iside(g.away,g.home)}${iside(g.home,g.away)}</div></div>`).join('');
+ <div class="eduo" style="margin-top:10px">${iside(g.away,g.home)}${iside(g.home,g.away)}</div></div>
+ <div class="card"><h3 style="font-size:18px">\ud83d\udccb ${g.m} \u00b7 \uacbd\uae30\ubcc4 \uc778\ud130\uc149\uc158 <span class="small muted"><i class="dt t"></i> \ub358\uc9d0 <i class="dt m"></i> \uc7a1\uc74c</span></h3><div class="eduo">${igames(g.away)}${igames(g.home)}</div></div>`).join('');
 
 /* \uccab 3\ub4dc\ub77c\uc774\ube0c \u00b7 \uccab TD */
 const E=AUTO.early||{},DKN={TD:"TD",FG:"FG",PUNT:"\ud380\ud2b8",TO:"\ud134\uc624\ubc84",DOWNS:"4\ub2e4\uc6b4",MISS:"FG\uc2e4\ud328",END:"\uc885\ub8cc"};
