@@ -80,7 +80,7 @@
   <div class="note"><b>가성비 = 배당이 실제 확률보다 후한가?</b> DraftKings 단계별 오버 라인(예: 득점 20+)의 배당을 확률로 바꾼 값(<b>배당 확률</b>)과, 이 선수가 그 기준선 이상을 기록할 <b>추정 확률</b>을 비교해요. 추정 확률 = 시즌 적중률과 최근 5경기 적중률을 반반 섞고 표본이 적은 만큼 50% 쪽으로 당긴 값이에요.<br><b>적정 배당</b> = 추정 확률대로라면 받아야 할 배당이에요. 실제 배당이 적정 배당보다 후하면 가성비가 좋아요.<br>💰 <b>가성비 좋음</b> = 추정이 배당 확률보다 5%p 이상 높고 경고 없음 · 🟡 <b>가성비(경고)</b> = 차이는 크지만 출전시간 감소·부상·블로아웃·최근 부진 경고가 있음 · ⚖️ <b>적정</b> = ±5%p 이내 · 💸 <b>비쌈</b> = 5%p 이상 낮음. 추정은 과거 기록 기반이라 보장이 아니에요.</div>
   <div class="filters" id="vview"></div>
   <div class="filters" id="vcat"></div><div class="filters" id="vval"></div>
-  <div class="filters"><select class="sel" id="vgame"></select><input class="sel" id="vsearch" type="search" placeholder="🔍 선수 이름 (예: brown)" style="min-width:180px"></div>
+  <div class="filters"><select class="sel" id="vgame"></select><select class="sel" id="vplayer" style="max-width:240px"></select><input class="sel" id="vsearch" type="search" placeholder="🔍 선수 이름 (예: brown)" style="min-width:180px"></div>
   <div id="vlad"></div>
   <div class="shead" id="vhead"><span>선수 · 경기</span><span style="text-align:center">기준선 · 배당</span><span>배당 확률 vs 추정</span><span>최근 5경기 (최신→)</span><span>적정 배당 · 출전</span><span style="text-align:center">가성비</span></div>
   <div id="vlist"></div>
@@ -259,6 +259,9 @@ document.querySelectorAll('#vcat .fbtn').forEach(b=>b.onclick=()=>{vc=b.dataset.
 document.querySelectorAll('#vval .fbtn').forEach(b=>b.onclick=()=>{vv=b.dataset.v;document.querySelectorAll('#vval .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawV();});
 $('vgame').onchange=e=>{vg=e.target.value;vn=40;drawV();};
 $('vsearch').oninput=e=>{vq=e.target.value.trim().toLowerCase();vn=40;drawV();};
+let vp='all';{const pl={};LAD.forEach(d=>{(pl[d.g]=pl[d.g]||{})[d.id]=d.n+' ('+d.t+')';});
+ $('vplayer').innerHTML=`<option value="all">👤 모든 선수 (${new Set(LAD.map(d=>d.id)).size}명)</option>`+Object.keys(pl).map(g=>`<optgroup label="${g}">${Object.entries(pl[g]).sort((a,b)=>a[1].localeCompare(b[1])).map(([id,n])=>`<option value="${id}">${n}</option>`).join('')}</optgroup>`).join('');
+ $('vplayer').onchange=e=>{vp=e.target.value;vn=40;drawV();};}
 const VI={good:'좋음',warn:'경고',fair:'적정',bad:'비쌈',low:'확률↓',heavy:'무거움'};
 const PIDX={};(AUTO.props||[]).forEach(p=>PIDX[p.id+'|'+p.cat]=p);
 const SIDX={};AUTO.stat80.forEach(r=>{const k=r.n+'|'+r.cat,o=SIDX[k],rank={top:0,rec:1,caution:2};if(!o||rank[r.rec]<rank[o.rec]||(r.rec===o.rec&&r.th>o.th))SIDX[k]=r;});
@@ -290,7 +293,7 @@ function playerCard(G){const d0=G[0],mu=d0.min3-d0.min,fl=[...new Set(G.flatMap(
 function drawV(){const lad=vw==='lad';$('vhead').style.display=lad?'none':'';$('vlad').style.display=lad?'':'none';$('vlist').style.display=lad?'none':'';
  if(lad){const ok=d=>vv==='all'||d.r.some(r=>vv==='good+'?(r[10]==='good'||r[10]==='warn'):r[10]===vv);
   const best=d=>Math.max(...d.r.filter(r=>r[9]!=null&&r[3]>=40&&r[2]<=95).map(r=>r[9]),-99);
-  const F=LAD.filter(d=>(vc==='all'||d.cat===vc)&&(vg==='all'||d.g===vg)&&(!vq||d.n.toLowerCase().includes(vq))&&ok(d));
+  const F=LAD.filter(d=>(vc==='all'||d.cat===vc)&&(vg==='all'||d.g===vg)&&(!vq||d.n.toLowerCase().includes(vq))&&(vp==='all'||d.id===vp)&&(vp!=='all'||ok(d)));
   const by={};F.forEach(d=>(by[d.id]=by[d.id]||[]).push(d));
   const P=Object.values(by).map(G=>G.sort((a,b)=>VCATS.indexOf(a.cat)-VCATS.indexOf(b.cat))).sort((a,b)=>Math.max(...b.map(best))-Math.max(...a.map(best)));
   $('vlad').innerHTML=P.length?`<div class="small muted" style="margin:4px 0 8px">선수 ${P.length}명 · 선수마다 카드 하나에 스탯별(득점·리바·어시·3점·PRA·PR·PA·RA) 한 줄씩. 기준선 간격은 FanDuel 대체 라인처럼 고정(득점 10·15·20…, 리바 4·6·8…, 어시 2·4·6…, 3점 1·2·3…, PRA 15·20·25…).<br>칸 = <b>기준선 · 추정 확률(시즌·최근5 반반) · 시즌/최근5 적중 · DK 배당(배당이 뜻하는 확률) · 판정</b>. 추정이 배당 확률보다 5%p 이상 높으면 <b style="color:var(--good)">좋음</b> (<b style="color:#d97706">경고</b> = 좋지만 경고 있음 · 적정 · <b style="color:var(--bad)">비쌈</b> · 확률↓ = 추정 40% 미만 · ★ 최적 = 그 스탯에서 가장 좋은 단계). 칸을 누르면 슬립에 담겨요.</div><div class="lgrid">`+P.slice(0,vn).map(playerCard).join('')+'</div>'+(P.length>vn?`<button class="btn" style="width:100%;margin:6px 0" onclick="vn+=40;drawV()">더 보기 (${P.length-vn}명 남음)</button>`:''):'<div class="muted">해당 조건의 선수가 없어요.</div>';}
