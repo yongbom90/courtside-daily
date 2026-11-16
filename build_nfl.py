@@ -5,7 +5,7 @@ usage: python build_nfl.py YYYYMMDD out.json
 데이터형 위젯: 픽·방향은 만들지 않는다. 숫자는 전부 ESPN(라인은 DraftKings via ESPN)에서 온 값.
 분석 문장(경기 맥락, 팀 카드, 리뷰 원인)은 Claude가 nfl_analysis.json에 따로 쓴다.
 """
-import glob, json, os, sys, urllib.request
+import glob, json, os, re, sys, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
@@ -243,6 +243,148 @@ def early(ab, evs, sums):
             "tdq": q, "q1": round(100 * q["1"] / G), "h1": round(100 * (q["1"] + q["2"]) / G),
             "games": games[:6]}
 
+NM = r"([A-Z][A-Za-z'.\-]*\.[A-Za-z'\-]+(?: (?:Jr|Sr|II|III)\.?)?)"
+
+
+def int_play(p, off, dfn, nxt):
+    """인터셉션 플레이 1개 → 상세. off=던진 팀, dfn=잡은 팀, nxt=다음 드라이브(잡은 팀 공격)."""
+    t = p.get("text", "")
+    g = lambda rx: (re.search(rx, t) or [None, None])[1]
+    after = t.split("INTERCEPTED", 1)[-1]
+    td = "TOUCHDOWN" in after.upper()
+    ret = re.search(r"for (-?\d+) yards?", after)
+    if td:
+        nx = "PICK6"
+    elif nxt and nxt["team"]["abbreviation"] == dfn:
+        nx = drive_kind(nxt.get("result"))
+    else:
+        nx = "END"
+    return {"q": p.get("period", {}).get("number"), "clk": (p.get("clock") or {}).get("displayValue", ""),
+            "qb": g(NM + r" pass"), "tgt": g(r"intended for " + NM), "by": g(r"INTERCEPTED by " + NM),
+            "depth": g(r"pass (short|deep)"), "dir": g(r"pass (?:short |deep )?(left|middle|right)"),
+            "ret": int(ret[1]) if ret else (0 if "no gain" in after else None), "nx": nx, "txt": t[:260]}
+
+
+def game_ints(s):
+    """한 경기 → {던진 팀: [인터셉션 상세]}."""
+    dr = (s.get("drives") or {}).get("previous") or []
+    tms = [t["team"]["abbreviation"] for t in s.get("boxscore", {}).get("teams", [])]
+    out = {t: [] for t in tms}
+    for i, x in enumerate(dr):
+        for p in x.get("plays", []):
+            txt = p.get("text", "")
+            if "INTERCEPTED" not in txt or "NULLIFIED" in txt.upper() or "NO PLAY" in txt.upper():
+                continue
+            off = x["team"]["abbreviation"]
+            dfn = next((t for t in tms if t != off), "")
+            out.setdefault(off, []).append(int_play(p, off, dfn, dr[i + 1] if i + 1 < len(dr) else None))
+    return out
+
+
+def ints(ab, evs, sums):
+    """팀의 이번 시즌 인터셉션: 던진 것(공격)·잡은 것(수비) 경기별 상세 + 집계."""
+    games, qbs, dfs = [], {}, {}
+    for d, e in sorted(evs, reverse=True):
+        s = sums[e]
+        dr = (s.get("drives") or {}).get("previous") or []
+        opp = next((t["team"]["abbreviation"] for t in s.get("boxscore", {}).get("teams", []) if t["team"]["abbreviation"] != ab), "")
+        gi = game_ints(s)
+        thr, made = gi.get(ab, []), [r for t, L in gi.items() if t != ab for r in L]
+        for t in s.get("boxscore", {}).get("players", []):
+            if t["team"]["abbreviation"] != ab:
+                continue
+            for g in t.get("statistics", []):
+                for a in g.get("athletes", []):
+                    st = dict(zip(g["keys"], a.get("stats", [])))
+                    nm = a["athlete"]["displayName"]
+                    if g["name"] == "passing":
+                        q = qbs.setdefault(nm, {"n": nm, "G": 0, "INT": 0, "ATT": 0, "g1": 0})
+                        att = num((st.get("completions/passingAttempts") or "0/0").split("/")[1])
+                        if att:
+                            k = int(num(st.get("interceptions")))
+                            q.update(G=q["G"] + 1, INT=q["INT"] + k, ATT=q["ATT"] + att, g1=q["g1"] + (k > 0))
+                    elif g["name"] == "interceptions":
+                        f = dfs.setdefault(nm, {"n": nm, "INT": 0, "YDS": 0, "TD": 0})
+                        f.update(INT=f["INT"] + int(num(st.get("interceptions"))), YDS=f["YDS"] + int(num(st.get("interceptionYards"))),
+                                 TD=f["TD"] + int(num(st.get("interceptionTouchdowns"))))
+        if dr:
+            games.append({"d": d[:10], "opp": opp, "thr": thr, "made": made})
+    if not games:
+        return None
+    G = len(games)
+    T = [r for g in games for r in g["thr"]]
+    M = [r for g in games for r in g["made"]]
+    cnt = lambda L, k, vals: {v: sum(r[k] == v for r in L) for v in vals}
+    after = lambda L: {k: sum(r["nx"] == k for r in L) for k in ("PICK6", "TD", "FG", "PUNT", "TO", "DOWNS", "MISS", "END")}
+    tg = {}
+    for r in T:
+        if r["tgt"]:
+            tg[r["tgt"]] = tg.get(r["tgt"], 0) + 1
+    for q in qbs.values():
+        q["rate"] = round(100 * q["INT"] / q["ATT"], 1) if q["ATT"] else 0
+    return {"G": G,
+            "thr": len(T), "thrPG": round(len(T) / G, 2), "thrGames": sum(bool(g["thr"]) for g in games),
+            "made": len(M), "madePG": round(len(M) / G, 2), "madeGames": sum(bool(g["made"]) for g in games),
+            "thrQ": cnt(T, "q", (1, 2, 3, 4)), "madeQ": cnt(M, "q", (1, 2, 3, 4)),
+            "thrOT": sum((r["q"] or 0) > 4 for r in T), "madeOT": sum((r["q"] or 0) > 4 for r in M),
+            "thrDepth": cnt(T, "depth", ("short", "deep")), "thrDir": cnt(T, "dir", ("left", "middle", "right")),
+            "madeDepth": cnt(M, "depth", ("short", "deep")), "madeDir": cnt(M, "dir", ("left", "middle", "right")),
+            "thrAfter": after(T), "madeAfter": after(M),
+            "tgts": sorted(tg.items(), key=lambda x: -x[1])[:5],
+            "qbs": sorted(qbs.values(), key=lambda q: -q["ATT"]),
+            "dfs": sorted(dfs.values(), key=lambda f: (-f["INT"], -f["YDS"])),
+            "last": [[len(g["thr"]), len(g["made"])] for g in games[:5]],
+            "games": games}
+
+
+def int_ranks(season):
+    """리그 32팀 인터셉션 순위(경기당): 던진 INT 적은 순, 잡은 INT 많은 순. 실패하면 빈 dict."""
+    try:
+        teams = [t["team"] for t in get(f"{B}/teams")["sports"][0]["leagues"][0]["teams"]]
+        def one(t):
+            d = get(f"{CORE}/seasons/{season}/types/2/teams/{t['id']}/statistics")
+            st = {(c["name"], x["name"]): x.get("value") or 0 for c in d["splits"]["categories"] for x in c["stats"]}
+            g = st.get(("general", "gamesPlayed")) or 1
+            return t["abbreviation"], st.get(("passing", "interceptions"), 0) / g, st.get(("defensiveInterceptions", "interceptions"), 0) / g, \
+                st.get(("miscellaneous", "turnOverDifferential"), 0)
+        with ThreadPoolExecutor(8) as ex:
+            rows = list(ex.map(one, teams))
+    except Exception as e:
+        print(f"  int_ranks: {e}", file=sys.stderr)
+        return {}
+    rk = lambda key, rev: {r[0]: 1 + sum((x[key] > r[key]) if rev else (x[key] < r[key]) for x in rows) for r in rows}
+    a, b, c = rk(1, False), rk(2, True), rk(3, True)
+    return {r[0]: {"thrRk": a[r[0]], "madeRk": b[r[0]], "toDiff": int(r[3]), "toRk": c[r[0]]} for r in rows}
+
+
+def qb_int(aid, line, opn):
+    """오늘 INT 라인이 열린 QB의 이번 시즌 경기별 INT(트레이드 전 팀 포함, ESPN 개인 경기 로그)."""
+    try:
+        g = get(f"https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/{aid}/gamelog")
+        ath = get(f"https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/{aid}")["athlete"]
+        nm, cur = ath["displayName"], (ath.get("team") or {}).get("abbreviation", "")
+    except Exception as e:
+        print(f"  qb_int {aid}: {e}", file=sys.stderr)
+        return None
+    names = g.get("names", [])
+    st = next((x for x in g.get("seasonTypes", []) if "Regular" in x.get("displayName", "")), None)
+    rows = []
+    for c in (st or {}).get("categories", []):
+        for e in c.get("events", []):
+            d = dict(zip(names, e["stats"]))
+            ev = g["events"].get(e["eventId"], {})
+            if num(d.get("passingAttempts")) > 0:
+                rows.append({"d": ev.get("gameDate", "")[:10], "opp": (ev.get("opponent") or {}).get("abbreviation", ""),
+                             "tm": (ev.get("team") or {}).get("abbreviation", ""), "INT": int(num(d.get("interceptions"))),
+                             "ATT": int(num(d.get("passingAttempts")))})
+    rows.sort(key=lambda r: r["d"], reverse=True)
+    if not rows:
+        return {"id": aid, "n": nm, "tm": cur, "line": line, "open": opn, "G": 0}
+    G, I, A = len(rows), sum(r["INT"] for r in rows), sum(r["ATT"] for r in rows)
+    hit = sum(r["INT"] > line for r in rows)
+    return {"id": aid, "n": nm, "tm": cur, "line": line, "open": opn, "G": G, "INT": I, "ATT": A, "rate": round(100 * I / A, 1),
+            "hit": hit, "hitPct": round(100 * hit / G), "l5": rows[:5], "teams": sorted({r["tm"] for r in rows})}
+
 
 def main(date, out):
     slate_days, back_days = windows(date)
@@ -297,6 +439,15 @@ def main(date, out):
         sums = dict(zip(all_ev, ex.map(summary, all_ev)))
         prop_res = dict(zip([g["id"] for g in games], ex.map(props_for, [g["id"] for g in games])))
     early_by = {ab: early(ab, evs, sums) for ab, evs in ev_by_team.items()}
+    int_by = {ab: ints(ab, evs, sums) for ab, evs in ev_by_team.items()}
+    rk = int_ranks(date[:4] if date[4:6] > "02" else str(int(date[:4]) - 1))
+    for ab, v in int_by.items():
+        if v:
+            v.update(rk.get(ab, {}))
+    int_qb = {}
+    for g in games:
+        L = [qb_int(aid, ln[0], ln[1]) for (aid, cat), ln in prop_res[g["id"]][0].items() if cat == "INT"]
+        int_qb[g["m"]] = [q for q in L if q]
     logs, who = {}, {}
     for ab, evs in ev_by_team.items():
         for _, e in sorted(evs, reverse=True):
@@ -461,7 +612,7 @@ def main(date, out):
             results.append({"id": ev["id"], "m": ev["shortName"], "close": f"{pc.get('details', '')} / {pc.get('overUnder', '')}",
                             "res": ats(pc.get("details"), pc.get("overUnder"), score), "score": score,
                             "q": {t["team"]["abbreviation"]: [int(q["value"]) for q in t.get("linescores", [])] for t in c["competitors"]},
-                            "headline": (s.get("article") or {}).get("headline", "")})
+                            "headline": (s.get("article") or {}).get("headline", ""), "ints": game_ints(s)})
             final_box[ev["id"]] = {aid: r for rows in box_rows(s).values() for aid, r in rows.items()}
     prop_review = []
     prev_files = sorted(f for f in glob.glob(os.path.join(HERE, "archive", "nfl_*_props.json")) if os.path.basename(f)[4:12] < date)
@@ -493,7 +644,7 @@ def main(date, out):
     for g in games:
         g.pop("tid", None)
     A = {"date": date, "slate": slate_days, "back": back_days, "games": games, "props": props, "td": tds, "usage": usage[:30],
-         "stat80": stat80, "early": early_by, "grades": grades, "gradeFrom": grade_from,
+         "stat80": stat80, "early": early_by, "ints": int_by, "intQB": int_qb, "grades": grades, "gradeFrom": grade_from,
          "results": results, "propReview": prop_review, "propReviewFrom": os.path.basename(prev_files[-1])[4:12] if prev_files else None,
          "cats": {**{v[0]: v[1] for v in PROP.values()}, "TD": "애니타임 TD"}, "avgAllow": avg_allow,
          "built": datetime.now().strftime("%Y-%m-%d %H:%M"), "phase": os.environ.get("CS_PHASE", "")}

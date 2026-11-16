@@ -3,6 +3,14 @@
 [class^="dk-"]{display:inline-block;padding:2px 6px;margin:0 3px 3px 0;border-radius:6px;font-size:11.5px;font-weight:700}
 .dk-TD{background:#16a34a2e;color:var(--good)}.dk-FG{background:#2563eb26;color:var(--primary)}.dk-PUNT{background:#64748b22;color:var(--muted)}
 .dk-TO{background:#dc262626;color:var(--bad)}.dk-DOWNS{background:#ea580c26;color:var(--warn)}.dk-MISS{background:#a855f726;color:#a855f7}.dk-END{background:#64748b14;color:var(--muted)}
+#intGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,640px),1fr))}
+.ib{display:inline-block;min-width:22px;text-align:center;padding:1px 6px;border-radius:6px;font-weight:700;font-size:12px;background:#64748b18;color:var(--muted)}
+.ib.t{background:#dc262626;color:var(--bad)}.ib.m{background:#16a34a2e;color:var(--good)}
+.iplay{font-size:12px;border-left:3px solid var(--line);padding:3px 0 3px 8px;margin:4px 0}.iplay.t{border-color:var(--bad)}.iplay.m{border-color:var(--good)}
+b.bad,span.bad{color:var(--bad)}span.good{color:var(--good)}
+.igame{border-top:1px solid var(--line);padding:5px 0}.igame summary{cursor:pointer;display:flex;gap:8px;align-items:center;font-size:13px;list-style:none}.igame summary::-webkit-details-marker{display:none}
+.qbi{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0}
+.chips2{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.chips2 span{font-size:11.5px;padding:2px 6px;border-radius:6px;border:1px solid var(--line)}.chips2 span.y{border-color:var(--bad);color:var(--bad);font-weight:700}
 #earlyGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,600px),1fr))}
 .eduo{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:760px){.eduo{grid-template-columns:1fr}}
 .eside h3{font-size:18px;margin:4px 0 6px}.kv{display:flex;justify-content:space-between;gap:8px;margin-top:6px}.kv b{font-size:18px}.kv.vs{color:var(--muted);font-size:13px}.kv.vs b{font-size:15px}
@@ -36,6 +44,7 @@ body{padding-bottom:40px}
   <button class="tab" data-t="props">📋 라인 vs 기록</button>
   <button class="tab" data-t="td">🎯 터치다운</button>
   <button class="tab" data-t="early">🚀 첫 3드라이브 · 첫 TD</button>
+  <button class="tab" data-t="ints">🛡️ 인터셉션</button>
   <button class="tab" data-t="usage">🔄 역할 변화</button>
   <button class="tab" data-t="review">🔍 지난 경기 리뷰</button>
 </div>
@@ -58,6 +67,10 @@ body{padding-bottom:40px}
 </section>
 <section class="panel" id="td"><div class="note">Anytime TD 라인이 열린 선수(QB 제외)의 이번 시즌 기록이에요. <b>TD 경기</b> = 러시·리시빙 터치다운을 1개 이상 기록한 경기 수예요. 칩은 최근 5경기 TD 수예요.</div>
   <div class="filters"><select class="sel" id="tdgame"></select></div><div class="grid" id="tdGrid"></div></section>
+<section class="panel" id="ints">
+  <p class="small muted">ESPN 플레이 기록으로 센 이번 시즌 인터셉션이에요. <span class="ib t">던짐</span> = 우리 QB가 던진 INT(공격), <span class="ib m">잡음</span> = 우리 수비가 잡은 INT. 리그 순위는 경기당 기준(던진 INT는 적은 순, 잡은 INT·턴오버 마진은 많은 순). 경기를 누르면 플레이별 상세(쿼터·시간·QB→노린 선수·잡은 선수·패스 방향·리턴·그다음 드라이브 결과)가 나와요.</p>
+  <h2 class="sec">오늘 매치업</h2><div class="grid" id="intGrid"></div>
+</section>
 <section class="panel" id="early">
   <div class="note"><b>첫 3드라이브</b> = 경기마다 각 팀이 공격한 처음 3번의 드라이브예요(이번 시즌 전체 경기). <b>공격 득점률</b> = 그중 TD·필드골로 끝난 비율. <b>수비 저지율</b> = 상대의 첫 3드라이브를 무득점(펀트·턴오버·4다운 저지·필드골 실패)으로 끝낸 비율이고, 무엇으로 막았는지 횟수를 같이 보여줘요. <b>첫 TD 쿼터</b> = 그 팀이 경기에서 처음 터치다운을 기록한 쿼터예요(수비·스페셜팀 TD 포함). 모두 ESPN 드라이브·득점 기록 자동 집계예요.</div>
   <div class="dleg"><span class="dk-TD">TD</span><span class="dk-FG">FG</span><span class="dk-PUNT">펀트</span><span class="dk-TO">턴오버</span><span class="dk-DOWNS">4다운</span><span class="dk-MISS">FG실패</span><span class="dk-END">종료</span></div>
@@ -171,6 +184,40 @@ function drawTD(v){const L=AUTO.td.filter(t=>(v==='all'||t.g===v)&&t.N>=3&&t.hit
  <div class="chips">${t.last.map(v=>`<i class="${v>0?'y':''}">${v}</i>`).join('')}</div></div>`).join('')||'<div class="muted">3경기 이상 출전하고 TD가 있는 선수가 없어요.</div>';}
 $('tdgame').onchange=e=>drawTD(e.target.value);drawTD('all');
 
+/* 인터셉션 */
+const IN=AUTO.ints||{},IQ=AUTO.intQB||{};
+const DIRN={left:'왼쪽',middle:'가운데',right:'오른쪽'},DEPN={short:'짧은',deep:'깊은'};
+const NXN={PICK6:'픽식스(바로 TD)',TD:'→ 상대 TD',FG:'→ 상대 FG',PUNT:'→ 펀트',TO:'→ 턴오버',DOWNS:'→ 4다운 실패',MISS:'→ FG 실패',END:'→ 전·후반 종료'};
+const rk=n=>n?`<span class="small muted">(리그 ${n}위)</span>`:'';
+const iplay=(r,cls,me)=>`<div class="iplay ${cls}"><b>${r.q>4?'OT':r.q+'Q'} ${r.clk}</b> · ${r.qb||'?'}${r.tgt?' → '+r.tgt:''} · <b>${r.by||'?'}</b> 가로챔${r.depth||r.dir?` · ${DEPN[r.depth]||''} ${DIRN[r.dir]||''} 패스`:''}${r.ret!=null?` · 리턴 ${r.ret}야드`:''} · <span class="${cls==='t'?'bad':'good'}">${(NXN[r.nx]||r.nx).replace('상대',cls==='t'?'상대':me)}</span></div>`;
+const after=(a,who)=>{const sc=(a.PICK6||0)+(a.TD||0)+(a.FG||0),n=Object.values(a).reduce((x,y)=>x+y,0);return n?`${who} 득점 ${sc}/${n} <span class="muted">(픽식스 ${a.PICK6||0} · TD ${a.TD||0} · FG ${a.FG||0} · 무득점 ${n-sc})</span>`:'—';};
+const qsplit=(Q,ot)=>['1','2','3','4'].map(q=>`${q}Q ${Q[q]||0}`).join(' · ')+(ot?` · OT ${ot}`:'');
+function iqb(q,team){if(!q.G)return `<div class="qbi"><b>${q.n}</b> · DK INT ${q.line} <span class="muted small">(이번 시즌 패스 기록 없음)</span></div>`;
+ const moved=q.teams.some(t=>t!==team);
+ return `<div class="qbi"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>${q.n} <span class="small muted">${team}</span></b><span class="small">DK INT <b>${q.line}</b>${q.open!=null&&q.open!==q.line?` (오픈 ${q.open})`:''} <span class="muted">배당 미제공</span></span></div>
+ <div class="kv"><span>INT 나온 경기 (오버 ${q.line})</span><b class="${q.hitPct>=60?'bad':''}">${q.hit}/${q.G} (${q.hitPct}%)</b></div>
+ <div class="small muted">시즌 ${q.INT} INT / ${q.ATT} 시도 · INT율 ${q.rate}%${moved?` · ⚠️ 기록에 이전 팀(${q.teams.filter(t=>t!==team).join(',')}) 경기 포함`:''}</div>
+ <div class="chips2">${q.l5.map(r=>`<span class="${r.INT?'y':''}">${r.d.slice(5).replace('-','/')} ${r.opp} ${r.INT}INT/${r.ATT}</span>`).join('')}</div></div>`;}
+function iside(t,o){const e=IN[t],x=IN[o];if(!e)return `<div class="eside"><h3>${t}</h3><div class="muted">기록 없음</div></div>`;
+ return `<div class="eside"><h3>${t} <span class="small muted">${e.G}경기</span></h3>
+ <div class="kv"><span><span class="ib t">던짐</span> 공격이 던진 INT</span><b>${e.thr} <span class="small">(경기당 ${e.thrPG})</span></b></div><div class="small muted">${rk(e.thrRk)} · INT 던진 경기 ${e.thrGames}/${e.G}</div>
+ ${x?`<div class="kv vs"><span>vs ${o} 수비가 잡는 INT</span><b>경기당 ${x.madePG} ${rk(x.madeRk)}</b></div>`:''}
+ <div class="kv"><span><span class="ib m">잡음</span> 수비가 잡은 INT</span><b>${e.made} <span class="small">(경기당 ${e.madePG})</span></b></div><div class="small muted">${rk(e.madeRk)} · INT 잡은 경기 ${e.madeGames}/${e.G}</div>
+ ${x?`<div class="kv vs"><span>vs ${o} 공격이 던지는 INT</span><b>경기당 ${x.thrPG} ${rk(x.thrRk)}</b></div>`:''}
+ ${e.toDiff!=null?`<div class="kv"><span>턴오버 마진</span><b>${e.toDiff>0?'+':''}${e.toDiff} ${rk(e.toRk)}</b></div>`:''}
+ <div class="small" style="margin-top:8px"><b>쿼터별</b><br><span class="ib t">던짐</span> ${qsplit(e.thrQ,e.thrOT)}<br><span class="ib m">잡음</span> ${qsplit(e.madeQ,e.madeOT)}</div>
+ <div class="small" style="margin-top:6px"><b>던진 INT 패스</b> 짧은 ${e.thrDepth.short} · 깊은 ${e.thrDepth.deep} / 왼쪽 ${e.thrDir.left} · 가운데 ${e.thrDir.middle} · 오른쪽 ${e.thrDir.right}</div>
+ <div class="small" style="margin-top:6px"><b>INT 다음 드라이브</b><br><span class="ib t">던짐</span> ${after(e.thrAfter,'상대')}<br><span class="ib m">잡음</span> ${after(e.madeAfter,t)}</div>
+ <div class="small" style="margin-top:6px"><b>QB별</b> ${e.qbs.filter(q=>q.ATT>=5).map(q=>`${q.n} ${q.INT}INT/${q.ATT}시도(${q.rate}%, INT 경기 ${q.g1}/${q.G})`).join(' · ')||'—'}</div>
+ <div class="small" style="margin-top:6px"><b>INT 때 노린 선수</b> ${e.tgts.map(([n,c])=>`${n} ${c}`).join(' · ')||'—'}</div>
+ <div class="small" style="margin-top:6px"><b>잡은 수비수</b> ${e.dfs.map(f=>`${f.n} ${f.INT}${f.YDS?` (${f.YDS}야드)`:''}${f.TD?' 🔥TD':''}`).join(' · ')||'—'}</div>
+ <div class="small muted" style="margin-top:8px">경기별 (최신순, 눌러서 상세)</div>
+ ${e.games.map(g=>`<details class="igame"><summary><span class="muted" style="min-width:74px">${g.d.slice(5).replace('-','/')} vs ${g.opp}</span><span class="ib ${g.thr.length?'t':''}">던짐 ${g.thr.length}</span><span class="ib ${g.made.length?'m':''}">잡음 ${g.made.length}</span></summary>
+  ${g.thr.map(r=>iplay(r,'t',t)).join('')}${g.made.map(r=>iplay(r,'m',t)).join('')}${!g.thr.length&&!g.made.length?'<div class="small muted">양 팀 INT 없음</div>':''}</details>`).join('')}</div>`;}
+$('intGrid').innerHTML=AUTO.games.map(g=>`<div class="card"><h3 style="font-size:20px">${g.m} <span class="small muted">${g.time}</span></h3>
+ <div class="small" style="margin:4px 0"><b>오늘 QB 인터셉션 라인</b></div>${(IQ[g.m]||[]).map(q=>iqb(q,q.tm||[g.away,g.home].find(t=>(IN[t]?.qbs||[]).some(x=>x.n===q.n))||'')).join('')||'<div class="small muted">DK INT 라인이 아직 없어요.</div>'}
+ <div class="eduo" style="margin-top:10px">${iside(g.away,g.home)}${iside(g.home,g.away)}</div></div>`).join('');
+
 /* 첫 3드라이브 · 첫 TD */
 const E=AUTO.early||{},DKN={TD:"TD",FG:"FG",PUNT:"펀트",TO:"턴오버",DOWNS:"4다운",MISS:"FG실패",END:"종료"};
 const dchip=k=>`<span class="dk-${k}">${DKN[k]}</span>`;
@@ -200,8 +247,8 @@ $('usageGrid').innerHTML=AUTO.usage.slice(0,24).map(u=>{const up=u.d>0;
 const R=AN.review||{};const PR=AUTO.propReview.filter(p=>p.r!=='-');
 const prSum=Object.entries(PR.reduce((m,p)=>{(m[p.cat]=m[p.cat]||[0,0])[p.r==='O'?0:1]++;return m;},{}));
 $('revWrap').innerHTML=(R.summary?`<div class="note">${R.summary}</div>`:'')+
- (AUTO.results.length?`<h2 class="sec">지난 경기 결과 (${AUTO.back.map(md).join('~')}, 마감 라인 대비)</h2><div class="tblwrap"><table><tr><th>경기</th><th>스코어 (쿼터)</th><th>마감 라인</th><th>결과</th><th>헤드라인</th></tr>
- ${AUTO.results.map(r=>`<tr><td>${r.m}</td><td>${Object.entries(r.score).map(([t,s])=>`<b>${t} ${s}</b> <span class="muted small">(${(r.q[t]||[]).join('-')})</span>`).join('<br>')}</td><td>${r.close}</td><td class="small">${r.res}</td><td class="small">${r.headline}</td></tr>`).join('')}</table></div>`:'<div class="muted">이 구간에 끝난 경기가 없어요.</div>')+
+ (AUTO.results.length?`<h2 class="sec">지난 경기 결과 (${AUTO.back.map(md).join('~')}, 마감 라인 대비)</h2><div class="tblwrap"><table><tr><th>경기</th><th>스코어 (쿼터)</th><th>마감 라인</th><th>결과</th><th>인터셉션</th><th>헤드라인</th></tr>
+ ${AUTO.results.map(r=>`<tr><td>${r.m}</td><td>${Object.entries(r.score).map(([t,s])=>`<b>${t} ${s}</b> <span class="muted small">(${(r.q[t]||[]).join('-')})</span>`).join('<br>')}</td><td>${r.close}</td><td class="small">${r.res}</td><td class="small">${Object.entries(r.ints||{}).map(([t,L])=>`<div><span class="ib ${L.length?'t':''}">${t} 던짐 ${L.length}</span> ${L.map(x=>`<span class="muted">${x.q>4?'OT':x.q+'Q'} ${x.qb||''}${x.tgt?'→'+x.tgt:''} (${x.by||'?'})</span>`).join(', ')}</div>`).join('')||'—'}</td><td class="small">${r.headline}</td></tr>`).join('')}</table></div>`:'<div class="muted">이 구간에 끝난 경기가 없어요.</div>')+
  ((R.items||[]).length?`<h2 class="sec">왜 그렇게 됐나</h2><div class="grid">${R.items.map(x=>`<div class="card"><h3 style="font-size:20px">${x.t}</h3><div class="small">${x.why}</div>${x.lesson?`<div class="lean"><b>참고:</b> ${x.lesson}</div>`:''}</div>`).join('')}</div>`:'')+
  (()=>{const G=AUTO.grades||[];if(!G.length)return AUTO.gradeFrom?'':'<div class="note">아직 채점할 지난 위젯 픽이 없어요. 다음 실행부터 직전 위젯의 ⭐·✅ 픽을 실제 기록으로 채점해요.</div>';
  const sm=k=>{const x=G.filter(g=>g.rec===k&&g.r!=='-');return `${RECN[k]} ${x.filter(g=>g.r==='O').length}/${x.length}`;};
