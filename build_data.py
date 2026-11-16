@@ -372,6 +372,8 @@ def main(date, out):
                 p = (ps + p5) / 2
                 if p < 0.04 or p > 0.97:
                     continue
+                if lad["r"] and hit == 0 and h5 == 0 and lad["r"][-1][6] == 0 and lad["r"][-1][7] == 0:
+                    continue  # 한 번도 못 넘은 단계는 첫 줄만
                 am, imp, edge, val = dk.get(float(th), dk.get(th, (None, None, None, None)))
                 lad["r"].append([th, am, imp, round(100 * p), round(100 * ps), round(100 * p5), hit, h5, fair_am(p), edge, val])
             lad["dkx"] = sorted(t for t in dk if t not in LADDER.get(cat, []))  # 간격 밖 DK 단계(목록 보기에 있음)
