@@ -53,13 +53,13 @@
 .lab{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:12px;margin-bottom:4px}.lab .good{color:var(--good)}.lab .bad{color:var(--bad)}
 .lname{font-size:14px;font-weight:800;padding:1px 8px;border-radius:6px;background:var(--primary);color:#fff}
 .qwrap{flex:1 1 260px;max-width:340px;min-width:0;border-left:2px solid var(--line);padding-left:10px}
-.qt{width:100%;border-collapse:separate;border-spacing:3px;font-size:12px;margin:4px 0}.qt th{font-weight:600;color:var(--muted);text-align:center}.qt tr th:first-child{text-align:left;color:var(--text)}
-.qt td{text-align:center}.qc{display:block;padding:3px 0;border-radius:5px;background:linear-gradient(to right,var(--pri-bg,#64748b22) var(--w),transparent var(--w));border:1px solid var(--line);font-weight:700}
+.qt{width:auto;border-collapse:separate;border-spacing:2px;font-size:11px;margin:2px 0}.qt th,.qt td{padding:0 2px!important;line-height:1.25;border:none!important;height:auto}.qc small{font-weight:400;color:var(--muted);font-size:9px;margin-left:2px}.qt th{font-weight:600;color:var(--muted);text-align:center}.qt tr th:first-child{text-align:left;color:var(--text)}
+.qt td{text-align:center}.qc{display:block;min-width:44px;padding:1px 4px;border-radius:4px;background:linear-gradient(to right,var(--pri-bg,#64748b22) var(--w),transparent var(--w));border:1px solid var(--line);font-weight:700}
 .qt tr.qs td{font-size:10px;color:var(--muted);padding:0}
 .lcard{border:1px solid var(--line);border-radius:10px;padding:7px 9px}
 .lhd{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;font-size:14px}.lhd .dk{padding:1px 6px;font-size:11px}
 .lfl{font-size:11px;color:var(--warn);margin-top:2px}
-@media(min-width:1000px){.lgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.lgrid .pstats{flex-basis:100%}.lgrid .qwrap{max-width:480px;flex-basis:100%;border-left:none;padding-left:0;border-top:1px dashed var(--line);padding-top:4px}.lgrid .qt{font-size:11px;border-spacing:2px}.lgrid .qc{padding:1px 0}}
+@media(min-width:1000px){.lgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.lgrid .pstats{flex-basis:100%}.lgrid .qwrap{max-width:480px;flex-basis:100%;border-left:none;padding-left:0;border-top:1px dashed var(--line);padding-top:4px}}
 .lbody{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;margin-top:5px}.lrow{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;flex:0 1 auto;max-width:100%}
 .qbar{margin-top:4px}.qcols{display:grid;gap:4px;margin-top:3px}.qcols div{position:relative;height:46px;border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;overflow:hidden}
 .qcols i{position:absolute;left:0;right:0;bottom:0;background:var(--pri-bg,#64748b22)}.qcols b{position:relative;font-size:14px;line-height:1}.qcols em{position:relative;font-style:normal;font-size:10px;color:var(--muted)}
@@ -267,9 +267,9 @@ function qtable(id){const q=QT[id];if(!q)return '';
  const n=(q.PTS||[]).length>4&&q.otG?5:4,H=[...Array(n).keys()].map(i=>i<4?(i+1)+'Q':'OT');
  const P=q.PTS.slice(0,n),t=P.reduce((a,b)=>a+b,0)||1,sh=P.map(x=>x/t);
  const tag=(t<4?'':sh[0]<=0.18?'<span class="qtag slow">🐢 슬로우 스타터</span>':sh[0]>=0.32?'<span class="qtag fast">⚡ 빠른 스타터</span>':'')+(t>=4&&sh[3]>=0.32?'<span class="qtag late">🔥 4쿼터 강세</span>':'');
- const row=(k,l)=>{const v=q[k].slice(0,n),mx=Math.max(...v)||1;return `<tr><th>${l}</th>${v.map(x=>`<td><span class="qc" style="--w:${Math.round(100*x/mx)}%">${x}</span></td>`).join('')}</tr>`;};
+ const row=(k,l,pc)=>{const v=q[k].slice(0,n),mx=Math.max(...v)||1;return `<tr><th>${l}</th>${v.map((x,i)=>`<td><span class="qc" style="--w:${Math.round(100*x/mx)}%">${x}${pc?`<small>${Math.round(100*pc[i])}%</small>`:''}</span></td>`).join('')}</tr>`;};
  return `<div class="qwrap"><div class="small"><b>쿼터별 평균</b> <span class="muted">${q.G}경기${n===5?` · 연장 ${q.otG}경기`:''}</span> ${tag}</div>
-  <table class="qt"><tr><th></th>${H.map(h=>`<th>${h}</th>`).join('')}</tr>${row('PTS','득점')}<tr class="qs"><th></th>${sh.map(x=>`<td>${Math.round(100*x)}%</td>`).join('')}</tr>${row('REB','리바')}${row('AST','어시')}</table>
+  <table class="qt"><tr><th></th>${H.map(h=>`<th>${h}</th>`).join('')}</tr>${row('PTS','득점',sh)}${row('REB','리바')}${row('AST','어시')}</table>
   <div class="small muted">1Q 무득점 ${q.q1z}경기 · 최근 득점: ${q.l5.slice(0,3).map(r=>r.slice(0,4).join('-')+(r[4]?'+OT'+r[4]:'')).join(' / ')}</div></div>`;}
 function bestOf(d){return d.r.map(lv).filter(r=>r.val==='good'||r.val==='warn').sort((a,b)=>b.edge-a.edge)[0];}
 function strip(d,best){const R=d.r.map(lv);return `<div class="lrow">${R.map(r=>{const key=`${d.n} ${r.th}+ ${CATN[d.cat]}`,has=r.am!=null,c=r.val==='good'?'good':r.val==='bad'?'bad':r.val==='warn'?'warn':'',isb=best&&r.th===best.th;
