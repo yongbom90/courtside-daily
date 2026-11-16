@@ -161,7 +161,7 @@ const S80=AUTO.stat80.filter(r=>r.th>1||r.cat!=='3PM');
 const CATN={PTS:"득점",REB:"리바운드",AST:"어시스트","3PM":"3점슛",PRA:"득+리+어(PRA)",PR:"득+리(PR)",PA:"득+어(PA)",RA:"리+어(RA)"},
  VALN={good:"💰 가성비 좋음",warn:"🟡 가성비(경고)",fair:"⚖️ 적정",bad:"💸 비쌈"},CMB=['PRA','PR','PA','RA'],SING=['PTS','REB','AST','3PM'],RECN={top:"⭐ 강력추천",rec:"✅ 추천",caution:"⚠️ 주의"};
 let s80c="PTS",s80r="all";
-$('s80cat').innerHTML=SING.map(c=>`<button class="fbtn ${c===s80c?'on':''}" data-c="${c}">${CATN[c]} (${S80.filter(r=>r.cat===c).length})</button>`).join('');
+$('s80cat').innerHTML=SING.concat(CMB).map(c=>`<button class="fbtn ${c===s80c?'on':''}" data-c="${c}">${CATN[c]} (${S80.filter(r=>r.cat===c).length})</button>`).join('');
 $('s80rec').innerHTML=[["all","전체"],["top","⭐ 강력추천만"],["rec","✅ 추천 이상"],["caution","⚠️ 주의"]].map(([k,l])=>`<button class="fbtn ${k===s80r?'on':''}" data-r="${k}">${l}</button>`).join('');
 document.querySelectorAll('#s80cat .fbtn').forEach(b=>b.onclick=()=>{s80c=b.dataset.c;document.querySelectorAll('#s80cat .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawS80();});
 document.querySelectorAll('#s80rec .fbtn').forEach(b=>b.onclick=()=>{s80r=b.dataset.r;document.querySelectorAll('#s80rec .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawS80();});
