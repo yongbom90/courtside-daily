@@ -47,7 +47,15 @@
   <div class="phead"><span>선수 · 경기</span><span style="text-align:center">라인</span><span>시즌 오버 / 언더</span><span>최근 5경기 (최신→)</span><span>평균 · 출전시간</span><span></span></div>
   <div id="llist"></div>
 </section>
-<style>.lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,560px),1fr));gap:8px}
+<style>.lgrid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}.lgrid>.lcard,.pbody>*,.lstat{min-width:0}.lab{min-width:0}.lab span{white-space:nowrap}
+.pbody{display:flex;gap:12px;flex-wrap:wrap;margin-top:4px}.pstats{flex:1 1 300px;min-width:0}
+.lstat{border-top:1px solid var(--line);padding:6px 0 4px}.lstat:first-child{border-top:none}
+.lab{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:12px;margin-bottom:4px}.lab .good{color:var(--good)}.lab .bad{color:var(--bad)}
+.lname{font-size:14px;font-weight:800;padding:1px 8px;border-radius:6px;background:var(--primary);color:#fff}
+.qwrap{flex:1 1 260px;max-width:340px;min-width:0;border-left:2px solid var(--line);padding-left:10px}
+.qt{width:100%;border-collapse:separate;border-spacing:3px;font-size:12px;margin:4px 0}.qt th{font-weight:600;color:var(--muted);text-align:center}.qt tr th:first-child{text-align:left;color:var(--text)}
+.qt td{text-align:center}.qc{display:block;padding:3px 0;border-radius:5px;background:linear-gradient(to right,var(--pri-bg,#64748b22) var(--w),transparent var(--w));border:1px solid var(--line);font-weight:700}
+.qt tr.qs td{font-size:10px;color:var(--muted);padding:0}
 .lcard{border:1px solid var(--line);border-radius:10px;padding:7px 9px}
 .lhd{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;font-size:14px}.lhd .dk{padding:1px 6px;font-size:11px}
 .lfl{font-size:11px;color:var(--warn);margin-top:2px}
@@ -240,7 +248,7 @@ function valFilter(L,vv){return L.filter(v=>vv==='all'||(vv==='good+'?(v.val==='
 const VV=[["good","💰 가성비 좋음"],["good+","💰+🟡 (경고 포함)"],["fair","⚖️ 적정"],["bad","💸 비쌈"],["all","전체"]];
 const VL=(AUTO.value||[]).concat(AUTO.cvalue||[]),LAD=AUTO.ladders||[],VCATS=SING.concat(CMB);
 const lv=r=>({th:r[0],am:r[1],imp:r[2],p:r[3],ps:r[4],p5:r[5],hit:r[6],h5:r[7],fair:r[8],edge:r[9],val:r[10]});
-let vc='all',vv='all',vg='all',vw='lad',vq='',vn=60;
+let vc='all',vv='all',vg='all',vw='lad',vq='',vn=40;
 $('vview').innerHTML=[['lad','🪜 선수별 묶어보기 (기준선별 확률)'],['list','📋 단계별 목록']].map(([k,l])=>`<button class="fbtn ${k===vw?'on':''}" data-w="${k}">${l}</button>`).join('');
 $('vcat').innerHTML=[['all','전체']].concat(VCATS.map(c=>[c,CATN[c]])).map(([c,l])=>`<button class="fbtn ${c===vc?'on':''}" data-c="${c}">${l}</button>`).join('');
 $('vval').innerHTML=VV.slice(0,4).concat([VV[4]]).map(([k,l])=>`<button class="fbtn ${k===vv?'on':''}" data-v="${k}">${l}</button>`).join('');
@@ -248,38 +256,43 @@ $('vgame').innerHTML='<option value="all">모든 경기</option>'+AUTO.games.map
 document.querySelectorAll('#vview .fbtn').forEach(b=>b.onclick=()=>{vw=b.dataset.w;document.querySelectorAll('#vview .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawV();});
 document.querySelectorAll('#vcat .fbtn').forEach(b=>b.onclick=()=>{vc=b.dataset.c;document.querySelectorAll('#vcat .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawV();});
 document.querySelectorAll('#vval .fbtn').forEach(b=>b.onclick=()=>{vv=b.dataset.v;document.querySelectorAll('#vval .fbtn').forEach(x=>x.classList.toggle('on',x===b));drawV();});
-$('vgame').onchange=e=>{vg=e.target.value;vn=60;drawV();};
-$('vsearch').oninput=e=>{vq=e.target.value.trim().toLowerCase();vn=60;drawV();};
+$('vgame').onchange=e=>{vg=e.target.value;vn=40;drawV();};
+$('vsearch').oninput=e=>{vq=e.target.value.trim().toLowerCase();vn=40;drawV();};
 const VI={good:'좋음',warn:'경고',fair:'적정',bad:'비쌈',low:'확률↓',heavy:'무거움'};
 const PIDX={};(AUTO.props||[]).forEach(p=>PIDX[p.id+'|'+p.cat]=p);
 const SIDX={};AUTO.stat80.forEach(r=>{const k=r.n+'|'+r.cat,o=SIDX[k],rank={top:0,rec:1,caution:2};if(!o||rank[r.rec]<rank[o.rec]||(r.rec===o.rec&&r.th>o.th))SIDX[k]=r;});
 const QT=AUTO.qtr||{},QPART={PTS:['PTS'],REB:['REB'],AST:['AST'],PRA:['PTS','REB','AST'],PR:['PTS','REB'],PA:['PTS','AST'],RA:['REB','AST']};
-function qbox(d){const q=QT[d.id],ks=QPART[d.cat];if(!q||!ks)return '';
- const n=(q.PTS||[]).length>4&&q.otG?5:4,v=[...Array(n).keys()].map(i=>+ks.reduce((a,k)=>a+(q[k][i]||0),0).toFixed(i===4?2:1)),t=v.reduce((a,b)=>a+b,0)||1,mx=Math.max(...v)||1,sh=v.map(x=>x/t);
- const tag=t<4?'':sh[0]<=0.18?'<span class="qtag slow">🐢 슬로우 스타터</span>':sh[0]>=0.32?'<span class="qtag fast">⚡ 빠른 스타터</span>':'';
- const tag4=t>=4&&sh[3]>=0.32?'<span class="qtag late">🔥 4쿼터 강세</span>':'';
- return `<div class="qbar"><span class="muted">쿼터별 평균</span>${tag}${tag4}<div class="qcols" style="grid-template-columns:repeat(${n},1fr)">${v.map((x,i)=>`<div><i style="height:${Math.round(100*x/mx)}%"></i><b>${x}</b><em>${i<4?(i+1)+'Q':'OT'} · ${Math.round(100*sh[i])}%</em></div>`).join('')}</div>
-  <div class="small muted">${q.G}경기${n===5?` (연장 ${q.otG}경기)`:''}${ks.includes('PTS')?` · 1Q 무득점 ${q.q1z}경기`:''}${d.cat==='PTS'?` · 최근: ${q.l5.slice(0,3).map(r=>r.slice(0,4).join('-')+(r[4]?'+OT'+r[4]:'')).join(' / ')}`:''}</div></div>`;}
-function lside(d,best){const p=PIDX[d.id+'|'+d.cat],s8=SIDX[d.n+'|'+d.cat],up=d.a5-d.avg,mu=d.min3-d.min;
- return `<div class="lside">
-  ${d.avg!=null?`<div><span class="muted">평균</span> <b>${d.avg}</b> → 최근5 <b class="${up>=0?'good':'bad'}">${d.a5} ${up>=0?'▲':'▼'}</b><span class="muted"> · 최고 ${d.mx} 최저 ${d.mn}</span></div>`:''}
-  ${p?`<div><span class="muted">DK 기본 라인</span> <b>${p.line}</b> · 시즌 오버 ${p.hit}/${p.N} (${p.rate}%) · 최근5 ${p.h5}/${p.last.length}</div>`:''}
-  ${s8?`<div><span class="muted">80% 판정</span> <b>${RECN[s8.rec]}</b> ${s8.th}+ (${s8.rate}%)</div>`:''}
-  <div><span class="muted">👉 최적</span> ${best?`<b>${best.th}+ ${fmtO(best.am)}</b> · 추정 ${best.p}% vs 배당 ${best.imp}% (<span class="good">+${best.edge}%p</span>)`:'<span class="muted">가성비 좋은 단계 없음</span>'}</div>
-  <div><span class="muted">출전</span> ${d.min} → <b>${d.min3}분</b> <span class="${mu>=0?'good':'bad'}">${mu>=0?'+':''}${mu.toFixed(1)}</span></div>${qbox(d)}</div>`;}
-function ladCard(d){const R=d.r.map(lv),best=R.filter(r=>r.val==='good'||r.val==='warn').sort((a,b)=>b.edge-a.edge)[0];
- return `<div class="lcard"><div class="lhd"><b>${d.n}</b><span class="small muted">${d.t}·${d.g.replace(' @ ','@')}</span><span class="dk"><b>${CMB.includes(d.cat)?d.cat:CATN[d.cat]}</b></span>
-  <span class="small muted" style="margin-left:auto">L5 ${d.last.join('·')} · ${d.min3}분</span></div>
- ${d.fl.length?`<div class="lfl">⚠️ ${d.fl.join(' · ')}</div>`:''}
- <div class="lbody"><div class="lrow">${R.map(r=>{const key=`${d.n} ${r.th}+ ${CATN[d.cat]}`,has=r.am!=null,c=r.val==='good'?'good':r.val==='bad'?'bad':r.val==='warn'?'warn':'';
+function qtable(id){const q=QT[id];if(!q)return '';
+ const n=(q.PTS||[]).length>4&&q.otG?5:4,H=[...Array(n).keys()].map(i=>i<4?(i+1)+'Q':'OT');
+ const P=q.PTS.slice(0,n),t=P.reduce((a,b)=>a+b,0)||1,sh=P.map(x=>x/t);
+ const tag=(t<4?'':sh[0]<=0.18?'<span class="qtag slow">🐢 슬로우 스타터</span>':sh[0]>=0.32?'<span class="qtag fast">⚡ 빠른 스타터</span>':'')+(t>=4&&sh[3]>=0.32?'<span class="qtag late">🔥 4쿼터 강세</span>':'');
+ const row=(k,l)=>{const v=q[k].slice(0,n),mx=Math.max(...v)||1;return `<tr><th>${l}</th>${v.map(x=>`<td><span class="qc" style="--w:${Math.round(100*x/mx)}%">${x}</span></td>`).join('')}</tr>`;};
+ return `<div class="qwrap"><div class="small"><b>쿼터별 평균</b> <span class="muted">${q.G}경기${n===5?` · 연장 ${q.otG}경기`:''}</span> ${tag}</div>
+  <table class="qt"><tr><th></th>${H.map(h=>`<th>${h}</th>`).join('')}</tr>${row('PTS','득점')}<tr class="qs"><th></th>${sh.map(x=>`<td>${Math.round(100*x)}%</td>`).join('')}</tr>${row('REB','리바')}${row('AST','어시')}</table>
+  <div class="small muted">1Q 무득점 ${q.q1z}경기 · 최근 득점: ${q.l5.slice(0,3).map(r=>r.slice(0,4).join('-')+(r[4]?'+OT'+r[4]:'')).join(' / ')}</div></div>`;}
+function bestOf(d){return d.r.map(lv).filter(r=>r.val==='good'||r.val==='warn').sort((a,b)=>b.edge-a.edge)[0];}
+function strip(d,best){const R=d.r.map(lv);return `<div class="lrow">${R.map(r=>{const key=`${d.n} ${r.th}+ ${CATN[d.cat]}`,has=r.am!=null,c=r.val==='good'?'good':r.val==='bad'?'bad':r.val==='warn'?'warn':'',isb=best&&r.th===best.th;
   const tip=`${r.th}+ · 시즌 ${r.hit}/${d.N} · 최근5 ${r.h5}/5 · 추정 ${r.p}%${has?` · 배당확률 ${r.imp}% · ${VALN[r.val]||(r.val==='low'?'확률 낮음':'배당 무거움')} ${r.edge>0?'+':''}${r.edge}%p`:' · DK 배당 없음'} · 적정 ${fmtO(r.fair)}`;
-  return `<button class="lt ${c} ${best&&r===best?'best':''} v-${r.val||'none'}" title="${tip}" data-k="${key}" data-o="${has?r.am:''}" onclick="toggle(this)">
-   <span class="lth">${r.th}+</span><span class="ltl">추정</span><span class="ltp">${r.p}%</span><span class="lth2">시즌 ${r.hit}/${d.N}<br>최근5 ${r.h5}/5</span><span class="ltl">배당</span><span class="lto">${has?`<b>${fmtO(r.am)}</b><br><small>(${r.imp}%)</small>`:'—'}</span><span class="ltv ${r.val||'none'}">${best&&r===best?'★ 최적':VI[r.val]||'배당 없음'}</span></button>`}).join('')}</div>${lside(d,best)}</div></div>`;}
+  return `<button class="lt ${c} ${isb?'best':''} v-${r.val||'none'}" title="${tip}" data-k="${key}" data-o="${has?r.am:''}" onclick="toggle(this)">
+   <span class="lth">${r.th}+</span><span class="ltl">추정</span><span class="ltp">${r.p}%</span><span class="lth2">시즌 ${r.hit}/${d.N}<br>최근5 ${r.h5}/5</span><span class="ltl">배당</span><span class="lto">${has?`<b>${fmtO(r.am)}</b><br><small>(${r.imp}%)</small>`:'—'}</span><span class="ltv ${r.val||'none'}">${isb?'★ 최적':VI[r.val]||'배당 없음'}</span></button>`}).join('')}</div>`;}
+function statRow(d){const best=bestOf(d),p=PIDX[d.id+'|'+d.cat],s8=SIDX[d.n+'|'+d.cat],up=d.a5-d.avg;
+ return `<div class="lstat"><div class="lab"><span class="lname">${CATN[d.cat]}</span>
+  <span>평균 <b>${d.avg}</b> → 최근5 <b class="${up>=0?'good':'bad'}">${d.a5}${up>=0?'▲':'▼'}</b></span><span class="muted">L5 ${d.last.join('·')}</span>
+  ${p?`<span>DK 라인 <b>${p.line}</b> 오버 ${p.hit}/${p.N}·${p.h5}/${p.last.length}</span>`:''}
+  ${s8?`<span>80% <b>${RECN[s8.rec]}</b> ${s8.th}+</span>`:''}
+  ${best?`<span class="good"><b>★ ${best.th}+ ${fmtO(best.am)}</b> (${best.p}% vs ${best.imp}%)</span>`:''}</div>${strip(d,best)}</div>`;}
+function playerCard(G){const d0=G[0],mu=d0.min3-d0.min,fl=[...new Set(G.flatMap(d=>d.fl))];
+ return `<div class="lcard"><div class="lhd"><b style="font-size:17px">${d0.n}</b><span class="small muted">${d0.t} · ${d0.g}</span>
+  <span class="small" style="margin-left:auto">출전 ${d0.min} → <b>${d0.min3}분</b> <span class="${mu>=0?'good':'bad'}">${mu>=0?'+':''}${mu.toFixed(1)}</span> · ${d0.N}경기</span></div>
+  ${fl.length?`<div class="lfl">⚠️ ${fl.join(' · ')}</div>`:''}
+  <div class="pbody"><div class="pstats">${G.map(statRow).join('')}</div>${qtable(d0.id)}</div></div>`;}
 function drawV(){const lad=vw==='lad';$('vhead').style.display=lad?'none':'';$('vlad').style.display=lad?'':'none';$('vlist').style.display=lad?'none':'';
  if(lad){const ok=d=>vv==='all'||d.r.some(r=>vv==='good+'?(r[10]==='good'||r[10]==='warn'):r[10]===vv);
   const best=d=>Math.max(...d.r.filter(r=>r[9]!=null&&r[3]>=40&&r[2]<=95).map(r=>r[9]),-99);
-  const L=LAD.filter(d=>(vc==='all'||d.cat===vc)&&(vg==='all'||d.g===vg)&&(!vq||d.n.toLowerCase().includes(vq))&&ok(d)).sort((a,b)=>best(b)-best(a));
-  $('vlad').innerHTML=L.length?`<div class="small muted" style="margin:4px 0 8px">${L.length}개 (선수·스탯) · 기준선 간격은 FanDuel 대체 라인처럼 고정(득점 10·15·20…, 리바 4·6·8…, 어시 2·4·6…, 3점 1·2·3…, PRA 15·20·25…). 줄마다 그 기준선 이상 기록할 추정 확률(시즌·최근5 반반)이고, 같은 단계에 DraftKings 배당이 있으면 배당 확률·가성비도 붙여요. 👉 = 가성비가 가장 좋은 단계.<br>칸 = <b>기준선 · 추정 확률(시즌·최근5 반반) · 시즌/최근5 적중 · DK 배당(배당이 뜻하는 확률) · 판정</b>. 추정 확률이 배당 확률보다 5%p 이상 높으면 가성비 좋음 (아래 띠: <b style="color:var(--good)">좋음</b> · <b style="color:#d97706">경고</b> · 적정 · <b style="color:var(--bad)">비쌈</b> · 확률↓ = 추정 40% 미만, ★ 최적 = 가장 좋은 단계). 칸을 누르면 슬립에 담겨요. 마우스를 올리면 배당 확률·적정 배당이 보여요.</div><div class="lgrid">`+L.slice(0,vn).map(ladCard).join('')+'</div>'+(L.length>vn?`<button class="btn" style="width:100%;margin:6px 0" onclick="vn+=60;drawV()">더 보기 (${L.length-vn}개 남음)</button>`:''):'<div class="muted">해당 조건의 선수가 없어요.</div>';}
+  const F=LAD.filter(d=>(vc==='all'||d.cat===vc)&&(vg==='all'||d.g===vg)&&(!vq||d.n.toLowerCase().includes(vq))&&ok(d));
+  const by={};F.forEach(d=>(by[d.id]=by[d.id]||[]).push(d));
+  const P=Object.values(by).map(G=>G.sort((a,b)=>VCATS.indexOf(a.cat)-VCATS.indexOf(b.cat))).sort((a,b)=>Math.max(...b.map(best))-Math.max(...a.map(best)));
+  $('vlad').innerHTML=P.length?`<div class="small muted" style="margin:4px 0 8px">선수 ${P.length}명 · 선수마다 카드 하나에 스탯별(득점·리바·어시·3점·PRA·PR·PA·RA) 한 줄씩. 기준선 간격은 FanDuel 대체 라인처럼 고정(득점 10·15·20…, 리바 4·6·8…, 어시 2·4·6…, 3점 1·2·3…, PRA 15·20·25…).<br>칸 = <b>기준선 · 추정 확률(시즌·최근5 반반) · 시즌/최근5 적중 · DK 배당(배당이 뜻하는 확률) · 판정</b>. 추정이 배당 확률보다 5%p 이상 높으면 <b style="color:var(--good)">좋음</b> (<b style="color:#d97706">경고</b> = 좋지만 경고 있음 · 적정 · <b style="color:var(--bad)">비쌈</b> · 확률↓ = 추정 40% 미만 · ★ 최적 = 그 스탯에서 가장 좋은 단계). 칸을 누르면 슬립에 담겨요.</div><div class="lgrid">`+P.slice(0,vn).map(playerCard).join('')+'</div>'+(P.length>vn?`<button class="btn" style="width:100%;margin:6px 0" onclick="vn+=40;drawV()">더 보기 (${P.length-vn}명 남음)</button>`:''):'<div class="muted">해당 조건의 선수가 없어요.</div>';}
  else{const L=valFilter(VL.filter(v=>(vc==='all'||v.cat===vc)&&(vg==='all'||v.g===vg)),vv).sort((a,b)=>b.edge-a.edge);
   $('vlist').innerHTML=L.length?L.slice(0,80).map(valRow).join(''):'<div class="muted">해당 조건의 라인이 없어요.</div>';}
  sync();}
