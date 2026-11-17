@@ -43,6 +43,7 @@ METRICS = [
     ("afta", "자유투 허용", True), ("apitp", "골밑 실점", True), ("areb", "리바운드 허용", True),
     ("miss", "상대 놓친 슛", True), ("oreb", "상대 공격리바율", False), ("aoreb", "공격리바 허용률", True),
     ("aast", "어시스트 허용", True), ("stl", "상대 스틸", False), ("blk", "상대 블록", False),
+    ("tpr", "3점 비중", False),
 ]
 LABEL = {k: n for k, n, _ in METRICS}
 
@@ -74,6 +75,7 @@ def profiles(games):
                 "oreb": 100 * o["OREB"] / max(o["OREB"] + x["DREB"], 1),
                 "aoreb": 100 * x["OREB"] / max(x["OREB"] + o["DREB"], 1),
                 "aast": x["AST"] / G, "stl": o["STL"] / G, "blk": o["BLK"] / G,
+                "tpr": 100 * o["TPA"] / max(o["FGA"], 1),
                 "ppg": o["PTS"] / G, "oppg": x["PTS"] / G}
     n = len(P)
     for k, _, up in METRICS:
@@ -153,6 +155,38 @@ def short(n):
     return n.split(" ", 1)[-1] if " " in n else n
 
 
+# 이유 문장: (무엇, 단위, 많을 때 뜻, 적을 때 뜻). {o} = 상대 팀
+EXPL = {
+    "drtg": ("{o} 수비: 100번 공격당 실점", "점", "→ 득점이 잘 나오는 수비", "→ 득점이 잘 안 나오는 짠 수비"),
+    "pace": ("{o} 경기 속도(경기당 공격 횟수)", "회", "→ 빠른 경기, 슛 기회가 많아요", "→ 느린 경기, 슛 기회가 적어요"),
+    "a3pct": ("{o} 팀이 내준 3점 성공률", "%", "→ 3점이 잘 들어가는 상대", "→ 3점이 잘 안 들어가는 상대"),
+    "a3pa": ("{o} 팀이 내준 3점 시도", "개", "→ 3점 쏠 기회가 많아요", "→ 3점 쏠 기회를 잘 안 줘요"),
+    "a2pct": ("{o} 팀이 내준 2점 성공률", "%", "→ 골밑·중거리 마무리가 쉬운 편", "→ 골밑·중거리 마무리가 어려운 편"),
+    "apitp": ("{o} 골밑 실점", "점", "→ 골밑 공략이 잘 통해요", "→ 골밑을 잘 막아요"),
+    "afta": ("{o} 팀이 내준 자유투", "개", "→ 파울을 잘 얻어낼 수 있어요", "→ 파울을 잘 안 줘요"),
+    "areb": ("{o} 팀이 내준 리바운드", "개", "→ 리바 잡기 쉬운 상대", "→ 리바 잡기 어려운 상대"),
+    "miss": ("{o} 팀이 놓치는 슛", "개", "→ 잡을 수비 리바가 많아요", "→ 슛을 잘 넣어서 잡을 리바가 적어요"),
+    "oreb": ("{o} 공격 리바운드율", "%", "→ {o} 팀이 자기 리바를 많이 가져가서 수비 리바 몫이 줄어요", "→ {o} 팀이 공격 리바를 잘 못 잡아서 수비 리바 몫이 늘어요"),
+    "aoreb": ("{o} 팀이 내준 공격 리바운드율", "%", "→ 공격 리바 잡기 쉬워요", "→ 공격 리바 잡기 어려워요"),
+    "aast": ("{o} 팀이 내준 어시스트", "개", "→ 패스로 득점이 잘 나와요", "→ 패스 득점을 잘 막아요"),
+    "stl": ("{o} 스틸", "개", "→ 패스 길을 잘 끊어요", "→ 스틸이 적어 패스가 편해요"),
+    "blk": ("{o} 블록", "개", "→ 골밑 슛이 막히기 쉬워요", "→ 블록이 적어 골밑이 편해요"),
+    "tpr": ("{o} 슛 중 3점 비중", "%", "→ 빗나간 3점은 길게 튀어 가드·윙이 잡는 경우가 많아요(빅맨 리바 불리)", "→ 골밑 슛이 많아 리바가 림 근처로 떨어져요"),
+}
+
+
+def sentence(P, opp, k):
+    """지표 하나 → '{o} …: 값 — 30팀 중 N번째로 많음/적음 → 뜻'."""
+    n, r = P[opp]["n"], P[opp]["rk"][k]
+    up = next(u for k_, _, u in METRICS if k_ == k)
+    nat = r if up else n + 1 - r          # 값이 큰 순서
+    more = nat <= (n + 1) / 2
+    what, unit, m_txt, l_txt = EXPL[k]
+    ordn = nat if more else n + 1 - nat
+    return (f"{what.format(o=opp)} {P[opp][k]}{unit} — 30팀 중 {ordn}번째로 {'많음' if more else '적음'} "
+            f"{(m_txt if more else l_txt).format(o=opp)}")
+
+
 def grade(P, opp, cat, mx, km):
     """→ [등급, 순위, 이유들]. 등급 'good' | 'mid' | 'bad'."""
     if opp not in P:
@@ -167,13 +201,13 @@ def grade(P, opp, cat, mx, km):
     if any(c in ("REB",) for c in base):
         gone = [b for b in km["big"] if b[3]]
         if gone:
-            why.append("상대 리바 " + ", ".join(f"{short(b[0])}({b[1]}R) 결장" for b in gone[:2]))
+            why.append(f"{opp} 리바 강한 " + ", ".join(f"{short(b[0])}(경기당 {b[1]}리바)" for b in gone[:2]) + " 오늘 결장 → 리바 경쟁이 줄어요")
             gr = {"bad": "mid", "mid": "good"}.get(gr, gr)
             rank = max(1, rank - 8)
     if "PTS" in base:
         gone = [b for b in km["rim"] if b[2]]
         if gone and not any("결장" in w for w in why):
-            why.append("상대 블록 " + ", ".join(f"{short(b[0])}({b[1]}) 결장" for b in gone[:2]))
+            why.append(f"{opp} 림 보호 " + ", ".join(f"{short(b[0])}(경기당 블록 {b[1]})" for b in gone[:2]) + " 오늘 결장 → 골밑이 편해져요")
             gr = {"bad": "mid", "mid": "good"}.get(gr, gr)
             rank = max(1, rank - 8)
     rk = P[opp]["rk"]
@@ -191,24 +225,26 @@ def grade(P, opp, cat, mx, km):
                 cand.append((abs(r - (n + 1) / 2), k, r))
         cand.sort(reverse=True)
         for _, k, r in cand[:2]:
-            up = next(u for k_, _, u in METRICS if k_ == k)
-            why.append(f"{LABEL[k]} {P[opp][k]}{UNIT[k]}(많은 순 {r if up else n + 1 - r}위)")
+            why.append(sentence(P, opp, k))
         if c == "REB" and gr != "good":
             act = [b for b in km["big"] if not b[3]]
             if act:
-                why.append("상대 빅맨 " + ", ".join(f"{short(b[0])}({b[1]}R·공리{b[2]})" for b in act[:3]))
+                why.append(f"{opp} 빅맨 " + ", ".join(f"{short(b[0])}(경기당 리바 {b[1]}·공격리바 {b[2]})" for b in act[:3]) + " → 리바 경쟁이 세요")
+            # 빅맨(경기당 리바 7+)은 3점 많이 쏘는 상대에게 리바가 줄었어요(11/1~16: 평균 −0.8개, 참고용)
+            if mx["R"] >= 7 and P[opp]["rk"]["tpr"] >= n - 7:
+                why.append(sentence(P, opp, "tpr"))
         if c == "PTS" and gr != "good" and mx["s2"] >= 0.45:
             act = [b for b in km["rim"] if not b[2]]
             if act:
-                why.append("림 보호 " + ", ".join(f"{short(b[0])}(블록 {b[1]})" for b in act[:1]))
+                why.append(f"{opp} 림 보호 " + ", ".join(f"{short(b[0])}(경기당 블록 {b[1]})" for b in act[:1]) + " → 골밑 마무리가 어려워요")
         if c == "3PM" and gr == "bad":
             act = [b for b in km["stl"] if not b[2]]
             if act:
-                why.append("외곽 수비 " + ", ".join(f"{short(b[0])}(스틸 {b[1]})" for b in act[:1]))
+                why.append(f"{opp} 외곽 수비 " + ", ".join(f"{short(b[0])}(경기당 스틸 {b[1]})" for b in act[:1]) + " → 슛 쏠 틈이 적어요")
         if c == "AST" and gr == "bad":
             act = [b for b in km["stl"] if not b[2]]
             if act:
-                why.append("스틸 " + ", ".join(f"{short(b[0])}({b[1]})" for b in act[:2]))
+                why.append(f"{opp} " + ", ".join(f"{short(b[0])}(경기당 스틸 {b[1]})" for b in act[:2]) + " → 패스 길을 잘 끊어요")
     if gr == "mid" and not any("결장" in w for w in why):
         why = why[:2]
     return [gr, rank, why[:4]]
