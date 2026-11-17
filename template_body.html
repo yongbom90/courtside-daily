@@ -64,6 +64,7 @@
 .muw{font-size:11px;line-height:1.4;margin:-1px 0 4px}.muw.good{color:var(--good)}.muw.bad{color:var(--bad)}.muw.mid{color:var(--muted)}
 .bk{margin:6px 0 10px}.bk table{font-size:12px;width:100%}.bk td,.bk th{padding:3px 6px;white-space:nowrap;text-align:right}.bk td:first-child,.bk th:first-child{text-align:left}.bk .grp td{background:var(--pri-bg,#64748b14);font-weight:800;text-align:left}.bk small{font-size:10.5px;opacity:.85}.bk .g{color:var(--good);font-weight:700}.bk .b{color:var(--bad);font-weight:700}.bk .tday{background:#2563eb12}.bk .sub{display:block;font-size:10.5px;opacity:.7}@media(max-width:700px){.bk td,.bk th{padding:3px 4px}.bk table{font-size:11.5px}}
 .h2t td.hc{background:#2563eb14;font-weight:700}
+.th2 .gh td{background:var(--pri-bg,#64748b14);font-weight:700;text-align:left}.th2 .av td{font-weight:700;border-top:1px solid var(--line,#8883)}.th2 .w{color:var(--good);font-weight:800}.th2 .top{font-size:10.5px;opacity:.8;text-align:left!important}.th2 h4{margin:8px 0 2px;font-size:13px}
 .tmu{font-size:12px;line-height:1.55;margin:4px 0;padding:5px 8px;border-radius:8px;background:var(--pri-bg,#64748b14)}.tmu b{font-weight:800}.tmu .g{color:var(--good)}.tmu .b{color:var(--bad)}
 .pmu{font-size:12px;line-height:1.5;margin:5px 0 3px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--pri-bg,#64748b10)}.pmu.b{border-color:var(--bad);background:#dc26260d}.pmu .mu{margin:1px 0}
 .pmw{color:var(--bad);margin-top:2px}
@@ -199,7 +200,25 @@ function bookT(g){const B=AUTO.book||{};if(!B[g.away]||!B[g.home])return '';
  <div class="tblwrap"><table><tr><th></th>${cols.map(([t,sp,l])=>`<th class="${sp!=='all'?'tday':''}">${t} ${l} <small>${B[t][sp]?B[t][sp].G+'경기':''}</small></th>`).join('')}</tr>
  ${R.map(r=>r[0]==='grp'?`<tr class="grp"><td colspan="5">${r[1]}</td></tr>`:`<tr><td>${r[0]}</td>${cols.map(([t,sp])=>{const S=B[t][sp];return `<td class="${sp!=='all'?'tday':''}">${S?r[1](S,sp):'—'}</td>`;}).join('')}</tr>`).join('')}
  </table></div></div>`;}
-$('teamWrap').innerHTML=AUTO.games.map(g=>`<h2 class="sec">${g.m} <span class="small muted">${g.sp} / ${g.tot}</span></h2>${bookT(g)}<div class="two">${[g.away,g.home].map(t=>{
+/* 🆚 팀 맞대결: 이번 시즌 · 지난 정규시즌(플옵·플레이인 제외). 경기마다 두 팀 기록 + 시즌별 평균. 참고용 */
+function teamH2H(g){const L=(AUTO.th2h||{})[g.id]||[];const T=[g.away,g.home];
+ const pc=(m,a)=>a?Math.round(m/a*1000)/10:0,f1=x=>Math.round(x*10)/10;
+ const row=(t,x,cls='')=>`<tr class="${cls}"><td>${t}</td><td>${x.PTS}</td><td>${x.FGM}/${x.FGA} <small>${pc(x.FGM,x.FGA)}%</small></td><td>${x.TPM}/${x.TPA} <small>${pc(x.TPM,x.TPA)}%</small></td><td>${x.FTM}/${x.FTA}</td><td>${x.REB} <small>(${x.OREB})</small></td><td>${x.AST}</td><td>${x.TOV}</td><td>${x.PITP}</td>`;
+ const sec=(sn,lab)=>{const G=L.filter(x=>x.s===sn);if(!G.length)return `<h4>${lab}</h4><div class="small muted">맞대결 없음</div>`;
+  const w={},tot=[];T.forEach(t=>w[t]=0);G.forEach(x=>{const a=x.t[T[0]].PTS,b=x.t[T[1]].PTS;w[a>b?T[0]:T[1]]++;tot.push(a+b);});
+  const ov=g.tot?tot.filter(v=>v>g.tot).length:null;
+  const avg=t=>{const o={};['PTS','FGM','FGA','TPM','TPA','FTM','FTA','REB','OREB','AST','TOV','PITP'].forEach(k=>o[k]=f1(G.reduce((s,x)=>s+x.t[t][k],0)/G.length));return o;};
+  return `<h4>${lab} <span class="small muted" style="font-weight:400">${T.map(t=>`${t} ${w[t]}승`).join(' · ')} · 두 팀 합계 평균 ${f1(tot.reduce((a,b)=>a+b,0)/tot.length)}${ov!=null?` (오늘 토탈 ${g.tot} 넘은 경기 ${ov}/${G.length})`:''}</span></h4>
+  <div class="tblwrap"><table><tr><th></th><th>득점</th><th>야투</th><th>3점</th><th>자유투</th><th>리바(공)</th><th>어시</th><th>턴오버</th><th>골밑</th><th>최다 득점</th></tr>
+  ${G.map(x=>{const a=x.t[T[0]].PTS,b=x.t[T[1]].PTS,wn=a>b?T[0]:T[1];
+   return `<tr class="gh"><td colspan="10">${x.d.slice(2).replace(/-/g,'.')} · ${x.home} 홈 · <span class="w">${wn} 승</span> ${a}-${b}${x.ot?` (연장${x.ot>1?x.ot:''})`:''} · 합계 ${a+b}</td></tr>`+
+   T.map(t=>row(t,x.t[t],t===wn?'':'')+`<td class="top">${(x.top[t]||[]).map(p=>`${p[0].split(' ').filter(w=>!/^(Jr\.?|Sr\.?|II|III|IV)$/.test(w)).slice(-1)[0]} ${p[1]}/${p[2]}/${p[3]}`).join(', ')}</td></tr>`).join('');}).join('')}
+  ${G.length>1?T.map((t,i)=>row(`평균 ${t}`,avg(t),i?'':'av')+'<td></td></tr>').join(''):''}
+  </table></div>`;};
+ if(!L.length)return '';
+ return `<div class="card bk th2"><h3 style="font-size:16px">🆚 팀 맞대결</h3><div class="small muted" style="margin:-2px 0 2px">경기별 두 팀 기록 · 리바 괄호 = 공격 리바 · 최다 득점 = 득점/리바/어시 · 지난 시즌은 정규시즌만(플옵·플레이인 제외), 선수 이동이 있어 참고용</div>
+ ${sec('26-27','이번 시즌 (26-27)')}${sec('25-26','지난 시즌 (25-26)')}</div>`;}
+$('teamWrap').innerHTML=AUTO.games.map(g=>`<h2 class="sec">${g.m} <span class="small muted">${g.sp} / ${g.tot}</span></h2>${bookT(g)}${teamH2H(g)}<div class="two">${[g.away,g.home].map(t=>{
  const a=(AN.teams||{})[t]||{};const st=g.stats[t]||{};const f=(AUTO.form[t]||[]).slice(0,5);
  return `<div class="card"><h3>${t} <span class="small muted" style="font-family:Noto Sans KR">${g.rec[t]} ${b2b(g,t)?'<span class="tag t-warn">B2B</span>':''}</span></h3>
  <div class="small muted">득점 ${st.avgPoints||'—'} · 실점 ${st.avgPointsAgainst||'—'} · FG ${st.fieldGoalPct||'—'}% · 3P ${st.threePointFieldGoalPct||'—'}% · 리바 ${st.avgRebounds||'—'} · 턴오버 ${st.avgTotalTurnovers||'—'} · 최근10 ${st['Last Ten Games']||'—'}</div>
