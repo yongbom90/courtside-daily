@@ -254,7 +254,14 @@ def league_profiles(date):
         d += timedelta(days=1)
     with ThreadPoolExecutor(8) as ex:
         sums = list(ex.map(summary, evs))
-    return MU.profiles([MU.team_lines(s) for s in sums]), len(evs)
+    rows = []
+    for s in sums:
+        L = MU.team_lines(s)
+        comp = (s.get("header", {}).get("competitions") or [{}])[0]
+        ha = {c.get("team", {}).get("abbreviation"): c.get("homeAway", "")[:1] for c in comp.get("competitors", [])}
+        if len(L) == 2 and all(ha.get(t) for t in L):
+            rows.append({"d": (comp.get("date") or "")[:10], "t": {t: (ha[t], L[t]) for t in L}})
+    return MU.profiles([MU.team_lines(s) for s in sums]), len(evs), MU.team_book(rows)
 
 
 def main(date, out):
@@ -328,7 +335,7 @@ def main(date, out):
     out_names = {i["n"] for g in games for v in g["inj"].values() for i in v if i["s"] in ("Out", "Doubtful")}
 
     # 🧭 매치업: 리그 30팀 허용 기록 순위 + 상대 핵심 선수(빅맨·림 보호·스틸)
-    TP, n_league = league_profiles(date)
+    TP, n_league, TB = league_profiles(date)
     opp_of = {}
     for g in games:
         opp_of[g["away"]], opp_of[g["home"]] = g["home"], g["away"]
@@ -359,10 +366,75 @@ def main(date, out):
             if l.get("opp") == opp:
                 played = {r["n"] for r in box_rows(sums[l["e"]]).get(opp, [])}
                 miss = [b[0] for k_ in ("big", "rim") for b in km[opp][k_] if b[0] not in played]
-                out.append({"s": "26-27", "d": l["d"], "ha": l["ha"], "min": l["min"], "miss": sorted(set(miss)),
-                            **{k: l[k] for k in ("PTS", "REB", "AST", "3PM", "PRA", "PR", "PA", "RA", "FGA", "3PA", "FTA")}})
+                TL = MU.team_lines(sums[l["e"]])
+                me_, op_ = (TL.get(ab) or {}).get("PTS"), (TL.get(opp) or {}).get("PTS")
+                out.append({"s": "26-27", "d": l["d"], "ha": l["ha"], "min": l["min"], "miss": sorted(set(miss)), "tm": ab,
+                            "sc": f"{me_}-{op_}" if me_ is not None else "", "res": ("W" if me_ > op_ else "L") if me_ is not None else "",
+                            **{k: l[k] for k in ("PTS", "REB", "AST", "3PM", "PRA", "PR", "PA", "RA", "FGM", "FGA", "3PA", "FTM", "FTA", "STL", "BLK", "TOV")}})
         out.sort(key=lambda x: x["d"], reverse=True)
         _h2h[aid] = out
+        return out
+
+    # 🆚 지난 시즌(25-26) 정규시즌 맞대결: 선수 게임로그(ESPN, 캐시) — 그때 소속이 달라도 오늘 상대와 붙은 경기면 포함. 확률 계산엔 안 씀.
+    _h2hP, avP = {}, {}
+
+    def h2h_prev(aid, ab):
+        if aid in _h2hP:
+            return _h2hP[aid]
+        opp, out = opp_of.get(ab), []
+        try:
+            gl = get(f"https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{aid}/gamelog?season=2026", f"gl2026_{aid}.json")
+            nm, ev = gl.get("names", []), gl.get("events", {})
+            seen = set()
+            for st in gl.get("seasonTypes", []):
+                # 정규시즌만(플레이오프·플레이인은 강도가 달라서 제외 — 오너 요청)
+                if st.get("displayName", "") != "2025-26 Regular Season":
+                    continue
+                po = ""
+                for c in st.get("categories", []):
+                    for e in c.get("events", []):
+                        g_ = ev.get(e["eventId"], {})
+                        if (g_.get("opponent") or {}).get("abbreviation") != opp or e["eventId"] in seen:
+                            continue
+                        seen.add(e["eventId"])
+                        S = dict(zip(nm, e["stats"]))
+                        n_ = lambda k: int(float(S.get(k) or 0))
+                        P_, R_, A_ = n_("points"), n_("totalRebounds"), n_("assists")
+                        F_ = MU._split(S.get("fieldGoalsMade-fieldGoalsAttempted"))
+                        T_ = MU._split(S.get("threePointFieldGoalsMade-threePointFieldGoalsAttempted"))
+                        FT = MU._split(S.get("freeThrowsMade-freeThrowsAttempted"))
+                        hs, as_ = g_.get("homeTeamScore"), g_.get("awayTeamScore")
+                        ha = "a" if g_.get("atVs") == "@" else "h"
+                        sc = f"{hs}-{as_}" if ha == "h" else f"{as_}-{hs}"
+                        out.append({"s": "25-26", "po": po, "d": g_.get("gameDate", "")[:10], "ha": ha, "tm": (g_.get("team") or {}).get("abbreviation", ""),
+                                    "sc": sc, "res": g_.get("gameResult", ""), "min": n_("minutes"), "PTS": P_, "REB": R_, "AST": A_,
+                                    "3PM": T_[0], "3PA": T_[1], "FGM": F_[0], "FGA": F_[1], "FTM": FT[0], "FTA": FT[1],
+                                    "STL": n_("steals"), "BLK": n_("blocks"), "TOV": n_("turnovers"),
+                                    "PRA": P_ + R_ + A_, "PR": P_ + R_, "PA": P_ + A_, "RA": R_ + A_})
+            # 지난 정규시즌 전체 평균(맞대결과 비교용)
+            tot, G = {}, 0
+            for st in gl.get("seasonTypes", []):
+                if "Regular" not in st.get("displayName", "") or "Play In" in st.get("displayName", ""):
+                    continue
+                for c in st.get("categories", []):
+                    for e in c.get("events", []):
+                        if (ev.get(e["eventId"], {}).get("opponent") or {}).get("abbreviation") not in TP:
+                            continue  # 올스타전 등 제외
+                        S = dict(zip(nm, e["stats"]))
+                        G += 1
+                        T_ = MU._split(S.get("threePointFieldGoalsMade-threePointFieldGoalsAttempted"))
+                        for k, v in (("PTS", S.get("points")), ("REB", S.get("totalRebounds")), ("AST", S.get("assists")),
+                                     ("3PM", T_[0]), ("3PA", T_[1]), ("min", S.get("minutes"))):
+                            tot[k] = tot.get(k, 0) + float(v or 0)
+            if G:
+                av = {k: round(v / G, 1) for k, v in tot.items()}
+                av["PRA"] = round(av["PTS"] + av["REB"] + av["AST"], 1)
+                av["G"] = G
+                avP[aid] = av
+        except Exception as ex:
+            print(f"  h2h 지난시즌 {aid}: {ex}", file=sys.stderr)
+        out.sort(key=lambda x: x["d"], reverse=True)
+        _h2hP[aid] = out
         return out
     q_names = {i["n"] for g in games for v in g["inj"].values() for i in v if i["s"] not in ("Out", "Doubtful")}
     stat80, form = [], {}
@@ -583,8 +655,11 @@ def main(date, out):
                             "r": "-" if act is None else ("O" if act >= p["th"] else "X")})
 
     h2h = {d["id"]: _h2h.get(d["id"], []) for d in ladders}
+    _tm = {d["id"]: d["t"] for d in ladders}
+    with ThreadPoolExecutor(8) as ex:
+        h2hP = dict(zip(_tm, ex.map(lambda i: h2h_prev(i, _tm[i]), _tm)))
     teams_mu = {ab: {**{k: TP[ab][k] for k in TP[ab] if k != "rk"}, "rk": TP[ab]["rk"], "km": km[ab]} for ab in opp_of if ab in TP}
-    json.dump({"date": date, "prev": prev, "games": games, "teams": teams_mu, "nLeague": n_league, "h2h": h2h, "stat80": stat80, "form": form, "results": results,
+    json.dump({"date": date, "prev": prev, "games": games, "teams": teams_mu, "book": {ab: TB[ab] for ab in opp_of if ab in TB}, "nLeague": n_league, "h2h": h2h, "h2hP": h2hP, "avP": avP, "stat80": stat80, "form": form, "results": results,
                "value": [v for v in value if v["cat"] not in COMBO][:300],
                "cvalue": [v for v in value if v["cat"] in COMBO][:200], "ladders": ladders, "qtr": {d["id"]: qtr[d["id"]] for d in ladders if d["id"] in qtr}, "vgrades": vgrades, "vgFrom": vg_from,
                "props": props, "minutes": minutes[:40], "propReview": prop_review, "propReviewFrom": pr_from,

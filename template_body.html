@@ -62,6 +62,8 @@
 .lfl{font-size:11px;color:var(--warn);margin-top:2px}
 .mu{display:inline-block;padding:0 6px;border-radius:6px;font-size:11px;font-weight:800;white-space:nowrap}.mu.good{background:#16a34a22;color:var(--good)}.mu.bad{background:#dc262622;color:var(--bad)}.mu.mid{background:#64748b1f;color:var(--muted)}
 .muw{font-size:11px;line-height:1.4;margin:-1px 0 4px}.muw.good{color:var(--good)}.muw.bad{color:var(--bad)}.muw.mid{color:var(--muted)}
+.bk{margin:6px 0 10px}.bk table{font-size:12px;width:100%}.bk td,.bk th{padding:3px 6px;white-space:nowrap;text-align:right}.bk td:first-child,.bk th:first-child{text-align:left}.bk .grp td{background:var(--pri-bg,#64748b14);font-weight:800;text-align:left}.bk small{font-size:10.5px;opacity:.85}.bk .g{color:var(--good);font-weight:700}.bk .b{color:var(--bad);font-weight:700}.bk .tday{background:#2563eb12}.bk .sub{display:block;font-size:10.5px;opacity:.7}@media(max-width:700px){.bk td,.bk th{padding:3px 4px}.bk table{font-size:11.5px}}
+.h2t td.hc{background:#2563eb14;font-weight:700}
 .tmu{font-size:12px;line-height:1.55;margin:4px 0;padding:5px 8px;border-radius:8px;background:var(--pri-bg,#64748b14)}.tmu b{font-weight:800}.tmu .g{color:var(--good)}.tmu .b{color:var(--bad)}
 .pmu{font-size:12px;line-height:1.5;margin:5px 0 3px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--pri-bg,#64748b10)}.pmu.b{border-color:var(--bad);background:#dc26260d}.pmu .mu{margin:1px 0}
 .pmw{color:var(--bad);margin-top:2px}
@@ -171,7 +173,33 @@ $('slateGrid').innerHTML=AUTO.games.map(g=>{const [c,l,w]=garbage(g.abs);const a
  ${(a.picks||[]).map(p=>`<button class="btn" data-k="${p[0]}" data-o="${p[1]??''}" onclick="toggle(this)">+ ${p[0]} ${p[1]!=null?'('+fmtO(p[1])+')':''}</button>`).join('')}
  </div>`}).join('');
 
-$('teamWrap').innerHTML=AUTO.games.map(g=>`<h2 class="sec">${g.m} <span class="small muted">${g.sp} / ${g.tot}</span></h2><div class="two">${[g.away,g.home].map(t=>{
+/* 📊 팀 시즌 기록: 시즌 전체 + 오늘 위치(원정팀=원정 기록, 홈팀=홈 기록). 순위 = 그 팀에 좋은 순(1위 최고) */
+const BK_GOOD={o_TOV:false,x_PTS:false,"x_FG%":false,x_TPM:false,x_TPA:false,"x_3P%":false,x_FTA:false,x_REB:false,x_OREB:false,x_AST:false,x_PITP:false,x_DRTG:false};
+function bookT(g){const B=AUTO.book||{};if(!B[g.away]||!B[g.home])return '';
+ const cols=[[g.away,'all','시즌'],[g.away,'a','✈️ 원정'],[g.home,'all','시즌'],[g.home,'h','🏠 홈']];
+ const rk=(S,k)=>{if(!S.rk||S.rk[k]==null)return '';const r=BK_GOOD[k]===false?31-S.rk[k]:S.rk[k];return ` <small class="${r<=8?'g':r>=23?'b':''}">${r}위</small>`;};
+ const v=(S,k,u='')=>`${S[k]}${u}${rk(S,k)}`;
+ const ma=(S,p,m,a,pc,sp)=>`${S[p+m]}/${S[p+a]} · ${S[p+pc]}%${rk(S,p+pc)}${sp==='all'&&p==='o_'?`<span class="sub">합계 ${S.tot[m]}/${S.tot[a]}</span>`:''}`;
+ const R=[['grp','⚔️ 공격 (우리가 한 것)'],
+  ['성적',(S)=>`${S.W}승 ${S.L}패`],
+  ['득점',(S,sp)=>v(S,'o_PTS')+(sp==='all'?`<span class="sub">합계 ${S.tot.PTS}</span>`:'')],
+  ['야투',(S,sp)=>ma(S,'o_','FGM','FGA','FG%',sp)],
+  ['3점',(S,sp)=>ma(S,'o_','TPM','TPA','3P%',sp)+`<span class="sub">시도${rk(S,'o_TPA')}</span>`],
+  ['자유투',(S,sp)=>ma(S,'o_','FTM','FTA','FT%',sp)+`<span class="sub">시도${rk(S,'o_FTA')}</span>`],
+  ['리바 (공격)',(S)=>`${v(S,'o_REB')} <span class="sub">공격 ${v(S,'o_OREB')}</span>`],
+  ['어시',(S)=>v(S,'o_AST')],['턴오버',(S)=>v(S,'o_TOV')],['골밑 득점',(S)=>v(S,'o_PITP')],
+  ['100회당 득점',(S)=>v(S,'o_ORTG')],['경기 속도',(S)=>v(S,'pace')],
+  ['grp','🛡️ 수비 (상대에게 내준 것)'],
+  ['실점',(S)=>v(S,'x_PTS')],['야투 허용',(S)=>`${S['x_FGM']}/${S['x_FGA']} · ${S['x_FG%']}%${rk(S,'x_FG%')}`],
+  ['3점 허용',(S)=>`${S.x_TPM}/${S.x_TPA} · ${S['x_3P%']}%${rk(S,'x_3P%')}<span class="sub">시도${rk(S,'x_TPA')}</span>`],
+  ['자유투 허용',(S)=>`${S.x_FTM}/${S.x_FTA}${rk(S,'x_FTA')}`],
+  ['리바 허용 (공격)',(S)=>`${v(S,'x_REB')} <span class="sub">공격 ${v(S,'x_OREB')}</span>`],
+  ['어시 허용',(S)=>v(S,'x_AST')],['상대 턴오버',(S)=>v(S,'x_TOV')],['골밑 실점',(S)=>v(S,'x_PITP')],['100회당 실점',(S)=>v(S,'x_DRTG')]];
+ return `<div class="card bk"><h3 style="font-size:16px">📊 팀 시즌 기록</h3><div class="small muted" style="margin:-2px 0 4px">경기당 평균 · 순위는 그 팀에 좋은 순서(공격은 많을수록, 수비는 적게 내줄수록 1위) · <span class="g">1~8위</span> / <span class="b">23~30위</span> · 파란 칸 = 오늘 경기 위치 기록</div>
+ <div class="tblwrap"><table><tr><th></th>${cols.map(([t,sp,l])=>`<th class="${sp!=='all'?'tday':''}">${t} ${l} <small>${B[t][sp]?B[t][sp].G+'경기':''}</small></th>`).join('')}</tr>
+ ${R.map(r=>r[0]==='grp'?`<tr class="grp"><td colspan="5">${r[1]}</td></tr>`:`<tr><td>${r[0]}</td>${cols.map(([t,sp])=>{const S=B[t][sp];return `<td class="${sp!=='all'?'tday':''}">${S?r[1](S,sp):'—'}</td>`;}).join('')}</tr>`).join('')}
+ </table></div></div>`;}
+$('teamWrap').innerHTML=AUTO.games.map(g=>`<h2 class="sec">${g.m} <span class="small muted">${g.sp} / ${g.tot}</span></h2>${bookT(g)}<div class="two">${[g.away,g.home].map(t=>{
  const a=(AN.teams||{})[t]||{};const st=g.stats[t]||{};const f=(AUTO.form[t]||[]).slice(0,5);
  return `<div class="card"><h3>${t} <span class="small muted" style="font-family:Noto Sans KR">${g.rec[t]} ${b2b(g,t)?'<span class="tag t-warn">B2B</span>':''}</span></h3>
  <div class="small muted">득점 ${st.avgPoints||'—'} · 실점 ${st.avgPointsAgainst||'—'} · FG ${st.fieldGoalPct||'—'}% · 3P ${st.threePointFieldGoalPct||'—'}% · 리바 ${st.avgRebounds||'—'} · 턴오버 ${st.avgTotalTurnovers||'—'} · 최근10 ${st['Last Ten Games']||'—'}</div>
@@ -339,12 +367,13 @@ function statRow(d){const best=bestOf(d),p=PIDX[d.id+'|'+d.cat],s8=SIDX[d.n+'|'+
   ${s8?`<span>80% <b>${RECN[s8.rec]}</b> ${s8.th}+</span>`:''}
   ${best?`<span class="good"><b>★ ${best.th}+ ${fmtO(best.am)}</b> (${best.p}% vs ${best.imp}%)</span>`:''}${muB(d.mu)}</div>${SING.includes(d.cat)?'':muW(d.mu)}<div class="lbody">${strip(d,best)}${sideInfo(d,p)}</div></div>`;}
 /* 📌 기준 단계 요약(시즌 vs 오늘 · 상성 · 이번 시즌 맞대결). 단계 버튼으로 바꿔 보기 */
-function psum(d,th){const o=oppOf(d),HH=(AUTO.h2h||{})[d.id]||[],R=d.r.map(lv),r0=R.find(r=>r.th===th)||R[0];
+function psum(d,th){const o=oppOf(d),HH=(AUTO.h2h||{})[d.id]||[],PV=(AUTO.h2hP||{})[d.id]||[],R=d.r.map(lv),r0=R.find(r=>r.th===th)||R[0];
  const cur=HH,ok=v=>v>=r0.th;
- const hs=L=>L.map(h=>`<span style="color:var(--${ok(h[d.cat])?'good':'bad'})">${h[d.cat]}</span><small class="muted">(${h.d.slice(5).replace('-','/')} ${h.ha==='h'?'홈':'원정'}${h.miss.length?' · 상대 '+h.miss.map(x=>x.split(' ').slice(-1)[0]).join(',')+' 결장':''})</small>`).join(' ');
+ const hs=L=>L.map(h=>`<span style="color:var(--${ok(h[d.cat])?'good':'bad'})">${h[d.cat]}</span><small class="muted">(${h.d.slice(h.s==='25-26'?2:5).replace(/-/g,'/')} ${h.ha==='h'?'홈':'원정'}${(h.miss||[]).length?' · 상대 '+h.miss.map(x=>x.split(' ').slice(-1)[0]).join(',')+' 결장':''})</small>`).join(' ');
  return `<b>📌 ${d.n.split(' ').slice(-1)[0]} ${MUS[d.cat]} ${r0.th}+ vs ${o}</b> <span class="thb">${R.map(r=>`<button class="${r.th===r0.th?'on':''}" onclick="event.stopPropagation();document.getElementById('ps-${d.id}-${d.cat}').innerHTML=psum(LAD.find(x=>x.id==='${d.id}'&&x.cat==='${d.cat}'),${r.th})">${r.th}</button>`).join('')}</span><br>
   시즌 <b>${r0.p}%</b> <span class="muted">(${r0.hit}/${d.N} · 최근5 ${r0.h5}/5)</span> → 오늘 <b>${r0.pt}%</b> ${dlt(r0.p,r0.pt)} · 상성 ${d.mu?muB(d.mu):'—'}<br>
-  이번 시즌 vs ${o}: ${cur.length?`<b>${cur.filter(h=>ok(h[d.cat])).length}/${cur.length}</b> — ${hs(cur)}`:'<span class="muted">아직 안 만남</span>'}`;}
+  이번 시즌 vs ${o}: ${cur.length?`<b>${cur.filter(h=>ok(h[d.cat])).length}/${cur.length}</b> — ${hs(cur)}`:'<span class="muted">아직 안 만남</span>'}<br>
+  지난 시즌 vs ${o}: ${PV.length?`<b>${PV.filter(h=>ok(h[d.cat])).length}/${PV.length}</b> — ${hs(PV)}`:'<span class="muted">맞대결 없음</span>'}`;}
 /* 단계 칸 오른쪽 빈자리: 그 스탯의 최근10 · 홈/원정 · 맞대결 · 상대 허용 */
 const OPPK={PTS:[['drtg','100회당 실점',''],['pace','페이스','']],REB:[['miss','놓친 슛',''],['oreb','공격리바율','%',1]],AST:[['aast','어시 허용',''],['pace','페이스','']],
  '3PM':[['a3pa','3점 시도 허용',''],['a3pct','3점 허용률','%']]};
@@ -365,7 +394,8 @@ function sideInfo(d,p){const o=oppOf(d),T=(AUTO.teams||{})[o],HH=(AUTO.h2h||{})[
  const prj=pj?`<div class="pproj"><b>🎯 오늘 예상 ${MUS[d.cat]} ${pj[0]}</b> · 보통 <b>${pj[1]}~${pj[2]}</b><br><span class="muted">이유: ${why}</span>${near.length?`<br>맞출 가능성 ${near.map(r=>`<b>${r.th}+</b> <span class="${r.pt>=75?'good':r.pt<50?'bad':''}">${r.pt}%</span>`).join(' · ')} <span class="muted">(오늘 확률)</span>`:''}</div>`:'';
  return `<div class="lside">${prj}${sum}<div><span class="muted">최근10${ln!=null?` (라인 ${ln} 초과=초록)`:''}</span><div class="chips sm">${(d.l10||d.last).map(ch).join('')}</div></div>
   ${d.hm?`<div><span class="muted">홈</span> <b class="${d.home?'hl':''}">${d.hm[0]}</b> <span class="muted">(${d.hm[1]})</span> · <span class="muted">원정</span> <b class="${d.home?'':'hl'}">${d.aw[0]}</b> <span class="muted">(${d.aw[1]})</span> <span class="muted">· 오늘 ${d.home?'홈':'원정'}</span></div>`:''}
-  <div><span class="muted">🆚 맞대결 평균</span> ${H.length?`<b>${(H.reduce((a,b)=>a+b,0)/H.length).toFixed(1)}</b> <span class="muted">(${H.length}경기 · 시즌 평균 ${d.avg})</span>`:'<span class="muted">맞대결 없음</span>'}</div>
+  <div><span class="muted">🆚 이번 시즌 맞대결</span> ${H.length?`<b>${(H.reduce((a,b)=>a+b,0)/H.length).toFixed(1)}</b> <span class="muted">(${H.length}경기 · 시즌 평균 ${d.avg})</span>`:'<span class="muted">없음</span>'}</div>
+  ${(()=>{const P=((AUTO.h2hP||{})[d.id]||[]).map(h=>h[d.cat]),A=((AUTO.avP||{})[d.id]||{})[d.cat];return `<div><span class="muted">🆚 지난 시즌 맞대결</span> ${P.length?`<b>${(P.reduce((a,b)=>a+b,0)/P.length).toFixed(1)}</b> <span class="muted">(${P.length}경기${A!=null?' · 지난 시즌 평균 '+A:''})</span>`:'<span class="muted">없음</span>'}</div>`;})()}
   ${opp?`<div><span class="muted">상대 ${o} 허용</span> ${opp}</div>`:''}</div>`;}
 function playerCard(G){const d0=G[0],mu=d0.min3-d0.min,fl=[...new Set(G.flatMap(d=>d.fl))];
  return `<div class="lcard"><div class="lhd"><b style="font-size:17px">${d0.n}</b><span class="small muted">${d0.t} · ${d0.g}</span>
@@ -381,16 +411,27 @@ function pmu(d0){const A=LAD.filter(x=>x.id===d0.id&&x.mu).sort((a,b)=>MUO.index
  return `<div class="pmu ${anyBad?'b':''}"><b>🧭 오늘 상대 ${o} — 스탯별 난이도</b> ${A.map(x=>`<span class="mu ${x.mu[0]}">${MUS[x.cat]} ${muShort(x.mu)}</span>`).join(' ')}
   ${flowL((A.find(x=>x.flow)||{}).flow)}
   ${S.map(x=>`<div class="pml ${x.mu[0]}"><b>${MUS[x.cat]} · ${muTxt(x.mu)}</b>${x.mu[2].length?x.mu[2].map(w=>`<div class="${w.startsWith('참고')?'muted':''}">${wIc(x.mu[0],w)} ${w}</div>`).join(''):'<div class="muted">• 특별히 유리하거나 불리한 점이 없어요</div>'}</div>`).join('')}</div>`;}
-/* 🆚 맞대결 기록 (이번 시즌) */
-function h2hTable(d){const H=(AUTO.h2h||{})[d.id]||[],o=oppOf(d);
- if(!H.length)return `<div class="small muted" style="margin-top:6px">🆚 vs ${o}: 이번 시즌 맞대결 없음</div>`;
- const K=['min','PTS','REB','AST','3PM','PRA','FGA','3PA','FTA'],L={min:'분',PTS:'득',REB:'리',AST:'어','3PM':'3P',PRA:'PRA',FGA:'야투','3PA':'3시',FTA:'자유'};
- const av=k=>(H.reduce((a,h)=>a+h[k],0)/H.length).toFixed(1);
- return `<div style="margin-top:6px"><div class="small"><b>🆚 vs ${o} 맞대결</b> <span class="muted">이번 시즌 ${H.length}경기</span></div>
-  <table class="qt"><tr><th></th>${K.map(k=>`<th>${L[k]}</th>`).join('')}</tr>
-  ${H.slice(0,5).map(h=>`<tr><th style="font-weight:600;color:var(--muted)">${h.d.slice(2).replace(/-/g,'/')} ${h.ha==='h'?'홈':'원정'}${h.miss.length?` <span style="color:var(--good)" title="상대 결장: ${h.miss.join(', ')}">*</span>`:''}</th>${K.map(k=>`<td>${h[k]}</td>`).join('')}</tr>`).join('')}
-  <tr><th>평균</th>${K.map(k=>`<td><b>${av(k)}</b></td>`).join('')}</tr></table>
-  ${H.some(h=>h.miss.length)?`<div class="small muted">* 그 경기 상대 결장: ${[...new Set(H.flatMap(h=>h.miss))].join(', ')}</div>`:''}</div>`;}
+/* 🆚 맞대결 기록: 이번 시즌(위) · 지난 시즌(아래) 따로. 지난 시즌은 기록만 보여주고 확률엔 안 씀 */
+function h2hTable(d){const o=oppOf(d),C=(AUTO.h2h||{})[d.id]||[],P=(AUTO.h2hP||{})[d.id]||[];
+ const curAv={};LAD.filter(x=>x.id===d.id).forEach(x=>curAv[x.cat]=x.avg);curAv.min=d.min;
+ const prevAv=(AUTO.avP||{})[d.id]||null;
+ const K=[['min','분'],['PTS','득'],['REB','리'],['AST','어'],['3P','3점'],['FG','야투'],['FT','자유투'],['PRA','PRA']];
+ const cell=(h,k)=>k==='3P'?`${h['3PM']}/${h['3PA']}`:k==='FG'?`${h.FGM??'—'}/${h.FGA}`:k==='FT'?`${h.FTM??'—'}/${h.FTA}`:h[k];
+ const avg=(H,k)=>{const f=x=>k==='3P'?x['3PM']:k==='FG'?x.FGM:k==='FT'?x.FTM:x[k],g=x=>k==='3P'?x['3PA']:k==='FG'?x.FGA:k==='FT'?x.FTA:null;
+  const a=(H.reduce((s,x)=>s+(f(x)||0),0)/H.length).toFixed(1);return g(H[0])==null?a:`${a}/${(H.reduce((s,x)=>s+g(x),0)/H.length).toFixed(1)}`;};
+ const diff=(H,k,A)=>{const kk=k==='3P'?'3PM':k;if(!A||A[kk]==null||['FG','FT'].includes(k))return '<td></td>';
+  const v=H.reduce((s,x)=>s+x[kk],0)/H.length-A[kk];return `<td style="color:var(--${v>=0.05?'good':v<=-0.05?'bad':'muted'})">${v>0?'+':''}${v.toFixed(1)}</td>`;};
+ const tbl=(H,lbl,A,aLbl)=>{if(!H.length)return `<div class="small muted" style="margin-top:4px">${lbl}: 맞대결 없음</div>`;
+  return `<div class="small" style="margin-top:6px"><b>${lbl}</b> <span class="muted">${H.length}경기${aLbl?' · '+aLbl:''}${H.some(h=>h.tm&&h.tm!==d.t)?` · 당시 소속 ${[...new Set(H.map(h=>h.tm))].join('/')}`:''}</span></div>
+  <table class="qt h2t"><tr><th></th>${K.map(k=>`<th>${k[1]}</th>`).join('')}</tr>
+  ${H.map(h=>`<tr><th style="font-weight:600;color:var(--muted)">${h.d.slice(2).replace(/-/g,'/')} ${h.ha==='h'?'홈':'원정'}${h.po?` <b style="color:var(--warn)">${h.po==='PO'?'플옵':'플인'}</b>`:''} <span style="color:var(--${h.res==='W'?'good':'bad'})">${h.res==='W'?'승':h.res==='L'?'패':''} ${h.sc||''}</span>${(h.miss||[]).length?` <span style="color:var(--good)" title="상대 결장: ${h.miss.join(', ')}">*</span>`:''}</th>${K.map(k=>`<td class="${k[0]===d.cat||(k[0]==='3P'&&d.cat==='3PM')?'hc':''}">${cell(h,k[0])}</td>`).join('')}</tr>`).join('')}
+  <tr><th>맞대결 평균</th>${K.map(k=>`<td><b>${avg(H,k[0])}</b></td>`).join('')}</tr>
+  ${A?`<tr><th class="muted">시즌 평균 대비</th>${K.map(k=>diff(H,k[0],A)).join('')}</tr>`:''}</table>
+  ${H.some(h=>(h.miss||[]).length)?`<div class="small muted">* 그 경기 상대 결장: ${[...new Set(H.flatMap(h=>h.miss||[]))].join(', ')}</div>`:''}`;};
+ return `<div style="margin-top:6px"><div class="small"><b>🆚 vs ${o} 맞대결</b> <span class="muted">3점·야투·자유투 = 성공/시도</span></div>
+  ${tbl(C,'이번 시즌 (26-27)',curAv,'비교: 올 시즌 평균')}
+  ${tbl(P,'지난 시즌 (25-26)',prevAv,prevAv?`비교: 지난 시즌 평균(${prevAv.G}경기)`:'')}
+  ${P.length?'<div class="small muted">지난 시즌 맞대결은 참고 기록이에요 (오늘 확률 계산엔 안 들어가요)</div>':''}</div>`;}
 const isSt=G=>(G[0].st5??0)>=3;let vrole='all';
 function sec(P,title,sub){if(!P.length||(vrole==='st'&&!isSt(P[0]))||(vrole==='bn'&&isSt(P[0])))return '';
  return `<div class="lsec"><b>${title}</b> <span class="muted small">${P.length}명 · ${sub}</span></div><div class="lgrid">`+P.slice(0,vn).map(playerCard).join('')+'</div>'+(P.length>vn?`<button class="btn" style="width:100%;margin:6px 0" onclick="vn+=40;drawV()">더 보기 (${P.length-vn}명 남음)</button>`:'');}

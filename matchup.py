@@ -324,3 +324,54 @@ def flow(team, sp, ms):
 
 def downgrade(rec):
     return {"top": "rec", "rec": "caution"}.get(rec, rec)
+
+
+# 📊 팀 시즌 기록(홈/원정 분리) + 30팀 순위. rows: [{"d": 날짜, "t": {팀: (h/a, 기록)}}]
+BOOK_KEYS = ("PTS", "FGM", "FGA", "TPM", "TPA", "FTM", "FTA", "OREB", "DREB", "REB", "AST", "TOV", "STL", "BLK", "PITP", "POSS")
+# 순위 매길 항목: (키, 큰 값 = 팀에 좋음?)  o_ = 내 기록, x_ = 상대에게 내준 기록
+BOOK_RANK = [("o_PTS", True), ("o_FG%", True), ("o_TPM", True), ("o_TPA", True), ("o_3P%", True), ("o_FTA", True),
+             ("o_FT%", True), ("o_REB", True), ("o_OREB", True), ("o_AST", True), ("o_TOV", False), ("o_PITP", True),
+             ("o_ORTG", True), ("pace", True),
+             ("x_PTS", False), ("x_FG%", False), ("x_TPM", False), ("x_TPA", False), ("x_3P%", False), ("x_FTA", False),
+             ("x_REB", False), ("x_OREB", False), ("x_AST", False), ("x_TOV", True), ("x_PITP", False), ("x_DRTG", False)]
+
+
+def _sheet(G, W, o, x):
+    pct = lambda m, a: round(100 * m / a, 1) if a else 0.0
+    s = {"G": G, "W": W, "L": G - W, "tot": {k: o[k] for k in ("PTS", "FGM", "FGA", "TPM", "TPA", "FTM", "FTA", "REB", "OREB", "AST", "TOV")}}
+    for p, r in (("o_", o), ("x_", x)):
+        for k in BOOK_KEYS:
+            s[p + k] = round(r[k] / G, 1)
+        s[p + "FG%"], s[p + "3P%"], s[p + "FT%"] = pct(r["FGM"], r["FGA"]), pct(r["TPM"], r["TPA"]), pct(r["FTM"], r["FTA"])
+    s["o_ORTG"] = round(100 * o["PTS"] / max(o["POSS"], 1), 1)
+    s["x_DRTG"] = round(100 * x["PTS"] / max(x["POSS"], 1), 1)
+    s["pace"] = round((o["POSS"] + x["POSS"]) / 2 / G, 1)
+    return s
+
+
+def team_book(rows):
+    acc = {}
+    for g in rows:
+        T = g["t"]
+        if len(T) != 2:
+            continue
+        a, b = list(T)
+        for me, op in ((a, b), (b, a)):
+            ha, o = T[me]
+            x = T[op][1]
+            win = o["PTS"] > x["PTS"]
+            for sp in ("all", ha):
+                r = acc.setdefault(me, {}).setdefault(sp, {"G": 0, "W": 0, "o": dict.fromkeys(BOOK_KEYS, 0), "x": dict.fromkeys(BOOK_KEYS, 0)})
+                r["G"] += 1
+                r["W"] += win
+                for k in BOOK_KEYS:
+                    r["o"][k] += o.get(k, 0)
+                    r["x"][k] += x.get(k, 0)
+    B = {t: {sp: _sheet(r["G"], r["W"], r["o"], r["x"]) for sp, r in S.items() if r["G"]} for t, S in acc.items()}
+    # 순위: 1 = 값이 가장 큼 (색은 BOOK_RANK의 '좋음' 방향으로 화면에서 결정)
+    for sp in ("all", "h", "a"):
+        ts = [t for t in B if sp in B[t]]
+        for k, _ in BOOK_RANK:
+            for i, t in enumerate(sorted(ts, key=lambda t: -B[t][sp][k])):
+                B[t][sp].setdefault("rk", {})[k] = i + 1
+    return B
