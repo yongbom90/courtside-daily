@@ -254,7 +254,14 @@ def league_profiles(date):
         d += timedelta(days=1)
     with ThreadPoolExecutor(8) as ex:
         sums = list(ex.map(summary, evs))
-    return MU.profiles([MU.team_lines(s) for s in sums]), len(evs)
+    rows = []
+    for s in sums:
+        L = MU.team_lines(s)
+        comp = (s.get("header", {}).get("competitions") or [{}])[0]
+        ha = {c.get("team", {}).get("abbreviation"): c.get("homeAway", "")[:1] for c in comp.get("competitors", [])}
+        if len(L) == 2 and all(ha.get(t) for t in L):
+            rows.append({"d": (comp.get("date") or "")[:10], "t": {t: (ha[t], L[t]) for t in L}})
+    return MU.profiles([MU.team_lines(s) for s in sums]), len(evs), MU.team_book(rows)
 
 
 def main(date, out):
@@ -328,7 +335,7 @@ def main(date, out):
     out_names = {i["n"] for g in games for v in g["inj"].values() for i in v if i["s"] in ("Out", "Doubtful")}
 
     # 🧭 매치업: 리그 30팀 허용 기록 순위 + 상대 핵심 선수(빅맨·림 보호·스틸)
-    TP, n_league = league_profiles(date)
+    TP, n_league, TB = league_profiles(date)
     opp_of = {}
     for g in games:
         opp_of[g["away"]], opp_of[g["home"]] = g["home"], g["away"]
@@ -584,7 +591,7 @@ def main(date, out):
 
     h2h = {d["id"]: _h2h.get(d["id"], []) for d in ladders}
     teams_mu = {ab: {**{k: TP[ab][k] for k in TP[ab] if k != "rk"}, "rk": TP[ab]["rk"], "km": km[ab]} for ab in opp_of if ab in TP}
-    json.dump({"date": date, "prev": prev, "games": games, "teams": teams_mu, "nLeague": n_league, "h2h": h2h, "stat80": stat80, "form": form, "results": results,
+    json.dump({"date": date, "prev": prev, "games": games, "teams": teams_mu, "book": {ab: TB[ab] for ab in opp_of if ab in TB}, "nLeague": n_league, "h2h": h2h, "stat80": stat80, "form": form, "results": results,
                "value": [v for v in value if v["cat"] not in COMBO][:300],
                "cvalue": [v for v in value if v["cat"] in COMBO][:200], "ladders": ladders, "qtr": {d["id"]: qtr[d["id"]] for d in ladders if d["id"] in qtr}, "vgrades": vgrades, "vgFrom": vg_from,
                "props": props, "minutes": minutes[:40], "propReview": prop_review, "propReviewFrom": pr_from,

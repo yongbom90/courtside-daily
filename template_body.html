@@ -62,6 +62,7 @@
 .lfl{font-size:11px;color:var(--warn);margin-top:2px}
 .mu{display:inline-block;padding:0 6px;border-radius:6px;font-size:11px;font-weight:800;white-space:nowrap}.mu.good{background:#16a34a22;color:var(--good)}.mu.bad{background:#dc262622;color:var(--bad)}.mu.mid{background:#64748b1f;color:var(--muted)}
 .muw{font-size:11px;line-height:1.4;margin:-1px 0 4px}.muw.good{color:var(--good)}.muw.bad{color:var(--bad)}.muw.mid{color:var(--muted)}
+.bk{margin:6px 0 10px}.bk table{font-size:12px;width:100%}.bk td,.bk th{padding:3px 6px;white-space:nowrap;text-align:right}.bk td:first-child,.bk th:first-child{text-align:left}.bk .grp td{background:var(--pri-bg,#64748b14);font-weight:800;text-align:left}.bk small{font-size:10.5px;opacity:.85}.bk .g{color:var(--good);font-weight:700}.bk .b{color:var(--bad);font-weight:700}.bk .tday{background:#2563eb12}.bk .sub{display:block;font-size:10.5px;opacity:.7}@media(max-width:700px){.bk td,.bk th{padding:3px 4px}.bk table{font-size:11.5px}}
 .tmu{font-size:12px;line-height:1.55;margin:4px 0;padding:5px 8px;border-radius:8px;background:var(--pri-bg,#64748b14)}.tmu b{font-weight:800}.tmu .g{color:var(--good)}.tmu .b{color:var(--bad)}
 .pmu{font-size:12px;line-height:1.5;margin:5px 0 3px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--pri-bg,#64748b10)}.pmu.b{border-color:var(--bad);background:#dc26260d}.pmu .mu{margin:1px 0}
 .pmw{color:var(--bad);margin-top:2px}
@@ -171,7 +172,33 @@ $('slateGrid').innerHTML=AUTO.games.map(g=>{const [c,l,w]=garbage(g.abs);const a
  ${(a.picks||[]).map(p=>`<button class="btn" data-k="${p[0]}" data-o="${p[1]??''}" onclick="toggle(this)">+ ${p[0]} ${p[1]!=null?'('+fmtO(p[1])+')':''}</button>`).join('')}
  </div>`}).join('');
 
-$('teamWrap').innerHTML=AUTO.games.map(g=>`<h2 class="sec">${g.m} <span class="small muted">${g.sp} / ${g.tot}</span></h2><div class="two">${[g.away,g.home].map(t=>{
+/* 📊 팀 시즌 기록: 시즌 전체 + 오늘 위치(원정팀=원정 기록, 홈팀=홈 기록). 순위 = 그 팀에 좋은 순(1위 최고) */
+const BK_GOOD={o_TOV:false,x_PTS:false,"x_FG%":false,x_TPM:false,x_TPA:false,"x_3P%":false,x_FTA:false,x_REB:false,x_OREB:false,x_AST:false,x_PITP:false,x_DRTG:false};
+function bookT(g){const B=AUTO.book||{};if(!B[g.away]||!B[g.home])return '';
+ const cols=[[g.away,'all','시즌'],[g.away,'a','✈️ 원정'],[g.home,'all','시즌'],[g.home,'h','🏠 홈']];
+ const rk=(S,k)=>{if(!S.rk||S.rk[k]==null)return '';const r=BK_GOOD[k]===false?31-S.rk[k]:S.rk[k];return ` <small class="${r<=8?'g':r>=23?'b':''}">${r}위</small>`;};
+ const v=(S,k,u='')=>`${S[k]}${u}${rk(S,k)}`;
+ const ma=(S,p,m,a,pc,sp)=>`${S[p+m]}/${S[p+a]} · ${S[p+pc]}%${rk(S,p+pc)}${sp==='all'&&p==='o_'?`<span class="sub">합계 ${S.tot[m]}/${S.tot[a]}</span>`:''}`;
+ const R=[['grp','⚔️ 공격 (우리가 한 것)'],
+  ['성적',(S)=>`${S.W}승 ${S.L}패`],
+  ['득점',(S,sp)=>v(S,'o_PTS')+(sp==='all'?`<span class="sub">합계 ${S.tot.PTS}</span>`:'')],
+  ['야투',(S,sp)=>ma(S,'o_','FGM','FGA','FG%',sp)],
+  ['3점',(S,sp)=>ma(S,'o_','TPM','TPA','3P%',sp)+`<span class="sub">시도${rk(S,'o_TPA')}</span>`],
+  ['자유투',(S,sp)=>ma(S,'o_','FTM','FTA','FT%',sp)+`<span class="sub">시도${rk(S,'o_FTA')}</span>`],
+  ['리바 (공격)',(S)=>`${v(S,'o_REB')} <span class="sub">공격 ${v(S,'o_OREB')}</span>`],
+  ['어시',(S)=>v(S,'o_AST')],['턴오버',(S)=>v(S,'o_TOV')],['골밑 득점',(S)=>v(S,'o_PITP')],
+  ['100회당 득점',(S)=>v(S,'o_ORTG')],['경기 속도',(S)=>v(S,'pace')],
+  ['grp','🛡️ 수비 (상대에게 내준 것)'],
+  ['실점',(S)=>v(S,'x_PTS')],['야투 허용',(S)=>`${S['x_FGM']}/${S['x_FGA']} · ${S['x_FG%']}%${rk(S,'x_FG%')}`],
+  ['3점 허용',(S)=>`${S.x_TPM}/${S.x_TPA} · ${S['x_3P%']}%${rk(S,'x_3P%')}<span class="sub">시도${rk(S,'x_TPA')}</span>`],
+  ['자유투 허용',(S)=>`${S.x_FTM}/${S.x_FTA}${rk(S,'x_FTA')}`],
+  ['리바 허용 (공격)',(S)=>`${v(S,'x_REB')} <span class="sub">공격 ${v(S,'x_OREB')}</span>`],
+  ['어시 허용',(S)=>v(S,'x_AST')],['상대 턴오버',(S)=>v(S,'x_TOV')],['골밑 실점',(S)=>v(S,'x_PITP')],['100회당 실점',(S)=>v(S,'x_DRTG')]];
+ return `<div class="card bk"><h3 style="font-size:16px">📊 팀 시즌 기록</h3><div class="small muted" style="margin:-2px 0 4px">경기당 평균 · 순위는 그 팀에 좋은 순서(공격은 많을수록, 수비는 적게 내줄수록 1위) · <span class="g">1~8위</span> / <span class="b">23~30위</span> · 파란 칸 = 오늘 경기 위치 기록</div>
+ <div class="tblwrap"><table><tr><th></th>${cols.map(([t,sp,l])=>`<th class="${sp!=='all'?'tday':''}">${t} ${l} <small>${B[t][sp]?B[t][sp].G+'경기':''}</small></th>`).join('')}</tr>
+ ${R.map(r=>r[0]==='grp'?`<tr class="grp"><td colspan="5">${r[1]}</td></tr>`:`<tr><td>${r[0]}</td>${cols.map(([t,sp])=>{const S=B[t][sp];return `<td class="${sp!=='all'?'tday':''}">${S?r[1](S,sp):'—'}</td>`;}).join('')}</tr>`).join('')}
+ </table></div></div>`;}
+$('teamWrap').innerHTML=AUTO.games.map(g=>`<h2 class="sec">${g.m} <span class="small muted">${g.sp} / ${g.tot}</span></h2>${bookT(g)}<div class="two">${[g.away,g.home].map(t=>{
  const a=(AN.teams||{})[t]||{};const st=g.stats[t]||{};const f=(AUTO.form[t]||[]).slice(0,5);
  return `<div class="card"><h3>${t} <span class="small muted" style="font-family:Noto Sans KR">${g.rec[t]} ${b2b(g,t)?'<span class="tag t-warn">B2B</span>':''}</span></h3>
  <div class="small muted">득점 ${st.avgPoints||'—'} · 실점 ${st.avgPointsAgainst||'—'} · FG ${st.fieldGoalPct||'—'}% · 3P ${st.threePointFieldGoalPct||'—'}% · 리바 ${st.avgRebounds||'—'} · 턴오버 ${st.avgTotalTurnovers||'—'} · 최근10 ${st['Last Ten Games']||'—'}</div>
