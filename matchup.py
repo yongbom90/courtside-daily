@@ -183,7 +183,7 @@ def sentence(P, opp, k):
     more = nat <= (n + 1) / 2
     what, unit, m_txt, l_txt = EXPL[k]
     ordn = nat if more else n + 1 - nat
-    return (f"{what.format(o=opp)} {P[opp][k]}{unit} — 30팀 중 {ordn}번째로 {'많음' if more else '적음'} "
+    return (f"{what.format(o=opp)} {P[opp][k]}{unit} — 30팀 중 {'가장' if ordn == 1 else f'{ordn}번째로'} {'많음' if more else '적음'} "
             f"{(m_txt if more else l_txt).format(o=opp)}")
 
 
@@ -225,7 +225,14 @@ def grade(P, opp, cat, mx, km):
                 cand.append((abs(r - (n + 1) / 2), k, r))
         cand.sort(reverse=True)
         for _, k, r in cand[:2]:
-            why.append(sentence(P, opp, k))
+            # 보통 등급은 좋은 점·나쁜 점이 섞여요 → 방향을 앞에 붙여 헷갈리지 않게
+            pre = ("유리: " if r <= (n + 1) / 2 else "불리: ") if gr == "mid" else ""
+            why.append(pre + sentence(P, opp, k) + (" (성공률은 운 영향이 커서 참고만)" if k == "a3pct" else ""))
+        # 3점 등급은 '내준 3점 시도'로만 매겨요(11/1~16 검증). 성공률이 반대 방향이면 헷갈리지 않게 따로 적어요.
+        if c == "3PM" and gr in ("bad", "good"):
+            r3 = rk["a3pct"]
+            if gr == "bad" and r3 <= 8 or gr == "good" and r3 >= n - 7:
+                why.append(f"참고: {sentence(P, opp, 'a3pct')} — 하지만 성공률은 운 영향이 커서 등급은 시도 수로 매겨요")
         if c == "REB" and gr != "good":
             act = [b for b in km["big"] if not b[3]]
             if act:
