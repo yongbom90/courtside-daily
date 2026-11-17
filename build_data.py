@@ -334,6 +334,10 @@ def main(date, out):
         opp_of[g["away"]], opp_of[g["home"]] = g["home"], g["away"]
     km = {ab: MU.keymen({n: L for (t, n), L in logs.items() if t == ab}, out_names) for ab in opp_of}
     _mu = {}
+    spme = {}
+    for g in games:
+        for ab in (g["away"], g["home"]):
+            spme[ab] = MU.spread_for(g["sp"], ab)
 
     def mu_for(ab, name, cat):
         k = (ab, name, cat)
@@ -373,7 +377,9 @@ def main(date, out):
             r["mu"] = mu_for(ab, name, r["cat"])
             _v = [l[r["cat"]] for l in L]
             _p = ((r["hit"] + 1) / (r["N"] + 2) + (r["h5"] + 1) / 7) / 2
-            r["p"], r["pt"] = round(100 * _p), round(100 * (MU.today(_p, r["cat"], r["mu"][1]) if r["mu"] else _p))
+            r["flow"] = MU.flow(ab, spme.get(ab), sum(l["min"] for l in L) / len(L))
+            _bl = bool(r["flow"] and r["flow"][2])
+            r["p"], r["pt"] = round(100 * _p), round(100 * MU.today(_p, r["cat"], r["mu"][1] if r["mu"] else None, _bl))
             if r["mu"] and r["mu"][0] == "bad":
                 r["rec0"], r["rec"] = r["rec"], MU.downgrade(r["rec"])
         stat80 += rows
@@ -424,7 +430,8 @@ def main(date, out):
                 flags.append(f"라인 이동 {opn} → {line}")
             if name in q_names:
                 flags.append(f"부상 리포트 {inj_s.get(name, 'DTD/Q')}")
-            if g["abs"] >= 12:
+            _fl = MU.flow(ab, spme.get(ab), sum(l["min"] for l in L) / len(L))
+            if _fl and _fl[2]:
                 flags.append(f"스프레드 {g['abs']} 블로아웃 위험")
             props.append({"id": aid, "n": name, "t": ab, "g": g["m"], "gid": g["id"], "cat": cat, "line": line, "open": opn,
                           "N": len(vals), "hit": hit, "rate": round(100 * hit / len(vals)), "last": last,
@@ -454,7 +461,9 @@ def main(date, out):
                 base.append(mf)
             if name in q_names:
                 base.append(f"부상 리포트 {inj_s.get(name, 'DTD/Q')}")
-            if g["abs"] >= 12:
+            _fl = MU.flow(ab, spme.get(ab), sum(l["min"] for l in L) / N)
+            blow = bool(_fl and _fl[2])
+            if blow:
                 base.append(f"스프레드 {g['abs']} 블로아웃 위험")
             lad = {"id": aid, "n": name, "t": ab, "g": g["m"], "cat": cat, "N": N, "last": vals[:5],
                    "min": round(sum(l["min"] for l in L) / N, 1), "min3": round(sum(l["min"] for l in L[:3]) / 3, 1),
@@ -464,7 +473,7 @@ def main(date, out):
                    "hm": [round(sum(l[cat] for l in L if l.get("ha") == "h") / max(1, sum(l.get("ha") == "h" for l in L)), 1), sum(l.get("ha") == "h" for l in L)],
                    "aw": [round(sum(l[cat] for l in L if l.get("ha") == "a") / max(1, sum(l.get("ha") == "a" for l in L)), 1), sum(l.get("ha") == "a" for l in L)],
                    "home": ab == g["home"],
-                   "proj": MU.project(vals, cat, (mu_for(ab, name, cat) or [None, None])[1]) if cat in MU.PROJ else None,
+                   "proj": MU.project(vals, cat, (mu_for(ab, name, cat) or [None, None])[1], blow) if cat in MU.PROJ else None, "flow": _fl,
                    "att": {"s": [round(sum(l.get(k, 0) for l in L) / N, 1) for k in ("FGA", "3PA", "FTA")],
                            "l5": [round(sum(l.get(k, 0) for l in L[:5]) / len(L[:5]), 1) for k in ("FGA", "3PA", "FTA")]}}
             mbad = bool(lad["mu"] and lad["mu"][0] == "bad")
@@ -492,7 +501,7 @@ def main(date, out):
                               "val": val,
                               "last": last, "h5": h5,
                               "min": lad["min"], "min3": lad["min3"],
-                              "flags": flags, "mu": lad["mu"], "pt": round(100 * (MU.today(p, cat, lad["mu"][1]) if lad["mu"] else p))})
+                              "flags": flags, "mu": lad["mu"], "pt": round(100 * MU.today(p, cat, lad["mu"][1] if lad["mu"] else None, blow))})
             # 🪜 고정 간격 사다리: 각 단계 추정 확률(시즌·최근5 반반) + 같은 단계 DK 배당이 있으면 붙임
             last = vals[:5]
             for th in LADDER.get(cat, []):
@@ -504,7 +513,7 @@ def main(date, out):
                 if lad["r"] and hit == 0 and h5 == 0 and lad["r"][-1][6] == 0 and lad["r"][-1][7] == 0:
                     continue  # 한 번도 못 넘은 단계는 첫 줄만
                 am, imp, edge, val = dk.get(float(th), dk.get(th, (None, None, None, None)))
-                pt = MU.today(p, cat, lad["mu"][1]) if lad["mu"] else p
+                pt = MU.today(p, cat, lad["mu"][1] if lad["mu"] else None, blow)
                 lad["r"].append([th, am, imp, round(100 * p), round(100 * ps), round(100 * p5), hit, h5, fair_am(p), edge, val,
                                  round(100 * pt), sum(v >= th for v in hv)])
             lad["dkx"] = sorted(t for t in dk if t not in LADDER.get(cat, []))  # 간격 밖 DK 단계(목록 보기에 있음)

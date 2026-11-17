@@ -67,7 +67,7 @@
 .pmw{color:var(--bad);margin-top:2px}
 .pml{margin-top:4px;padding-left:2px}.pml>b{font-size:12px}.pml.bad>b{color:var(--bad)}.pml.good>b{color:var(--good)}.pml div{font-size:11.5px;line-height:1.45}.pml.bad div{color:var(--bad)}.pml.good div{color:var(--good)}
 .thb button{font:inherit;font-size:10px;padding:0 4px;margin-left:2px;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--muted);cursor:pointer}.thb button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
-.pproj{margin-bottom:4px;padding:4px 7px;border-radius:7px;border:1px solid var(--primary);background:var(--pri-bg,#2563eb10)}.pproj .good{color:var(--good)}
+.pproj{margin-bottom:4px;padding:4px 7px;border-radius:7px;border:1px solid var(--primary);background:var(--pri-bg,#2563eb10)}.pproj .good{color:var(--good)}.pproj .bad{color:var(--bad)}
 .psum{margin-bottom:4px;padding:4px 7px;border-radius:7px;background:var(--pri-bg,#64748b14);border:1px solid var(--line)}.psum small{font-size:10px;margin:0 3px 0 1px}
 .lbody{flex-wrap:nowrap}.lbody .lside{flex:1 1 200px;min-width:180px;line-height:1.6}.lside .hl{color:var(--primary);text-decoration:underline}
 .chips.sm{display:flex;flex-wrap:wrap;gap:2px;margin:1px 0}.chips.sm i{font-style:normal;font-size:11px;min-width:20px;padding:0 3px;text-align:center;border-radius:4px;border:1px solid var(--line)}.chips.sm i.y{background:#16a34a22;color:var(--good);border-color:var(--good)}.chips.sm i.n{color:var(--muted)}
@@ -345,6 +345,8 @@ function psum(d,th){const o=oppOf(d),HH=(AUTO.h2h||{})[d.id]||[],R=d.r.map(lv),r
 /* 단계 칸 오른쪽 빈자리: 그 스탯의 최근10 · 홈/원정 · 맞대결 · 상대 허용 */
 const OPPK={PTS:[['drtg','100회당 실점',''],['pace','페이스','']],REB:[['miss','놓친 슛',''],['oreb','공격리바율','%',1]],AST:[['aast','어시 허용',''],['pace','페이스','']],
  '3PM':[['a3pa','3점 시도 허용',''],['a3pct','3점 허용률','%']]};
+/* ⏱️ 경기 흐름(스프레드 → 블로아웃 위험) 한 줄 */
+function flowL(f){return f?`<div class="pml ${f[0]==='bad'?'bad':f[0]==='good'?'good':''}"><b>⏱️ 경기 흐름</b><div>${f[0]==='bad'?'⚠️':f[0]==='good'?'👍':'•'} ${f[1]}${f[2]?' → 오늘 확률·예상치에 반영했어요':''}</div></div>`:'';}
 function sideInfo(d,p){const o=oppOf(d),T=(AUTO.teams||{})[o],HH=(AUTO.h2h||{})[d.id]||[],H=HH.map(h=>h[d.cat]),ln=p?p.line:null;
  const R=d.r.map(lv),r0=ln!=null?R.slice().sort((a,b)=>Math.abs(a.th-ln)-Math.abs(b.th-ln))[0]:(R.filter(r=>r.pt>=70).sort((a,b)=>b.th-a.th)[0]||R[0]);
  const sum=r0?`<div class="psum" id="ps-${d.id}-${d.cat}">${psum(d,r0.th)}</div>`:'';
@@ -353,7 +355,9 @@ function sideInfo(d,p){const o=oppOf(d),T=(AUTO.teams||{})[o],HH=(AUTO.h2h||{})[
  const ks=[];(OPPK[d.cat]?[d.cat]:QPART[d.cat]).forEach(c=>(OPPK[c]||[]).forEach(k=>{if(!ks.some(x=>x[0]===k[0]))ks.push(k);}));
  const opp=T?ks.slice(0,4).map(([k,l,u,inv])=>{const r=T.rk[k];return `<span class="${r<=8?'good':r>=23?'bad':''}">${l} ${T[k]}${u} <small>(${rkTxt(T,k,!inv)})</small></span>`;}).join(' · '):'';
  const pj=d.proj;
- const prj=pj?`<div class="pproj"><b>🎯 오늘 예상 ${MUS[d.cat]} ${pj[0]}</b> <span class="muted">(시즌 평균 ${d.avg}${pj[3]?` · 상대 ${pj[3]>0?'+':''}${pj[3]}`:''})</span> · 보통 <b>${pj[1]}~${pj[2]}</b></div>`:'';
+ const RS=(LAD.find(x=>x.id===d.id&&x.cat===d.cat)||d).r.map(lv).sort((a,b)=>a.th-b.th),bl=RS.filter(r=>r.th<=(pj?pj[0]:0)),ab=RS.filter(r=>r.th>(pj?pj[0]:0)),near=[...bl.slice(-2),...ab.slice(0,1)];
+ const why=pj?[`시즌 평균 ${d.avg}`,pj[3]?`상대 ${pj[3]>0?'+':''}${pj[3]} (${d.mu?muShort(d.mu):''} 상대)`:'',pj[4]?`경기 흐름 ${pj[4]} (점수차 크게 벌어질 경기)`:''].filter(Boolean).join(' · '):'';
+ const prj=pj?`<div class="pproj"><b>🎯 오늘 예상 ${MUS[d.cat]} ${pj[0]}</b> · 보통 <b>${pj[1]}~${pj[2]}</b><br><span class="muted">이유: ${why}</span>${near.length?`<br>맞출 가능성 ${near.map(r=>`<b>${r.th}+</b> <span class="${r.pt>=75?'good':r.pt<50?'bad':''}">${r.pt}%</span>`).join(' · ')} <span class="muted">(오늘 확률)</span>`:''}</div>`:'';
  return `<div class="lside">${prj}${sum}<div><span class="muted">최근10${ln!=null?` (라인 ${ln} 초과=초록)`:''}</span><div class="chips sm">${(d.l10||d.last).map(ch).join('')}</div></div>
   ${d.hm?`<div><span class="muted">홈</span> <b class="${d.home?'hl':''}">${d.hm[0]}</b> <span class="muted">(${d.hm[1]})</span> · <span class="muted">원정</span> <b class="${d.home?'':'hl'}">${d.aw[0]}</b> <span class="muted">(${d.aw[1]})</span> <span class="muted">· 오늘 ${d.home?'홈':'원정'}</span></div>`:''}
   <div><span class="muted">🆚 맞대결 평균</span> ${H.length?`<b>${(H.reduce((a,b)=>a+b,0)/H.length).toFixed(1)}</b> <span class="muted">(${H.length}경기 · 시즌 평균 ${d.avg})</span>`:'<span class="muted">맞대결 없음</span>'}</div>
@@ -370,6 +374,7 @@ const MUO=['PTS','REB','AST','3PM','PRA','PR','PA','RA'],MUS={PTS:'득점',REB:'
 function pmu(d0){const A=LAD.filter(x=>x.id===d0.id&&x.mu).sort((a,b)=>MUO.indexOf(a.cat)-MUO.indexOf(b.cat));if(!A.length)return '';
  const o=oppOf(d0),S=A.filter(x=>SING.includes(x.cat)),anyBad=A.some(x=>x.mu[0]==='bad');
  return `<div class="pmu ${anyBad?'b':''}"><b>🧭 오늘 상대 ${o} — 스탯별 난이도</b> ${A.map(x=>`<span class="mu ${x.mu[0]}">${MUS[x.cat]} ${muShort(x.mu)}</span>`).join(' ')}
+  ${flowL((A.find(x=>x.flow)||{}).flow)}
   ${S.map(x=>`<div class="pml ${x.mu[0]}"><b>${MUS[x.cat]} · ${muTxt(x.mu)}</b>${x.mu[2].length?x.mu[2].map(w=>`<div>${x.mu[0]==='bad'?'⚠️':x.mu[0]==='good'?'👍':'•'} ${w}</div>`).join(''):'<div class="muted">• 특별히 유리하거나 불리한 점이 없어요</div>'}</div>`).join('')}</div>`;}
 /* 🆚 맞대결 기록 (이번 시즌) */
 function h2hTable(d){const H=(AUTO.h2h||{})[d.id]||[],o=oppOf(d);

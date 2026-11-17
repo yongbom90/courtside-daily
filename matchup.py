@@ -255,10 +255,10 @@ def grade(P, opp, cat, mx, km):
 SLOPE = {"PTS": 0.218, "REB": 0.188, "AST": 0.2, "3PM": 0.062, "PRA": 0.292, "PR": 0.206, "PA": 0.214, "RA": 0.219}
 
 
-def today(p, cat, rank):
+def today(p, cat, rank, blow=False):
     import math
     p = min(max(p, 0.01), 0.99)
-    x = math.log(p / (1 - p)) + SLOPE.get(cat, 0.2) * (15.5 - rank) / 14.5
+    x = math.log(p / (1 - p)) + (SLOPE.get(cat, 0.2) * (15.5 - rank) / 14.5 if rank else 0) + (BLOW_P if blow else 0)
     return 1 / (1 + math.exp(-x))
 
 
@@ -267,14 +267,52 @@ def today(p, cat, rank):
 PROJ = {"PTS": 0.04, "AST": 0.05, "REB": 0.0, "3PM": 0.0}
 
 
-def project(vals, cat, rank):
-    """→ [오늘 예상, 보통 범위 아래(25%), 위(75%), 상대 보정분]"""
+def project(vals, cat, rank, blow=False):
+    """→ [오늘 예상, 보통 범위 아래(25%), 위(75%), 상대 보정분, 경기 흐름 보정분]"""
     N = len(vals)
     avg = sum(vals) / N
     adj = avg * PROJ.get(cat, 0) * (15.5 - rank) / 14.5 if rank else 0
+    fadj = -avg * BLOW_J if blow else 0
     sv = sorted(vals)
     q = lambda f: sv[min(N - 1, max(0, round(f * (N - 1))))]
-    return [round(avg + adj, 1), q(0.25), q(0.75), round(adj, 1)]
+    return [round(avg + adj + fadj, 1), q(0.25), q(0.75), round(adj, 1), round(fadj, 1)]
+
+
+# ⏱️ 경기 흐름(점수차 예상 = 스프레드). 11/1~16 리그 검증(선수 1,391경기):
+#  시즌 평균 30분+ 주전이 13점+ 우세 또는 10점+ 열세 경기(36경기·86명) → 출전 평소의 95%, 기준선 적중 66→61%(로짓 −0.25),
+#  실제 기록은 예상의 91~96%(득점 91·리바 94·어시 92·3점 96 → 공통 −7%). 접전·5~12점 우세는 차이 없음(62→62%).
+#  13점+ 우세 팀 벤치(30분 미만)는 오히려 61→65% → 보정 없이 문장만.
+BLOW_P, BLOW_J = -0.25, 0.07
+
+
+def spread_for(details, team):
+    """'NY -14.5' → NY 기준 -14.5(음수 = 우세), 상대 기준 +14.5. 없으면 None"""
+    p = (details or "").split()
+    if len(p) != 2:
+        return 0.0 if (details or "").upper().startswith(("EVEN", "PK")) else None
+    try:
+        v = float(p[1])
+    except ValueError:
+        return None
+    return v if p[0] == team else -v
+
+
+def flow(team, sp, ms):
+    """→ [종류(bad/good/mid/ok), 문장, 확률·예상치 보정 여부]"""
+    if sp is None:
+        return None
+    a, st = abs(sp), ms >= 30
+    if sp <= -13:
+        if st:
+            return ["bad", f"{team} {a:g}점 우세 예상 → 크게 이기면 4쿼터에 쉬어요. 이런 경기(리그 36경기)에서 주전은 평소의 95%만 뛰고 기록은 예상보다 4~9% 낮았어요", True]
+        return ["good", f"{team} {a:g}점 우세 예상 → 주전이 일찍 쉬면 벤치 선수 출전이 늘어요(이런 경기에서 벤치 적중률은 오히려 올랐어요)", False]
+    if sp >= 10:
+        if st:
+            return ["bad", f"{team} {a:g}점 열세 예상 → 크게 지면 주전이 일찍 빠져요. 이런 경기(리그 36경기)에서 주전은 평소의 95%만 뛰고 기록은 예상보다 4~9% 낮았어요", True]
+        return ["mid", f"{team} {a:g}점 열세 예상 → 크게 질 수 있는 경기예요(벤치 선수는 영향이 작았어요)", False]
+    if a < 5:
+        return ["ok", f"접전 예상({team} {sp:+g}) → 출전시간 걱정 없어요", False]
+    return ["ok", f"{team} {sp:+g} → 이 정도 점수차는 리그 기록상 출전시간·적중률에 영향이 없었어요", False]
 
 
 def downgrade(rec):
