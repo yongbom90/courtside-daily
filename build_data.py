@@ -3,6 +3,7 @@ usage: python build_data.py YYYYMMDD out.json
 분석 문장(팀 분석, 방향, 리뷰)은 Claude가 analysis.json에 따로 쓴다.
 """
 import glob, json, os, sys, urllib.request
+import matchup as MU
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
@@ -45,10 +46,14 @@ def box_rows(s):
                 mins = 0
             if mins <= 0:
                 continue
-            tpm = (d.get("threePointFieldGoalsMade-threePointFieldGoalsAttempted") or "0-0").split("-")[0]
+            fgm, fga = MU._split(d.get("fieldGoalsMade-fieldGoalsAttempted"))
+            tpm, tpa = MU._split(d.get("threePointFieldGoalsMade-threePointFieldGoalsAttempted"))
+            ftm, fta = MU._split(d.get("freeThrowsMade-freeThrowsAttempted"))
+            n_ = lambda k: int(d.get(k) or 0)
             rows.append({"n": a["athlete"]["displayName"], "id": a["athlete"]["id"], "min": mins, "st": bool(a.get("starter")),
-                         "PTS": int(d.get("points") or 0), "REB": int(d.get("rebounds") or 0),
-                         "AST": int(d.get("assists") or 0), "3PM": int(tpm or 0)})
+                         "PTS": n_("points"), "REB": n_("rebounds"), "AST": n_("assists"), "3PM": tpm,
+                         "FGM": fgm, "FGA": fga, "3PA": tpa, "FTM": ftm, "FTA": fta, "OREB": n_("offensiveRebounds"),
+                         "DREB": n_("defensiveRebounds"), "STL": n_("steals"), "BLK": n_("blocks"), "TOV": n_("turnovers")})
             r = rows[-1]
             r.update(PR=r["PTS"] + r["REB"], PA=r["PTS"] + r["AST"], RA=r["REB"] + r["AST"], PRA=r["PTS"] + r["REB"] + r["AST"])
         out[t["team"]["abbreviation"]] = rows
@@ -57,16 +62,24 @@ def box_rows(s):
 
 
 def qstats(s):
-    """경기 플레이 기록 → {선수id: {"PTS":[1Q,2Q,3Q,4Q,OT], "REB":[...], "AST":[...]}} (연장은 OT 칸에 합산)."""
+    """경기 플레이 기록 → {선수id: {"PTS":[1Q,2Q,3Q,4Q,OT], "REB", "AST", "FGA", "3PA", "FTA"}} (연장은 OT 칸에 합산)."""
     out = {}
     def add(aid, k, q, v):
-        out.setdefault(aid, {"PTS": [0] * 5, "REB": [0] * 5, "AST": [0] * 5})[k][min(q, 5) - 1] += v
+        out.setdefault(aid, {k_: [0] * 5 for k_ in QK})[k][min(q, 5) - 1] += v
     for p in s.get("plays", []):
         q = (p.get("period") or {}).get("number") or 0
         parts = [x["athlete"]["id"] for x in p.get("participants", []) if x.get("athlete", {}).get("id")]
         if not q or not parts:
             continue
         txt = p.get("text", "")
+        if p.get("shootingPlay"):
+            pa = p.get("pointsAttempted")
+            if pa in (2, 3):
+                add(parts[0], "FGA", q, 1)
+                if pa == 3:
+                    add(parts[0], "3PA", q, 1)
+            elif pa == 1:
+                add(parts[0], "FTA", q, 1)
         if p.get("scoringPlay"):
             add(parts[0], "PTS", q, int(p.get("scoreValue") or 0))
             if len(parts) > 1 and "assist" in txt.lower():
@@ -74,6 +87,9 @@ def qstats(s):
         elif "rebound" in ((p.get("type") or {}).get("text", "") + " " + txt).lower() and "team" not in txt.lower():
             add(parts[0], "REB", q, 1)
     return out
+
+
+QK = ("PTS", "REB", "AST", "FGA", "3PA", "FTA")
 
 
 THR = {"PTS": [10, 12, 15, 18, 20, 22, 25, 28, 30, 35], "REB": [4, 5, 6, 8, 10, 12, 14],
@@ -219,6 +235,28 @@ def props_for(eid):
     return out
 
 
+SEASON_START = "20261020"
+
+
+def league_profiles(date):
+    """시즌 시작 ~ 어제까지 리그 전체 끝난 경기 → 30팀 허용 기록·순위(matchup.profiles)."""
+    d = datetime.strptime(SEASON_START, "%Y%m%d")
+    end = datetime.strptime(date, "%Y%m%d")
+    evs = []
+    while d < end:
+        ds = d.strftime("%Y%m%d")
+        p = os.path.join(CACHE, f"sb_{ds}.json")
+        sb = get(f"{B}/scoreboard?dates={ds}", None if not os.path.exists(p) else f"sb_{ds}.json")
+        done = [e for e in sb.get("events", []) if e["competitions"][0]["status"]["type"]["completed"]]
+        if not os.path.exists(p) and sb.get("events") and len(done) == len(sb["events"]) and (end - d).days >= 2:
+            json.dump(sb, open(p, "w", encoding="utf-8"))
+        evs += [e["id"] for e in done if (e.get("season") or {}).get("type", 2) == 2]
+        d += timedelta(days=1)
+    with ThreadPoolExecutor(8) as ex:
+        sums = list(ex.map(summary, evs))
+    return MU.profiles([MU.team_lines(s) for s in sums]), len(evs)
+
+
 def main(date, out):
     sb = get(f"{B}/scoreboard?dates={date}")
     games, teams = [], {}
@@ -278,12 +316,28 @@ def main(date, out):
         Q = [x for x in Q if x]
         if len(Q) < 3:
             continue
-        avg = {k: [round(sum(x[k][i] for x in Q) / len(Q), 2 if i == 4 else 1) for i in range(5)] for k in ("PTS", "REB", "AST")}
+        avg = {k: [round(sum(x[k][i] for x in Q) / len(Q), 2 if i == 4 else 1) for i in range(5)] for k in QK}
         avg["otG"] = sum(any(x[k][4] for k in ("PTS", "REB", "AST")) for x in Q)
         q1z = sum(x["PTS"][0] == 0 for x in Q)
         qtr[aid] = {"G": len(Q), **avg, "q1z": q1z, "l5": [x["PTS"] for x in Q[:5]]}
 
     out_names = {i["n"] for g in games for v in g["inj"].values() for i in v if i["s"] in ("Out", "Doubtful")}
+
+    # 🧭 매치업: 리그 30팀 허용 기록 순위 + 상대 핵심 선수(빅맨·림 보호·스틸)
+    TP, n_league = league_profiles(date)
+    opp_of = {}
+    for g in games:
+        opp_of[g["away"]], opp_of[g["home"]] = g["home"], g["away"]
+    km = {ab: MU.keymen({n: L for (t, n), L in logs.items() if t == ab}, out_names) for ab in opp_of}
+    _mu = {}
+
+    def mu_for(ab, name, cat):
+        k = (ab, name, cat)
+        if k not in _mu:
+            L = logs.get((ab, name))
+            opp = opp_of.get(ab)
+            _mu[k] = MU.grade(TP, opp, cat, MU.player_mix(L), km[opp]) if L and opp in TP else None
+        return _mu[k]
     q_names = {i["n"] for g in games for v in g["inj"].values() for i in v if i["s"] not in ("Out", "Doubtful")}
     stat80, form = [], {}
     for (ab, name), L in logs.items():
@@ -294,6 +348,9 @@ def main(date, out):
             if name in q_names:
                 r["flags"].append("부상 리포트 DTD/Q")
                 r["rec"] = "caution"
+            r["mu"] = mu_for(ab, name, r["cat"])
+            if r["mu"] and r["mu"][0] == "bad":
+                r["rec0"], r["rec"] = r["rec"], MU.downgrade(r["rec"])
         stat80 += rows
         l5 = L[:5]
         mn = sum(x["min"] for x in l5) / len(l5)
@@ -349,7 +406,7 @@ def main(date, out):
                           "h5": sum(v > line for v in last), "avg": round(sum(vals) / len(vals), 1),
                           "a5": round(sum(last) / len(last), 1), "mn": min(vals), "mx": max(vals),
                           "min": round(sum(l["min"] for l in L) / len(L), 1), "min3": round(sum(l["min"] for l in L[:3]) / min(3, len(L)), 1),
-                          "flags": flags})
+                          "flags": flags, "mu": mu_for(ab, name, cat)})
 
     # 💰 가성비: DraftKings 마일스톤(오버) 배당의 내재 확률 vs 시즌 적중률(표본 보정)
     value, ladders = [], []
@@ -378,7 +435,10 @@ def main(date, out):
                    "min": round(sum(l["min"] for l in L) / N, 1), "min3": round(sum(l["min"] for l in L[:3]) / 3, 1),
                    "st": sum(l.get("st", False) for l in L), "st5": sum(l.get("st", False) for l in L[:5]),
                    "avg": round(sum(vals) / N, 1), "a5": round(sum(vals[:5]) / len(vals[:5]), 1), "mx": max(vals), "mn": min(vals),
-                   "fl": base, "r": []}
+                   "fl": base, "r": [], "mu": mu_for(ab, name, cat),
+                   "att": {"s": [round(sum(l.get(k, 0) for l in L) / N, 1) for k in ("FGA", "3PA", "FTA")],
+                           "l5": [round(sum(l.get(k, 0) for l in L[:5]) / len(L[:5]), 1) for k in ("FGA", "3PA", "FTA")]}}
+            mbad = bool(lad["mu"] and lad["mu"][0] == "bad")
             dk = {}
             for th, dec, am in sorted(set(arr)):
                 hit = sum(v >= th for v in vals)
@@ -390,7 +450,7 @@ def main(date, out):
                 imp = 1 / dec
                 edge = p - imp
                 flags = base + ([f"최근 5경기 {h5}/5"] if h5 <= 2 else [])
-                val = ("good" if not flags else "warn") if edge >= 0.05 else "bad" if edge <= -0.05 else "fair"
+                val = ("good" if not flags and not mbad else "warn") if edge >= 0.05 else "bad" if edge <= -0.05 else "fair"
                 dk[th] = (am, round(100 * imp), round(100 * edge, 1), "low" if p < 0.4 else "heavy" if imp > 0.95 else val)
                 if imp > 0.95 or p < 0.4:
                     continue
@@ -401,7 +461,7 @@ def main(date, out):
                               "val": val,
                               "last": last, "h5": h5,
                               "min": lad["min"], "min3": lad["min3"],
-                              "flags": flags})
+                              "flags": flags, "mu": lad["mu"]})
             # 🪜 고정 간격 사다리: 각 단계 추정 확률(시즌·최근5 반반) + 같은 단계 DK 배당이 있으면 붙임
             last = vals[:5]
             for th in LADDER.get(cat, []):
@@ -480,7 +540,8 @@ def main(date, out):
             vgrades.append({**{k: p.get(k) for k in ("n", "t", "g", "cat", "th", "am", "edge")}, "act": act,
                             "r": "-" if act is None else ("O" if act >= p["th"] else "X")})
 
-    json.dump({"date": date, "prev": prev, "games": games, "stat80": stat80, "form": form, "results": results,
+    teams_mu = {ab: {**{k: TP[ab][k] for k in TP[ab] if k != "rk"}, "rk": TP[ab]["rk"], "km": km[ab]} for ab in opp_of if ab in TP}
+    json.dump({"date": date, "prev": prev, "games": games, "teams": teams_mu, "nLeague": n_league, "stat80": stat80, "form": form, "results": results,
                "value": [v for v in value if v["cat"] not in COMBO][:300],
                "cvalue": [v for v in value if v["cat"] in COMBO][:200], "ladders": ladders, "qtr": {d["id"]: qtr[d["id"]] for d in ladders if d["id"] in qtr}, "vgrades": vgrades, "vgFrom": vg_from,
                "props": props, "minutes": minutes[:40], "propReview": prop_review, "propReviewFrom": pr_from,
