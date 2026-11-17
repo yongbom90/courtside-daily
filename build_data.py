@@ -481,7 +481,10 @@ def main(date, out):
                    "min": round(sum(l["min"] for l in L) / N, 1), "min3": round(sum(l["min"] for l in L[:3]) / 3, 1),
                    "st": sum(l.get("st", False) for l in L), "st5": sum(l.get("st", False) for l in L[:5]),
                    "avg": round(sum(vals) / N, 1), "a5": round(sum(vals[:5]) / len(vals[:5]), 1), "mx": max(vals), "mn": min(vals),
-                   "fl": base, "r": [], "mu": mu_for(ab, name, cat),
+                   "fl": base, "r": [], "mu": mu_for(ab, name, cat), "l10": vals[:10],
+                   "hm": [round(sum(l[cat] for l in L if l.get("ha") == "h") / max(1, sum(l.get("ha") == "h" for l in L)), 1), sum(l.get("ha") == "h" for l in L)],
+                   "aw": [round(sum(l[cat] for l in L if l.get("ha") == "a") / max(1, sum(l.get("ha") == "a" for l in L)), 1), sum(l.get("ha") == "a" for l in L)],
+                   "home": ab == g["home"],
                    "att": {"s": [round(sum(l.get(k, 0) for l in L) / N, 1) for k in ("FGA", "3PA", "FTA")],
                            "l5": [round(sum(l.get(k, 0) for l in L[:5]) / len(L[:5]), 1) for k in ("FGA", "3PA", "FTA")]}}
             mbad = bool(lad["mu"] and lad["mu"][0] == "bad")

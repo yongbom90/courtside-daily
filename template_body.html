@@ -64,7 +64,10 @@
 .muw{font-size:11px;line-height:1.4;margin:-1px 0 4px}.muw.good{color:var(--good)}.muw.bad{color:var(--bad)}.muw.mid{color:var(--muted)}
 .tmu{font-size:12px;line-height:1.55;margin:4px 0;padding:5px 8px;border-radius:8px;background:var(--pri-bg,#64748b14)}.tmu b{font-weight:800}.tmu .g{color:var(--good)}.tmu .b{color:var(--bad)}
 .pmu{font-size:12px;line-height:1.5;margin:5px 0 3px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--pri-bg,#64748b10)}.pmu.b{border-color:var(--bad);background:#dc26260d}.pmu .mu{margin:1px 0}
-.pmw{color:var(--bad);margin-top:2px}.pmw.g{color:var(--good)}
+.pmw{color:var(--bad);margin-top:2px}
+.lbody{flex-wrap:nowrap}.lbody .lside{flex:1 1 200px;min-width:180px;line-height:1.6}.lside .hl{color:var(--primary);text-decoration:underline}
+.chips.sm{display:flex;flex-wrap:wrap;gap:2px;margin:1px 0}.chips.sm i{font-style:normal;font-size:11px;min-width:20px;padding:0 3px;text-align:center;border-radius:4px;border:1px solid var(--line)}.chips.sm i.y{background:#16a34a22;color:var(--good);border-color:var(--good)}.chips.sm i.n{color:var(--muted)}
+@media(max-width:700px){.lbody{flex-wrap:wrap}.lbody .lside{border-left:none;padding-left:0;border-top:1px dashed var(--line);padding-top:3px}}.pmw.g{color:var(--good)}
 .att{font-size:11px;color:var(--muted);margin-top:2px}.att b{color:var(--text)}
 .ptab{width:100%;font-size:13px}.ptab td,.ptab th{padding:4px 6px;vertical-align:top}.ptab th{font-size:11px;color:var(--muted);text-align:left}
 .tcol{display:flex;flex-direction:column;gap:8px;min-width:0}.ha{font-size:12px;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:4px;vertical-align:middle}.ha.h{background:var(--primary);color:#fff}.ha.a{background:#64748b33;color:var(--text)}.thd{font-size:16px;font-weight:800;padding:2px 4px;border-bottom:2px solid var(--primary)}.tsub{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}
@@ -322,7 +325,19 @@ function statRow(d){const best=bestOf(d),p=PIDX[d.id+'|'+d.cat],s8=SIDX[d.n+'|'+
   <span>평균 <b>${d.avg}</b> → 최근5 <b class="${up>=0?'good':'bad'}">${d.a5}${up>=0?'▲':'▼'}</b></span><span class="muted">L5 ${d.last.join('·')}</span>
   ${p?`<span>DK 라인 <b>${p.line}</b> 오버 ${p.hit}/${p.N}·${p.h5}/${p.last.length}</span>`:''}
   ${s8?`<span>80% <b>${RECN[s8.rec]}</b> ${s8.th}+</span>`:''}
-  ${best?`<span class="good"><b>★ ${best.th}+ ${fmtO(best.am)}</b> (${best.p}% vs ${best.imp}%)</span>`:''}${muB(d.mu)}</div>${muW(d.mu)}${strip(d,best)}</div>`;}
+  ${best?`<span class="good"><b>★ ${best.th}+ ${fmtO(best.am)}</b> (${best.p}% vs ${best.imp}%)</span>`:''}${muB(d.mu)}</div>${muW(d.mu)}<div class="lbody">${strip(d,best)}${sideInfo(d,p)}</div></div>`;}
+/* 단계 칸 오른쪽 빈자리: 그 스탯의 최근10 · 홈/원정 · 맞대결 · 상대 허용 */
+const OPPK={PTS:[['drtg','100회당 실점',''],['pace','페이스','']],REB:[['miss','놓친 슛',''],['oreb','공격리바율','%',1]],AST:[['aast','어시 허용',''],['pace','페이스','']],
+ '3PM':[['a3pa','3점 시도 허용',''],['a3pct','3점 허용률','%']]};
+function sideInfo(d,p){const o=oppOf(d),T=(AUTO.teams||{})[o],H=((AUTO.h2h||{})[d.id]||[]).map(h=>h[d.cat]),ln=p?p.line:null;
+ const ch=v=>`<i class="${ln!=null?(v>ln?'y':'n'):''}">${v}</i>`;
+ const parts=[...new Set((OPPK[d.cat]?[d.cat]:QPART[d.cat]).flatMap(c=>OPPK[c]||[]))].map(String);
+ const ks=[];(OPPK[d.cat]?[d.cat]:QPART[d.cat]).forEach(c=>(OPPK[c]||[]).forEach(k=>{if(!ks.some(x=>x[0]===k[0]))ks.push(k);}));
+ const opp=T?ks.slice(0,4).map(([k,l,u,inv])=>{const r=T.rk[k],nr=inv?31-r:r;return `<span class="${r<=8?'good':r>=23?'bad':''}">${l} ${T[k]}${u}(${nr}위)</span>`;}).join(' · '):'';
+ return `<div class="lside"><div><span class="muted">최근10${ln!=null?` (라인 ${ln} 초과=초록)`:''}</span><div class="chips sm">${(d.l10||d.last).map(ch).join('')}</div></div>
+  ${d.hm?`<div><span class="muted">홈</span> <b class="${d.home?'hl':''}">${d.hm[0]}</b> <span class="muted">(${d.hm[1]})</span> · <span class="muted">원정</span> <b class="${d.home?'':'hl'}">${d.aw[0]}</b> <span class="muted">(${d.aw[1]})</span> <span class="muted">· 오늘 ${d.home?'홈':'원정'}</span></div>`:''}
+  <div><span class="muted">🆚 vs ${o}</span> ${H.length?`${H.slice(0,6).join(' · ')} <span class="muted">평균</span> <b>${(H.reduce((a,b)=>a+b,0)/H.length).toFixed(1)}</b>`:'<span class="muted">맞대결 없음</span>'}</div>
+  ${opp?`<div><span class="muted">상대 ${o} 허용</span> ${opp}</div>`:''}</div>`;}
 function playerCard(G){const d0=G[0],mu=d0.min3-d0.min,fl=[...new Set(G.flatMap(d=>d.fl))];
  return `<div class="lcard"><div class="lhd"><b style="font-size:17px">${d0.n}</b><span class="small muted">${d0.t} · ${d0.g}</span>
   <span class="small" style="margin-left:auto">출전 ${d0.min} → <b>${d0.min3}분</b> <span class="${mu>=0?'good':'bad'}">${mu>=0?'+':''}${mu.toFixed(1)}</span> · ${d0.N}경기</span></div>
