@@ -63,6 +63,8 @@
 .mu{display:inline-block;padding:0 6px;border-radius:6px;font-size:11px;font-weight:800;white-space:nowrap}.mu.good{background:#16a34a22;color:var(--good)}.mu.bad{background:#dc262622;color:var(--bad)}.mu.mid{background:#64748b1f;color:var(--muted)}
 .muw{font-size:11px;line-height:1.4;margin:-1px 0 4px}.muw.good{color:var(--good)}.muw.bad{color:var(--bad)}.muw.mid{color:var(--muted)}
 .tmu{font-size:12px;line-height:1.55;margin:4px 0;padding:5px 8px;border-radius:8px;background:var(--pri-bg,#64748b14)}.tmu b{font-weight:800}.tmu .g{color:var(--good)}.tmu .b{color:var(--bad)}
+.pmu{font-size:12px;line-height:1.5;margin:5px 0 3px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--pri-bg,#64748b10)}.pmu.b{border-color:var(--bad);background:#dc26260d}.pmu .mu{margin:1px 0}
+.pmw{color:var(--bad);margin-top:2px}.pmw.g{color:var(--good)}
 .att{font-size:11px;color:var(--muted);margin-top:2px}.att b{color:var(--text)}
 .ptab{width:100%;font-size:13px}.ptab td,.ptab th{padding:4px 6px;vertical-align:top}.ptab th{font-size:11px;color:var(--muted);text-align:left}
 .tcol{display:flex;flex-direction:column;gap:8px;min-width:0}.ha{font-size:12px;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:4px;vertical-align:middle}.ha.h{background:var(--primary);color:#fff}.ha.a{background:#64748b33;color:var(--text)}.thd{font-size:16px;font-weight:800;padding:2px 4px;border-bottom:2px solid var(--primary)}.tsub{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}
@@ -325,8 +327,17 @@ function playerCard(G){const d0=G[0],mu=d0.min3-d0.min,fl=[...new Set(G.flatMap(
  return `<div class="lcard"><div class="lhd"><b style="font-size:17px">${d0.n}</b><span class="small muted">${d0.t} · ${d0.g}</span>
   <span class="small" style="margin-left:auto">출전 ${d0.min} → <b>${d0.min3}분</b> <span class="${mu>=0?'good':'bad'}">${mu>=0?'+':''}${mu.toFixed(1)}</span> · ${d0.N}경기</span></div>
   ${fl.length?`<div class="lfl">⚠️ ${fl.join(' · ')}</div>`:''}
+  ${pmu(d0)}
   ${d0.att?`<div class="att">경기당 시도 · 야투 <b>${d0.att.s[0]}</b> · 3점 <b>${d0.att.s[1]}</b> · 자유투 <b>${d0.att.s[2]}</b> <span>(최근5 ${d0.att.l5.join(' · ')})</span></div>`:''}
   <div class="pbody"><div class="pstats">${G.map(statRow).join('')}</div><div class="qwrap" style="border:none;padding:0">${qtable(d0.id).replace(/^<div class="qwrap">|<\/div>$/g,'')}${h2hTable(d0)}</div></div></div>`;}
+/* 🧭 선수 카드 맨 위: 오늘 상대 기준 스탯별 매치업 (필터와 상관없이 모든 스탯) */
+const MUO=['PTS','REB','AST','3PM','PRA','PR','PA','RA'],MUS={PTS:'득점',REB:'리바',AST:'어시','3PM':'3점',PRA:'PRA',PR:'PR',PA:'PA',RA:'RA'};
+function pmu(d0){const A=LAD.filter(x=>x.id===d0.id&&x.mu).sort((a,b)=>MUO.indexOf(a.cat)-MUO.indexOf(b.cat));if(!A.length)return '';
+ const o=oppOf(d0),bad=A.filter(x=>x.mu[0]==='bad'&&SING.includes(x.cat)),badC=A.filter(x=>x.mu[0]==='bad'&&!SING.includes(x.cat));
+ return `<div class="pmu ${bad.length?'b':''}"><b>🧭 오늘 vs ${o}</b> ${A.map(x=>`<span class="mu ${x.mu[0]}">${MUS[x.cat]} ${x.mu[0]==='good'?'유리':x.mu[0]==='bad'?'불리':'보통'} ${x.mu[1]}</span>`).join(' ')}
+  ${bad.map(x=>`<div class="pmw">⚠️ <b>${MUS[x.cat]} 위험</b> — ${x.mu[2].join(' · ')||'상대 허용 기록 하위'}</div>`).join('')}
+  ${!bad.length&&badC.length?`<div class="pmw">⚠️ <b>${badC.map(x=>MUS[x.cat]).join('·')} 불리</b> — ${badC[0].mu[2].slice(0,2).join(' · ')}</div>`:''}
+  ${A.filter(x=>x.mu[0]==='good'&&SING.includes(x.cat)).map(x=>`<div class="pmw g">👍 <b>${MUS[x.cat]} 유리</b> — ${x.mu[2].slice(0,2).join(' · ')}</div>`).join('')}</div>`;}
 /* 🆚 맞대결 기록 (이번 시즌 + 지난 시즌) */
 function h2hTable(d){const H=(AUTO.h2h||{})[d.id]||[],o=oppOf(d);
  if(!H.length)return `<div class="small muted" style="margin-top:6px">🆚 vs ${o}: 이번·지난 시즌 맞대결 기록 없음</div>`;

@@ -196,7 +196,7 @@ def grade(P, opp, cat, mx, km):
         if c == "REB" and gr != "good":
             act = [b for b in km["big"] if not b[3]]
             if act:
-                why.append("상대 빅맨 " + ", ".join(f"{short(b[0])}({b[1]}R·공리{b[2]})" for b in act[:2]))
+                why.append("상대 빅맨 " + ", ".join(f"{short(b[0])}({b[1]}R·공리{b[2]})" for b in act[:3]))
         if c == "PTS" and gr != "good" and mx["s2"] >= 0.45:
             act = [b for b in km["rim"] if not b[2]]
             if act:
