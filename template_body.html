@@ -328,14 +328,13 @@ function statRow(d){const best=bestOf(d),p=PIDX[d.id+'|'+d.cat],s8=SIDX[d.n+'|'+
   ${p?`<span>DK 라인 <b>${p.line}</b> 오버 ${p.hit}/${p.N}·${p.h5}/${p.last.length}</span>`:''}
   ${s8?`<span>80% <b>${RECN[s8.rec]}</b> ${s8.th}+</span>`:''}
   ${best?`<span class="good"><b>★ ${best.th}+ ${fmtO(best.am)}</b> (${best.p}% vs ${best.imp}%)</span>`:''}${muB(d.mu)}</div>${muW(d.mu)}<div class="lbody">${strip(d,best)}${sideInfo(d,p)}</div></div>`;}
-/* 📌 기준 단계 요약(시즌 vs 오늘 · 상성 · 이번/지난 시즌 맞대결). 단계 버튼으로 바꿔 보기 */
+/* 📌 기준 단계 요약(시즌 vs 오늘 · 상성 · 이번 시즌 맞대결). 단계 버튼으로 바꿔 보기 */
 function psum(d,th){const o=oppOf(d),HH=(AUTO.h2h||{})[d.id]||[],R=d.r.map(lv),r0=R.find(r=>r.th===th)||R[0];
- const cur=HH.filter(h=>h.s==='26-27'),old=HH.filter(h=>h.s!=='26-27'),ok=v=>v>=r0.th;
+ const cur=HH,ok=v=>v>=r0.th;
  const hs=L=>L.map(h=>`<span style="color:var(--${ok(h[d.cat])?'good':'bad'})">${h[d.cat]}</span><small class="muted">(${h.d.slice(5).replace('-','/')} ${h.ha==='h'?'홈':'원정'}${h.miss.length?' · 상대 '+h.miss.map(x=>x.split(' ').slice(-1)[0]).join(',')+' 결장':''})</small>`).join(' ');
  return `<b>📌 ${d.n.split(' ').slice(-1)[0]} ${MUS[d.cat]} ${r0.th}+ vs ${o}</b> <span class="thb">${R.map(r=>`<button class="${r.th===r0.th?'on':''}" onclick="event.stopPropagation();document.getElementById('ps-${d.id}-${d.cat}').innerHTML=psum(LAD.find(x=>x.id==='${d.id}'&&x.cat==='${d.cat}'),${r.th})">${r.th}</button>`).join('')}</span><br>
   시즌 <b>${r0.p}%</b> <span class="muted">(${r0.hit}/${d.N} · 최근5 ${r0.h5}/5)</span> → 오늘 <b>${r0.pt}%</b> ${dlt(r0.p,r0.pt)} · 상성 ${d.mu?`<span class="mu ${d.mu[0]}">${d.mu[0]==='good'?'유리':d.mu[0]==='bad'?'불리':'보통'} ${d.mu[1]}/30</span>`:'—'}<br>
-  이번 시즌 vs ${o}: ${cur.length?`<b>${cur.filter(h=>ok(h[d.cat])).length}/${cur.length}</b> — ${hs(cur)}`:'<span class="muted">아직 안 만남</span>'}<br>
-  지난 시즌 vs ${o}: ${old.length?`<b>${old.filter(h=>ok(h[d.cat])).length}/${old.length}</b> — ${hs(old.slice(0,4))}${old.length>4?' …':''}`:'<span class="muted">기록 없음</span>'}`;}
+  이번 시즌 vs ${o}: ${cur.length?`<b>${cur.filter(h=>ok(h[d.cat])).length}/${cur.length}</b> — ${hs(cur)}`:'<span class="muted">아직 안 만남</span>'}`;}
 /* 단계 칸 오른쪽 빈자리: 그 스탯의 최근10 · 홈/원정 · 맞대결 · 상대 허용 */
 const OPPK={PTS:[['drtg','100회당 실점',''],['pace','페이스','']],REB:[['miss','놓친 슛',''],['oreb','공격리바율','%',1]],AST:[['aast','어시 허용',''],['pace','페이스','']],
  '3PM':[['a3pa','3점 시도 허용',''],['a3pct','3점 허용률','%']]};
@@ -365,12 +364,12 @@ function pmu(d0){const A=LAD.filter(x=>x.id===d0.id&&x.mu).sort((a,b)=>MUO.index
   ${bad.map(x=>`<div class="pmw">⚠️ <b>${MUS[x.cat]} 위험</b> — ${x.mu[2].join(' · ')||'상대 허용 기록 하위'}</div>`).join('')}
   ${!bad.length&&badC.length?`<div class="pmw">⚠️ <b>${badC.map(x=>MUS[x.cat]).join('·')} 불리</b> — ${badC[0].mu[2].slice(0,2).join(' · ')}</div>`:''}
   ${A.filter(x=>x.mu[0]==='good'&&SING.includes(x.cat)).map(x=>`<div class="pmw g">👍 <b>${MUS[x.cat]} 유리</b> — ${x.mu[2].slice(0,2).join(' · ')}</div>`).join('')}</div>`;}
-/* 🆚 맞대결 기록 (이번 시즌 + 지난 시즌) */
+/* 🆚 맞대결 기록 (이번 시즌) */
 function h2hTable(d){const H=(AUTO.h2h||{})[d.id]||[],o=oppOf(d);
- if(!H.length)return `<div class="small muted" style="margin-top:6px">🆚 vs ${o}: 이번·지난 시즌 맞대결 기록 없음</div>`;
+ if(!H.length)return `<div class="small muted" style="margin-top:6px">🆚 vs ${o}: 이번 시즌 맞대결 없음</div>`;
  const K=['min','PTS','REB','AST','3PM','PRA','FGA','3PA','FTA'],L={min:'분',PTS:'득',REB:'리',AST:'어','3PM':'3P',PRA:'PRA',FGA:'야투','3PA':'3시',FTA:'자유'};
  const av=k=>(H.reduce((a,h)=>a+h[k],0)/H.length).toFixed(1);
- return `<div style="margin-top:6px"><div class="small"><b>🆚 vs ${o} 맞대결</b> <span class="muted">${H.length}경기 (이번+지난 시즌)</span></div>
+ return `<div style="margin-top:6px"><div class="small"><b>🆚 vs ${o} 맞대결</b> <span class="muted">이번 시즌 ${H.length}경기</span></div>
   <table class="qt"><tr><th></th>${K.map(k=>`<th>${L[k]}</th>`).join('')}</tr>
   ${H.slice(0,5).map(h=>`<tr><th style="font-weight:600;color:var(--muted)">${h.d.slice(2).replace(/-/g,'/')} ${h.ha==='h'?'홈':'원정'}${h.miss.length?` <span style="color:var(--good)" title="상대 결장: ${h.miss.join(', ')}">*</span>`:''}</th>${K.map(k=>`<td>${h[k]}</td>`).join('')}</tr>`).join('')}
   <tr><th>평균</th>${K.map(k=>`<td><b>${av(k)}</b></td>`).join('')}</tr></table>
@@ -423,7 +422,7 @@ function parList(){const C=[];
   const R=d.r.map(lv).filter(r=>r.pt>=pmin&&r.pt<=97&&r.hit>0);if(!R.length)return;const r=R.sort((a,b)=>b.th-a.th)[0];C.push({d,r});});
  C.sort((a,b)=>b.r.pt-a.r.pt||b.r.th-a.r.th);
  const head=`<div class="filters">${[85,80,75,70].map(x=>`<button class="fbtn ${x===pmin?'on':''}" onclick="pmin=${x};drawV()">오늘 ${x}% 이상</button>`).join('')}</div>
-  <div class="small muted" style="margin:4px 0 8px">선수·스탯마다 <b>오늘 확률(시즌·최근5 추정에 오늘 상대 매치업 보정)</b>이 기준 이상인 <b>가장 높은 단계 하나</b>만. 오늘 확률 높은 순. 담으면 슬립에 오늘 확률 곱(팔레이 전체 확률)이 나와요. 같은 경기 선수끼리는 서로 영향이 있어 곱이 정확하지 않아요. 🆚 = 이번+지난 시즌 맞대결에서 그 단계를 넘긴 횟수(참고, 확률엔 안 넣음).</div>`;
+  <div class="small muted" style="margin:4px 0 8px">선수·스탯마다 <b>오늘 확률(시즌·최근5 추정에 오늘 상대 매치업 보정)</b>이 기준 이상인 <b>가장 높은 단계 하나</b>만. 오늘 확률 높은 순. 담으면 슬립에 오늘 확률 곱(팔레이 전체 확률)이 나와요. 같은 경기 선수끼리는 서로 영향이 있어 곱이 정확하지 않아요. 🆚 = 이번 시즌 맞대결에서 그 단계를 넘긴 횟수(참고, 확률엔 안 넣음).</div>`;
  if(!C.length)return head+'<div class="muted">조건에 맞는 단계가 없어요.</div>';
  return head+`<div class="tblwrap"><table class="ptab"><tr><th>선수</th><th>스탯</th><th>오늘</th><th>시즌→</th><th>시즌·최근5</th><th>🆚 맞대결</th><th>매치업</th><th>DK</th><th></th></tr>`+C.slice(0,80).map(({d,r})=>{const key=`${d.n} ${r.th}+ ${CATN[d.cat]}`;
   return `<tr><td><b>${d.n}</b><br><span class="small muted">${d.t} vs ${oppOf(d)}</span></td><td><b>${CMB.includes(d.cat)?d.cat:CATN[d.cat]} ${r.th}+</b></td>

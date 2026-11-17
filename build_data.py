@@ -343,7 +343,7 @@ def main(date, out):
             _mu[k] = MU.grade(TP, opp, cat, MU.player_mix(L), km[opp]) if L and opp in TP else None
         return _mu[k]
 
-    # 🆚 맞대결: 이번 시즌(박스) + 지난 시즌(ESPN 게임로그, 캐시). 이번 시즌 경기는 상대 핵심 선수 결장 여부도.
+    # 🆚 맞대결: 이번 시즌 박스(상대 핵심 선수 결장 여부 포함). 지난 시즌은 오너 요청으로 뺌.
     _h2h = {}
 
     def h2h_of(aid, ab, name):
@@ -357,27 +357,6 @@ def main(date, out):
                 miss = [b[0] for k_ in ("big", "rim") for b in km[opp][k_] if b[0] not in played]
                 out.append({"s": "26-27", "d": l["d"], "ha": l["ha"], "min": l["min"], "miss": sorted(set(miss)),
                             **{k: l[k] for k in ("PTS", "REB", "AST", "3PM", "PRA", "PR", "PA", "RA", "FGA", "3PA", "FTA")}})
-        try:
-            gl = get(f"https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{aid}/gamelog?season=2026", f"gl2026_{aid}.json")
-            nm, ev = gl.get("names", []), gl.get("events", {})
-            for st in gl.get("seasonTypes", []):
-                if "Regular" not in st.get("displayName", ""):
-                    continue
-                for c in st.get("categories", []):
-                    for e in c.get("events", []):
-                        g_ = ev.get(e["eventId"], {})
-                        if (g_.get("opponent") or {}).get("abbreviation") != opp:
-                            continue
-                        S = dict(zip(nm, e["stats"]))
-                        P_, R_, A_ = int(S.get("points") or 0), int(S.get("totalRebounds") or 0), int(S.get("assists") or 0)
-                        T_ = MU._split(S.get("threePointFieldGoalsMade-threePointFieldGoalsAttempted"))
-                        F_ = MU._split(S.get("fieldGoalsMade-fieldGoalsAttempted"))
-                        FT = MU._split(S.get("freeThrowsMade-freeThrowsAttempted"))
-                        out.append({"s": "25-26", "d": g_.get("gameDate", "")[:10], "ha": "a" if g_.get("atVs") == "@" else "h",
-                                    "min": int(float(S.get("minutes") or 0)), "miss": [], "PTS": P_, "REB": R_, "AST": A_, "3PM": T_[0],
-                                    "PRA": P_ + R_ + A_, "PR": P_ + R_, "PA": P_ + A_, "RA": R_ + A_, "FGA": F_[1], "3PA": T_[1], "FTA": FT[1]})
-        except Exception as ex:
-            print(f"  h2h {name}: {ex}", file=sys.stderr)
         out.sort(key=lambda x: x["d"], reverse=True)
         _h2h[aid] = out
         return out
@@ -488,7 +467,7 @@ def main(date, out):
                    "att": {"s": [round(sum(l.get(k, 0) for l in L) / N, 1) for k in ("FGA", "3PA", "FTA")],
                            "l5": [round(sum(l.get(k, 0) for l in L[:5]) / len(L[:5]), 1) for k in ("FGA", "3PA", "FTA")]}}
             mbad = bool(lad["mu"] and lad["mu"][0] == "bad")
-            hv = [h[cat] for h in h2h_of(aid, ab, name)]  # 맞대결 기록(이번+지난 시즌)
+            hv = [h[cat] for h in h2h_of(aid, ab, name)]  # 이번 시즌 맞대결 기록
             lad["hN"] = len(hv)
             dk = {}
             for th, dec, am in sorted(set(arr)):
