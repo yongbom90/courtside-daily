@@ -130,6 +130,20 @@ $('sub').innerText=(PH?PH+' '+AUTO.built.slice(11)+' ET · ':'')+`${AUTO.games.l
 if((AUTO.injchk||[]).length){const C=AUTO.injchg||[];$('slate').insertAdjacentHTML('afterbegin',`<div class="note" style="background:var(--bad-bg);border-color:var(--bad)"><b>🚨 부상·라인 재확인 ${AUTO.injchk.join(', ')} (경기 2시간 전)</b>${C.length?'<ul class="tight">'+C.map(c=>`<li><b>${c.m}</b> [${c.k}] ${c.txt}</li>`).join('')+'</ul>':' · 아침 대비 변동 없음'}</div>`);}
 $('slateNote').innerHTML=`라인과 부상은 ${AUTO.built}(ET) 기준이라 팁오프 전까지 바뀔 수 있어요. 가비지 리스크는 스프레드 크기로 정한 규칙이에요(≥13 높음 · 8~12.5 중간 · &lt;8 낮음). <b>B2B</b>는 어제도 경기한 팀이에요. 확률을 보장하지 않아요.`;
 
+/* 🧭 경기별 매치업 체크: 시즌 기록은 좋은데(80% 추천 이상) 오늘 상대 때문에 불리한 픽 / 시즌도 좋고 오늘도 유리한 픽 */
+function muCheck(g,a){const R=AUTO.stat80.filter(r=>r.g===g.m&&r.mu);const best={};
+ R.forEach(r=>{const k=r.n+'|'+r.cat,o=best[k];if(!o||r.th>o.th)best[k]=r;});
+ const X=Object.values(best),sn=n=>n.split(' ').slice(-1)[0],CN={PTS:'득점',REB:'리바',AST:'어시','3PM':'3점',PRA:'PRA',PR:'PR',PA:'PA',RA:'RA'},lab=r=>`${r.t} ${sn(r.n)} ${CN[r.cat]} ${r.th}+`;
+ const bad=X.filter(r=>r.mu[0]==='bad'&&['top','rec'].includes(r.rec0||r.rec)).sort((x,y)=>y.rate-x.rate);
+ const good=X.filter(r=>r.mu[0]==='good'&&['top','rec'].includes(r.rec)).sort((x,y)=>y.rate-x.rate);
+ const own=[].concat(a.mu||[]);
+ if(!bad.length&&!good.length&&!own.length)return '';
+ return `<div class="tmu" style="margin-top:6px"><b>🧭 오늘 매치업 체크</b> <span class="muted">시즌 80% 픽을 오늘 상대 기준으로 다시 본 결과</span>
+  ${own.map(x=>`<div style="margin-top:3px">• ${x}</div>`).join('')}
+  ${(()=>{const by={};bad.forEach(r=>(by[r.t+' '+sn(r.n)]=by[r.t+' '+sn(r.n)]||[]).push(r));const K=Object.keys(by);
+   return K.slice(0,5).map(k=>{const L=by[k],rs=L.map(r=>r.mu[1]),why=[...new Set(L.flatMap(r=>r.mu[2]))].slice(0,3);
+    return `<div class="b" style="margin-top:3px">⚠️ <b>${k}</b> ${L.map(r=>`${CN[r.cat]} ${r.th}+ <span class="muted">${r.rate}%</span>`).join(' · ')} → 오늘 <b>불리 ${Math.min(...rs)}${rs.length>1?'~'+Math.max(...rs):''}/30</b><br><span class="muted">${why.join(' · ')}</span></div>`;}).join('')+(K.length>5?`<div class="muted">외 ${K.length-5}명 (80% 탭에서 확인)</div>`:'');})()}
+  ${good.length?`<div class="g" style="margin-top:4px">👍 유리: ${good.slice(0,6).map(r=>`<b>${lab(r)}</b> (${r.rate}%, ${r.mu[1]}/30)`).join(' · ')}</div>`:''}</div>`;}
 $('slateGrid').innerHTML=AUTO.games.map(g=>{const [c,l,w]=garbage(g.abs);const a=AN.games[g.m]||{};
  const bb=[g.away,g.home].filter(t=>b2b(g,t));
  return `<div class="card"><h3>${g.m} <span class="tag ${c}">${l}</span></h3>
@@ -138,6 +152,7 @@ $('slateGrid').innerHTML=AUTO.games.map(g=>{const [c,l,w]=garbage(g.abs);const a
  <div class="bar"><i style="width:${w}%;background:var(--${c==='t-bad'?'bad':c==='t-warn'?'warn':'good'})"></i></div>
  <div class="small"><b>ESPN BPI 승률:</b> ${g.away} ${g.bpi[g.away]}% · ${g.home} ${g.bpi[g.home]}%</div>
  <div class="small"><b>부상 OUT:</b> ${[g.away,g.home].map(t=>t+' '+((g.inj[t]||[]).filter(i=>/Out|Doubt/.test(i.s)).map(i=>i.n).join(', ')||'없음')).join(' / ')}</div>
+ ${muCheck(g,a)}
  ${a.ctx?`<div class="small"><b>컨텍스트:</b> ${a.ctx}</div>`:''}
  ${a.lean?`<div class="lean">${a.lean}</div>`:''}
  ${(a.picks||[]).map(p=>`<button class="btn" data-k="${p[0]}" data-o="${p[1]??''}" onclick="toggle(this)">+ ${p[0]} ${p[1]!=null?'('+fmtO(p[1])+')':''}</button>`).join('')}
