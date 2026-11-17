@@ -238,6 +238,14 @@ def props_for(eid):
 SEASON_START = "20261020"
 
 
+def _et(iso):  # ESPN UTC 시각 → 미국 동부 날짜
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.strptime(iso[:16], "%Y-%m-%dT%H:%M").replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+    except Exception:
+        return iso[:10]
+
+
 def league_profiles(date):
     """시즌 시작 ~ 어제까지 리그 전체 끝난 경기 → 30팀 허용 기록·순위(matchup.profiles)."""
     d = datetime.strptime(SEASON_START, "%Y%m%d")
@@ -315,7 +323,7 @@ def main(date, out):
             hm = next((c["homeAway"] for c in (sums[e].get("header", {}).get("competitions") or [{}])[0].get("competitors", [])
                        if c.get("team", {}).get("abbreviation") == ab), "")
             for row in br.get(ab, []):
-                logs.setdefault((ab, row["n"]), []).append({**row, "opp": op, "d": dt[:10], "ha": hm[:1], "e": e})
+                logs.setdefault((ab, row["n"]), []).append({**row, "opp": op, "d": dt[:10], "ha": hm[:1], "e": e, "et": _et(dt)})
 
     # 쿼터별 평균(플레이 기록): 출전한 경기만
     qs_by_ev = {e: qstats(sums[e]) for e in all_ev}
@@ -368,7 +376,7 @@ def main(date, out):
                 miss = [b[0] for k_ in ("big", "rim") for b in km[opp][k_] if b[0] not in played]
                 TL = MU.team_lines(sums[l["e"]])
                 me_, op_ = (TL.get(ab) or {}).get("PTS"), (TL.get(opp) or {}).get("PTS")
-                out.append({"s": "26-27", "d": l["d"], "ha": l["ha"], "min": l["min"], "miss": sorted(set(miss)), "tm": ab,
+                out.append({"s": "26-27", "d": l["et"], "ha": l["ha"], "min": l["min"], "miss": sorted(set(miss)), "tm": ab,
                             "sc": f"{me_}-{op_}" if me_ is not None else "", "res": ("W" if me_ > op_ else "L") if me_ is not None else "",
                             **{k: l[k] for k in ("PTS", "REB", "AST", "3PM", "PRA", "PR", "PA", "RA", "FGM", "FGA", "3PA", "FTM", "FTA", "STL", "BLK", "TOV")}})
         out.sort(key=lambda x: x["d"], reverse=True)
@@ -406,7 +414,7 @@ def main(date, out):
                         hs, as_ = g_.get("homeTeamScore"), g_.get("awayTeamScore")
                         ha = "a" if g_.get("atVs") == "@" else "h"
                         sc = f"{hs}-{as_}" if ha == "h" else f"{as_}-{hs}"
-                        out.append({"s": "25-26", "po": po, "d": g_.get("gameDate", "")[:10], "ha": ha, "tm": (g_.get("team") or {}).get("abbreviation", ""),
+                        out.append({"s": "25-26", "po": po, "d": _et(g_.get("gameDate", "")), "ha": ha, "tm": (g_.get("team") or {}).get("abbreviation", ""),
                                     "sc": sc, "res": g_.get("gameResult", ""), "min": n_("minutes"), "PTS": P_, "REB": R_, "AST": A_,
                                     "3PM": T_[0], "3PA": T_[1], "FGM": F_[0], "FGA": F_[1], "FTM": FT[0], "FTA": FT[1],
                                     "STL": n_("steals"), "BLK": n_("blocks"), "TOV": n_("turnovers"),
@@ -659,7 +667,38 @@ def main(date, out):
     with ThreadPoolExecutor(8) as ex:
         h2hP = dict(zip(_tm, ex.map(lambda i: h2h_prev(i, _tm[i]), _tm)))
     teams_mu = {ab: {**{k: TP[ab][k] for k in TP[ab] if k != "rk"}, "rk": TP[ab]["rk"], "km": km[ab]} for ab in opp_of if ab in TP}
-    json.dump({"date": date, "prev": prev, "games": games, "teams": teams_mu, "book": {ab: TB[ab] for ab in opp_of if ab in TB}, "nLeague": n_league, "h2h": h2h, "h2hP": h2hP, "avP": avP, "stat80": stat80, "form": form, "results": results,
+
+    # 🆚 팀 맞대결: 이번 시즌 + 지난 정규시즌(25-26). 플옵·플레이인 제외. 참고용(확률 계산엔 안 씀).
+    def team_h2h(g):
+        A, H = g["away"], g["home"]
+        cand = [("26-27", e) for _, e in ev_by_team.get(A, [])]
+        try:
+            sch = get(f"{B}/teams/{teams[A][0]}/schedule?season=2026&seasontype=2", f"sch2026_{teams[A][0]}.json")
+            cand += [("25-26", e["id"]) for e in sch.get("events", [])
+                     if e["competitions"][0]["status"]["type"]["completed"]
+                     and {c["team"]["abbreviation"] for c in e["competitions"][0]["competitors"]} == {A, H}]
+        except Exception as ex:
+            print(f"  팀 맞대결 지난시즌 {A}: {ex}", file=sys.stderr)
+        out = []
+        for sn, e in cand:
+            s_ = sums.get(e) or summary(e)
+            TL = MU.team_lines(s_)
+            if set(TL) != {A, H}:
+                continue
+            comp = (s_.get("header", {}).get("competitions") or [{}])[0]
+            ha = {c.get("team", {}).get("abbreviation"): c.get("homeAway", "")[:1] for c in comp.get("competitors", [])}
+            br = box_rows(s_)
+            top = {t: [[r["n"], r["PTS"], r["REB"], r["AST"]] for r in sorted(br.get(t, []), key=lambda r: -r["PTS"])[:2]] for t in (A, H)}
+            out.append({"s": sn, "d": _et(comp.get("date") or ""), "home": next((t for t in ha if ha[t] == "h"), ""),
+                        "ot": max(0, len((comp.get("competitors") or [{}])[0].get("linescores") or []) - 4),
+                        "t": {t: {k: TL[t][k] for k in ("PTS", "FGM", "FGA", "TPM", "TPA", "FTM", "FTA", "REB", "OREB", "AST", "TOV", "STL", "BLK", "PITP")} for t in (A, H)},
+                        "top": top})
+        out.sort(key=lambda x: x["d"], reverse=True)
+        return out
+
+    with ThreadPoolExecutor(4) as ex:
+        th2h = dict(zip([g["id"] for g in games], ex.map(team_h2h, games)))
+    json.dump({"date": date, "prev": prev, "games": games, "teams": teams_mu, "book": {ab: TB[ab] for ab in opp_of if ab in TB}, "nLeague": n_league, "h2h": h2h, "h2hP": h2hP, "avP": avP, "th2h": th2h, "stat80": stat80, "form": form, "results": results,
                "value": [v for v in value if v["cat"] not in COMBO][:300],
                "cvalue": [v for v in value if v["cat"] in COMBO][:200], "ladders": ladders, "qtr": {d["id"]: qtr[d["id"]] for d in ladders if d["id"] in qtr}, "vgrades": vgrades, "vgFrom": vg_from,
                "props": props, "minutes": minutes[:40], "propReview": prop_review, "propReviewFrom": pr_from,
