@@ -352,9 +352,8 @@ function sideInfo(d,p){const o=oppOf(d),T=(AUTO.teams||{})[o],HH=(AUTO.h2h||{})[
  const parts=[...new Set((OPPK[d.cat]?[d.cat]:QPART[d.cat]).flatMap(c=>OPPK[c]||[]))].map(String);
  const ks=[];(OPPK[d.cat]?[d.cat]:QPART[d.cat]).forEach(c=>(OPPK[c]||[]).forEach(k=>{if(!ks.some(x=>x[0]===k[0]))ks.push(k);}));
  const opp=T?ks.slice(0,4).map(([k,l,u,inv])=>{const r=T.rk[k];return `<span class="${r<=8?'good':r>=23?'bad':''}">${l} ${T[k]}${u} <small>(${rkTxt(T,k,!inv)})</small></span>`;}).join(' · '):'';
- const pj=d.proj,R2=d.r.map(lv),safe=R2.filter(r=>r.pt>=75).sort((a,b)=>b.th-a.th)[0],agg=R2.filter(r=>r.pt>=60&&(!safe||r.th>safe.th)).sort((a,b)=>b.th-a.th)[0];
- const prj=pj?`<div class="pproj"><b>🎯 오늘 예상 ${MUS[d.cat]} ${pj[0]}</b> <span class="muted">(시즌 평균 ${d.avg}${pj[3]?` · 상대 ${pj[3]>0?'+':''}${pj[3]}`:''})</span> · 보통 <b>${pj[1]}~${pj[2]}</b><br>
-  팔레이 추천 ${safe?`<b class="good">${safe.th}+</b> <span class="muted">(오늘 ${safe.pt}%)</span>`:'<span class="muted">75% 이상 단계 없음</span>'}${agg?` · 공격적 <b>${agg.th}+</b> <span class="muted">(오늘 ${agg.pt}%)</span>`:''}</div>`:'';
+ const pj=d.proj;
+ const prj=pj?`<div class="pproj"><b>🎯 오늘 예상 ${MUS[d.cat]} ${pj[0]}</b> <span class="muted">(시즌 평균 ${d.avg}${pj[3]?` · 상대 ${pj[3]>0?'+':''}${pj[3]}`:''})</span> · 보통 <b>${pj[1]}~${pj[2]}</b></div>`:'';
  return `<div class="lside">${prj}${sum}<div><span class="muted">최근10${ln!=null?` (라인 ${ln} 초과=초록)`:''}</span><div class="chips sm">${(d.l10||d.last).map(ch).join('')}</div></div>
   ${d.hm?`<div><span class="muted">홈</span> <b class="${d.home?'hl':''}">${d.hm[0]}</b> <span class="muted">(${d.hm[1]})</span> · <span class="muted">원정</span> <b class="${d.home?'':'hl'}">${d.aw[0]}</b> <span class="muted">(${d.aw[1]})</span> <span class="muted">· 오늘 ${d.home?'홈':'원정'}</span></div>`:''}
   <div><span class="muted">🆚 맞대결 평균</span> ${H.length?`<b>${(H.reduce((a,b)=>a+b,0)/H.length).toFixed(1)}</b> <span class="muted">(${H.length}경기 · 시즌 평균 ${d.avg})</span>`:'<span class="muted">맞대결 없음</span>'}</div>
