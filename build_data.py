@@ -302,9 +302,13 @@ def main(date, out):
     miles_by_game = {g["id"]: miles_for(g["id"]) for g in games}
     logs = {}
     for ab, evs in ev_by_team.items():
-        for _, e in sorted(evs, reverse=True):
-            for row in box_rows(sums[e]).get(ab, []):
-                logs.setdefault((ab, row["n"]), []).append(row)
+        for dt, e in sorted(evs, reverse=True):
+            br = box_rows(sums[e])
+            op = next((t for t in br if t != ab), "")
+            hm = next((c["homeAway"] for c in (sums[e].get("header", {}).get("competitions") or [{}])[0].get("competitors", [])
+                       if c.get("team", {}).get("abbreviation") == ab), "")
+            for row in br.get(ab, []):
+                logs.setdefault((ab, row["n"]), []).append({**row, "opp": op, "d": dt[:10], "ha": hm[:1], "e": e})
 
     # 쿼터별 평균(플레이 기록): 출전한 경기만
     qs_by_ev = {e: qstats(sums[e]) for e in all_ev}
@@ -338,6 +342,45 @@ def main(date, out):
             opp = opp_of.get(ab)
             _mu[k] = MU.grade(TP, opp, cat, MU.player_mix(L), km[opp]) if L and opp in TP else None
         return _mu[k]
+
+    # 🆚 맞대결: 이번 시즌(박스) + 지난 시즌(ESPN 게임로그, 캐시). 이번 시즌 경기는 상대 핵심 선수 결장 여부도.
+    _h2h = {}
+
+    def h2h_of(aid, ab, name):
+        if aid in _h2h:
+            return _h2h[aid]
+        opp = opp_of.get(ab)
+        out = []
+        for l in logs.get((ab, name), []):
+            if l.get("opp") == opp:
+                played = {r["n"] for r in box_rows(sums[l["e"]]).get(opp, [])}
+                miss = [b[0] for k_ in ("big", "rim") for b in km[opp][k_] if b[0] not in played]
+                out.append({"s": "26-27", "d": l["d"], "ha": l["ha"], "min": l["min"], "miss": sorted(set(miss)),
+                            **{k: l[k] for k in ("PTS", "REB", "AST", "3PM", "PRA", "PR", "PA", "RA", "FGA", "3PA", "FTA")}})
+        try:
+            gl = get(f"https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{aid}/gamelog?season=2026", f"gl2026_{aid}.json")
+            nm, ev = gl.get("names", []), gl.get("events", {})
+            for st in gl.get("seasonTypes", []):
+                if "Regular" not in st.get("displayName", ""):
+                    continue
+                for c in st.get("categories", []):
+                    for e in c.get("events", []):
+                        g_ = ev.get(e["eventId"], {})
+                        if (g_.get("opponent") or {}).get("abbreviation") != opp:
+                            continue
+                        S = dict(zip(nm, e["stats"]))
+                        P_, R_, A_ = int(S.get("points") or 0), int(S.get("totalRebounds") or 0), int(S.get("assists") or 0)
+                        T_ = MU._split(S.get("threePointFieldGoalsMade-threePointFieldGoalsAttempted"))
+                        F_ = MU._split(S.get("fieldGoalsMade-fieldGoalsAttempted"))
+                        FT = MU._split(S.get("freeThrowsMade-freeThrowsAttempted"))
+                        out.append({"s": "25-26", "d": g_.get("gameDate", "")[:10], "ha": "a" if g_.get("atVs") == "@" else "h",
+                                    "min": int(float(S.get("minutes") or 0)), "miss": [], "PTS": P_, "REB": R_, "AST": A_, "3PM": T_[0],
+                                    "PRA": P_ + R_ + A_, "PR": P_ + R_, "PA": P_ + A_, "RA": R_ + A_, "FGA": F_[1], "3PA": T_[1], "FTA": FT[1]})
+        except Exception as ex:
+            print(f"  h2h {name}: {ex}", file=sys.stderr)
+        out.sort(key=lambda x: x["d"], reverse=True)
+        _h2h[aid] = out
+        return out
     q_names = {i["n"] for g in games for v in g["inj"].values() for i in v if i["s"] not in ("Out", "Doubtful")}
     stat80, form = [], {}
     for (ab, name), L in logs.items():
@@ -349,6 +392,9 @@ def main(date, out):
                 r["flags"].append("부상 리포트 DTD/Q")
                 r["rec"] = "caution"
             r["mu"] = mu_for(ab, name, r["cat"])
+            _v = [l[r["cat"]] for l in L]
+            _p = ((r["hit"] + 1) / (r["N"] + 2) + (r["h5"] + 1) / 7) / 2
+            r["p"], r["pt"] = round(100 * _p), round(100 * (MU.today(_p, r["cat"], r["mu"][1]) if r["mu"] else _p))
             if r["mu"] and r["mu"][0] == "bad":
                 r["rec0"], r["rec"] = r["rec"], MU.downgrade(r["rec"])
         stat80 += rows
@@ -439,6 +485,8 @@ def main(date, out):
                    "att": {"s": [round(sum(l.get(k, 0) for l in L) / N, 1) for k in ("FGA", "3PA", "FTA")],
                            "l5": [round(sum(l.get(k, 0) for l in L[:5]) / len(L[:5]), 1) for k in ("FGA", "3PA", "FTA")]}}
             mbad = bool(lad["mu"] and lad["mu"][0] == "bad")
+            hv = [h[cat] for h in h2h_of(aid, ab, name)]  # 맞대결 기록(이번+지난 시즌)
+            lad["hN"] = len(hv)
             dk = {}
             for th, dec, am in sorted(set(arr)):
                 hit = sum(v >= th for v in vals)
@@ -461,7 +509,7 @@ def main(date, out):
                               "val": val,
                               "last": last, "h5": h5,
                               "min": lad["min"], "min3": lad["min3"],
-                              "flags": flags, "mu": lad["mu"]})
+                              "flags": flags, "mu": lad["mu"], "pt": round(100 * (MU.today(p, cat, lad["mu"][1]) if lad["mu"] else p))})
             # 🪜 고정 간격 사다리: 각 단계 추정 확률(시즌·최근5 반반) + 같은 단계 DK 배당이 있으면 붙임
             last = vals[:5]
             for th in LADDER.get(cat, []):
@@ -473,7 +521,9 @@ def main(date, out):
                 if lad["r"] and hit == 0 and h5 == 0 and lad["r"][-1][6] == 0 and lad["r"][-1][7] == 0:
                     continue  # 한 번도 못 넘은 단계는 첫 줄만
                 am, imp, edge, val = dk.get(float(th), dk.get(th, (None, None, None, None)))
-                lad["r"].append([th, am, imp, round(100 * p), round(100 * ps), round(100 * p5), hit, h5, fair_am(p), edge, val])
+                pt = MU.today(p, cat, lad["mu"][1]) if lad["mu"] else p
+                lad["r"].append([th, am, imp, round(100 * p), round(100 * ps), round(100 * p5), hit, h5, fair_am(p), edge, val,
+                                 round(100 * pt), sum(v >= th for v in hv)])
             lad["dkx"] = sorted(t for t in dk if t not in LADDER.get(cat, []))  # 간격 밖 DK 단계(목록 보기에 있음)
             if lad["r"]:
                 ladders.append(lad)
@@ -540,8 +590,9 @@ def main(date, out):
             vgrades.append({**{k: p.get(k) for k in ("n", "t", "g", "cat", "th", "am", "edge")}, "act": act,
                             "r": "-" if act is None else ("O" if act >= p["th"] else "X")})
 
+    h2h = {d["id"]: _h2h.get(d["id"], []) for d in ladders}
     teams_mu = {ab: {**{k: TP[ab][k] for k in TP[ab] if k != "rk"}, "rk": TP[ab]["rk"], "km": km[ab]} for ab in opp_of if ab in TP}
-    json.dump({"date": date, "prev": prev, "games": games, "teams": teams_mu, "nLeague": n_league, "stat80": stat80, "form": form, "results": results,
+    json.dump({"date": date, "prev": prev, "games": games, "teams": teams_mu, "nLeague": n_league, "h2h": h2h, "stat80": stat80, "form": form, "results": results,
                "value": [v for v in value if v["cat"] not in COMBO][:300],
                "cvalue": [v for v in value if v["cat"] in COMBO][:200], "ladders": ladders, "qtr": {d["id"]: qtr[d["id"]] for d in ladders if d["id"] in qtr}, "vgrades": vgrades, "vgFrom": vg_from,
                "props": props, "minutes": minutes[:40], "propReview": prop_review, "propReviewFrom": pr_from,

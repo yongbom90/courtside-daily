@@ -169,11 +169,13 @@ def grade(P, opp, cat, mx, km):
         if gone:
             why.append("상대 리바 " + ", ".join(f"{short(b[0])}({b[1]}R) 결장" for b in gone[:2]))
             gr = {"bad": "mid", "mid": "good"}.get(gr, gr)
+            rank = max(1, rank - 8)
     if "PTS" in base:
         gone = [b for b in km["rim"] if b[2]]
         if gone and not any("결장" in w for w in why):
             why.append("상대 블록 " + ", ".join(f"{short(b[0])}({b[1]}) 결장" for b in gone[:2]))
             gr = {"bad": "mid", "mid": "good"}.get(gr, gr)
+            rank = max(1, rank - 8)
     rk = P[opp]["rk"]
     for c in base:
         ms = WHY[c]
@@ -210,6 +212,18 @@ def grade(P, opp, cat, mx, km):
     if gr == "mid" and not any("결장" in w for w in why):
         why = why[:2]
     return [gr, rank, why[:4]]
+
+
+# 오늘 확률 보정: logit(오늘) = logit(시즌 추정) + SLOPE × (15.5 − 순위)/14.5
+# 11/1~16 리그 전체 선수-경기·모든 사다리 단계(약 3만 건)로 항목별 로지스틱 회귀. 80% 기준 1위 상대 ≈ +3~4%p, 30위 ≈ −3~5%p.
+SLOPE = {"PTS": 0.218, "REB": 0.188, "AST": 0.2, "3PM": 0.062, "PRA": 0.292, "PR": 0.206, "PA": 0.214, "RA": 0.219}
+
+
+def today(p, cat, rank):
+    import math
+    p = min(max(p, 0.01), 0.99)
+    x = math.log(p / (1 - p)) + SLOPE.get(cat, 0.2) * (15.5 - rank) / 14.5
+    return 1 / (1 + math.exp(-x))
 
 
 def downgrade(rec):
