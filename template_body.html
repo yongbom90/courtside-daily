@@ -67,6 +67,7 @@
 .pmw{color:var(--bad);margin-top:2px}
 .pml{margin-top:4px;padding-left:2px}.pml>b{font-size:12px}.pml.bad>b{color:var(--bad)}.pml.good>b{color:var(--good)}.pml div{font-size:11.5px;line-height:1.45}.pml.bad div{color:var(--bad)}.pml.good div{color:var(--good)}
 .thb button{font:inherit;font-size:10px;padding:0 4px;margin-left:2px;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--muted);cursor:pointer}.thb button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.pproj{margin-bottom:4px;padding:4px 7px;border-radius:7px;border:1px solid var(--primary);background:var(--pri-bg,#2563eb10)}.pproj .good{color:var(--good)}
 .psum{margin-bottom:4px;padding:4px 7px;border-radius:7px;background:var(--pri-bg,#64748b14);border:1px solid var(--line)}.psum small{font-size:10px;margin:0 3px 0 1px}
 .lbody{flex-wrap:nowrap}.lbody .lside{flex:1 1 200px;min-width:180px;line-height:1.6}.lside .hl{color:var(--primary);text-decoration:underline}
 .chips.sm{display:flex;flex-wrap:wrap;gap:2px;margin:1px 0}.chips.sm i{font-style:normal;font-size:11px;min-width:20px;padding:0 3px;text-align:center;border-radius:4px;border:1px solid var(--line)}.chips.sm i.y{background:#16a34a22;color:var(--good);border-color:var(--good)}.chips.sm i.n{color:var(--muted)}
@@ -351,7 +352,10 @@ function sideInfo(d,p){const o=oppOf(d),T=(AUTO.teams||{})[o],HH=(AUTO.h2h||{})[
  const parts=[...new Set((OPPK[d.cat]?[d.cat]:QPART[d.cat]).flatMap(c=>OPPK[c]||[]))].map(String);
  const ks=[];(OPPK[d.cat]?[d.cat]:QPART[d.cat]).forEach(c=>(OPPK[c]||[]).forEach(k=>{if(!ks.some(x=>x[0]===k[0]))ks.push(k);}));
  const opp=T?ks.slice(0,4).map(([k,l,u,inv])=>{const r=T.rk[k];return `<span class="${r<=8?'good':r>=23?'bad':''}">${l} ${T[k]}${u} <small>(${rkTxt(T,k,!inv)})</small></span>`;}).join(' · '):'';
- return `<div class="lside">${sum}<div><span class="muted">최근10${ln!=null?` (라인 ${ln} 초과=초록)`:''}</span><div class="chips sm">${(d.l10||d.last).map(ch).join('')}</div></div>
+ const pj=d.proj,R2=d.r.map(lv),safe=R2.filter(r=>r.pt>=75).sort((a,b)=>b.th-a.th)[0],agg=R2.filter(r=>r.pt>=60&&(!safe||r.th>safe.th)).sort((a,b)=>b.th-a.th)[0];
+ const prj=pj?`<div class="pproj"><b>🎯 오늘 예상 ${MUS[d.cat]} ${pj[0]}</b> <span class="muted">(시즌 평균 ${d.avg}${pj[3]?` · 상대 ${pj[3]>0?'+':''}${pj[3]}`:''})</span> · 보통 <b>${pj[1]}~${pj[2]}</b><br>
+  팔레이 추천 ${safe?`<b class="good">${safe.th}+</b> <span class="muted">(오늘 ${safe.pt}%)</span>`:'<span class="muted">75% 이상 단계 없음</span>'}${agg?` · 공격적 <b>${agg.th}+</b> <span class="muted">(오늘 ${agg.pt}%)</span>`:''}</div>`:'';
+ return `<div class="lside">${prj}${sum}<div><span class="muted">최근10${ln!=null?` (라인 ${ln} 초과=초록)`:''}</span><div class="chips sm">${(d.l10||d.last).map(ch).join('')}</div></div>
   ${d.hm?`<div><span class="muted">홈</span> <b class="${d.home?'hl':''}">${d.hm[0]}</b> <span class="muted">(${d.hm[1]})</span> · <span class="muted">원정</span> <b class="${d.home?'':'hl'}">${d.aw[0]}</b> <span class="muted">(${d.aw[1]})</span> <span class="muted">· 오늘 ${d.home?'홈':'원정'}</span></div>`:''}
   <div><span class="muted">🆚 맞대결 평균</span> ${H.length?`<b>${(H.reduce((a,b)=>a+b,0)/H.length).toFixed(1)}</b> <span class="muted">(${H.length}경기 · 시즌 평균 ${d.avg})</span>`:'<span class="muted">맞대결 없음</span>'}</div>
   ${opp?`<div><span class="muted">상대 ${o} 허용</span> ${opp}</div>`:''}</div>`;}
@@ -428,9 +432,9 @@ function parList(){const C=[];
  const head=`<div class="filters">${[85,80,75,70].map(x=>`<button class="fbtn ${x===pmin?'on':''}" onclick="pmin=${x};drawV()">오늘 ${x}% 이상</button>`).join('')}</div>
   <div class="small muted" style="margin:4px 0 8px">선수·스탯마다 <b>오늘 확률(시즌·최근5 추정에 오늘 상대 매치업 보정)</b>이 기준 이상인 <b>가장 높은 단계 하나</b>만. 오늘 확률 높은 순. 담으면 슬립에 오늘 확률 곱(팔레이 전체 확률)이 나와요. 같은 경기 선수끼리는 서로 영향이 있어 곱이 정확하지 않아요. 🆚 = 이번 시즌 맞대결에서 그 단계를 넘긴 횟수(참고, 확률엔 안 넣음).</div>`;
  if(!C.length)return head+'<div class="muted">조건에 맞는 단계가 없어요.</div>';
- return head+`<div class="tblwrap"><table class="ptab"><tr><th>선수</th><th>스탯</th><th>오늘</th><th>시즌→</th><th>시즌·최근5</th><th>🆚 맞대결</th><th>매치업</th><th>DK</th><th></th></tr>`+C.slice(0,80).map(({d,r})=>{const key=`${d.n} ${r.th}+ ${CATN[d.cat]}`;
+ return head+`<div class="tblwrap"><table class="ptab"><tr><th>선수</th><th>스탯</th><th>오늘</th><th>시즌→</th><th>시즌·최근5</th><th>오늘 예상</th><th>🆚 맞대결</th><th>매치업</th><th>DK</th><th></th></tr>`+C.slice(0,80).map(({d,r})=>{const key=`${d.n} ${r.th}+ ${CATN[d.cat]}`;
   return `<tr><td><b>${d.n}</b><br><span class="small muted">${d.t} vs ${oppOf(d)}</span></td><td><b>${CMB.includes(d.cat)?d.cat:CATN[d.cat]} ${r.th}+</b></td>
-  <td><b style="font-size:16px">${r.pt}%</b></td><td class="small">${r.p}% ${dlt(r.p,r.pt)}</td><td class="small">${r.hit}/${d.N} · ${r.h5}/5</td>
+  <td><b style="font-size:16px">${r.pt}%</b></td><td class="small">${r.p}% ${dlt(r.p,r.pt)}</td><td class="small">${r.hit}/${d.N} · ${r.h5}/5</td><td class="small">${d.proj?`<b>${d.proj[0]}</b> <span class="muted">(${d.proj[1]}~${d.proj[2]})</span>`:`<span class="muted">평균 ${d.avg}</span>`}</td>
   <td class="small">${d.hN?`<b style="color:var(--${r.hh===0?'bad':r.hh===d.hN?'good':'text'})">${r.hh}/${d.hN}</b>`:'<span class="muted">없음</span>'}</td>
   <td class="small">${muB(d.mu)}${d.mu&&d.mu[2].length?`<br><span class="muted">${d.mu[2].slice(0,2).join(' · ')}</span>`:''}</td>
   <td class="small">${r.am!=null?fmtO(r.am):'—'}</td>

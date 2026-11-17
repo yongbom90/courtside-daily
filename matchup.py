@@ -262,5 +262,20 @@ def today(p, cat, rank):
     return 1 / (1 + math.exp(-x))
 
 
+# 오늘 예상치 = 시즌 평균 × (1 + PROJ × (15.5 − 순위)/14.5). 11/1~16 검증: 시즌 평균이 최근5·출전시간 섞은 것보다 실제에 가까웠고,
+# 상대 보정은 득점 ±4%·어시 ±5% 만 오차를 줄였어요(리바·3점은 효과 없음 → 0).
+PROJ = {"PTS": 0.04, "AST": 0.05, "REB": 0.0, "3PM": 0.0}
+
+
+def project(vals, cat, rank):
+    """→ [오늘 예상, 보통 범위 아래(25%), 위(75%), 상대 보정분]"""
+    N = len(vals)
+    avg = sum(vals) / N
+    adj = avg * PROJ.get(cat, 0) * (15.5 - rank) / 14.5 if rank else 0
+    sv = sorted(vals)
+    q = lambda f: sv[min(N - 1, max(0, round(f * (N - 1))))]
+    return [round(avg + adj, 1), q(0.25), q(0.75), round(adj, 1)]
+
+
 def downgrade(rec):
     return {"top": "rec", "rec": "caution"}.get(rec, rec)
