@@ -17,7 +17,8 @@ LOCK="logs/.lock"
 for i in $(seq 1 50); do
   if mkdir "$LOCK" 2>/dev/null; then echo $$ > "$LOCK/pid"; trap 'rm -rf "$LOCK"' EXIT; break; fi
   P=$(cat "$LOCK/pid" 2>/dev/null); if [ -n "$P" ] && ! kill -0 "$P" 2>/dev/null; then rm -rf "$LOCK"; continue; fi
-  [ "$KIND" = inj ] || { echo "다른 실행 중 → 다음 슬롯"; exit 0; }
+  # 9시처럼 NBA·NFL 이 같은 슬롯에 동시에 뜨면 한쪽이 그냥 끝나버려서, 아침/오후 실행도 최대 5분(10회) 기다린다
+  [ "$KIND" = inj ] || [ "$i" -lt 10 ] || { echo "다른 실행 중 → 다음 슬롯"; exit 0; }
   [ "$i" -eq 50 ] && { echo "잠금 대기 초과"; exit 0; }
   sleep 30
 done
