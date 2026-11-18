@@ -698,7 +698,14 @@ def main(date, out):
 
     with ThreadPoolExecutor(4) as ex:
         th2h = dict(zip([g["id"] for g in games], ex.map(team_h2h, games)))
-    json.dump({"date": date, "prev": prev, "games": games, "teams": teams_mu, "book": {ab: TB[ab] for ab in opp_of if ab in TB}, "nLeague": n_league, "h2h": h2h, "h2hP": h2hP, "avP": avP, "th2h": th2h, "stat80": stat80, "form": form, "results": results,
+    # 📊 경기별 막대그래프용 시즌 로그(오래된 경기 → 최근): [날짜(동부 MM/DD), 상대, 홈/원정, 출전분, 득점, 리바, 어시, 3점]
+    glog = {}
+    for d in ladders:
+        if d["id"] in glog or d["id"] not in key_of:
+            continue
+        glog[d["id"]] = [[l["et"][5:].replace("-", "/"), l["opp"], l["ha"], round(l["min"]), l["PTS"], l["REB"], l["AST"], l["3PM"]]
+                         for l in reversed(logs[key_of[d["id"]]])]
+    json.dump({"date": date, "prev": prev, "games": games, "teams": teams_mu, "book": {ab: TB[ab] for ab in opp_of if ab in TB}, "nLeague": n_league, "h2h": h2h, "h2hP": h2hP, "avP": avP, "th2h": th2h, "glog": glog, "stat80": stat80, "form": form, "results": results,
                "value": [v for v in value if v["cat"] not in COMBO][:300],
                "cvalue": [v for v in value if v["cat"] in COMBO][:200], "ladders": ladders, "qtr": {d["id"]: qtr[d["id"]] for d in ladders if d["id"] in qtr}, "vgrades": vgrades, "vgFrom": vg_from,
                "props": props, "minutes": minutes[:40], "propReview": prop_review, "propReviewFrom": pr_from,
