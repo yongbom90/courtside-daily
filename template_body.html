@@ -74,6 +74,9 @@
 .pgrid{align-items:start}.pcol{display:flex;flex-direction:column;gap:6px}.pcard{border:1px solid var(--line);border-radius:10px;padding:6px 8px}.pch{display:flex;flex-wrap:wrap;gap:4px;align-items:baseline}.pbest{margin-left:auto;font-size:11px;font-weight:800;color:var(--good)}
 .pcw{font-size:11.5px;color:var(--bad);margin-top:2px}.pcr{display:grid;grid-template-columns:minmax(78px,1fr) minmax(92px,auto) minmax(0,1.3fr) auto;gap:2px 8px;align-items:center;border-top:1px dashed var(--line);padding:4px 0}.pcr .pp{font-size:16px}
 .pcr>div:nth-child(4){grid-column:2/4}.pcr>button{grid-row:1;grid-column:4}@media(max-width:520px){.pcr{grid-template-columns:1fr auto auto}.pcr>div:nth-child(3),.pcr>div:nth-child(4){grid-column:1/3}.pcr>button{grid-column:3;grid-row:1}}.pproj .bad{color:var(--bad)}
+.gbar{margin-top:5px;padding-top:4px;border-top:1px dashed var(--line)}.gsc{overflow-x:auto}.gbar svg{display:block;font-family:inherit}
+.gbar .gy{fill:var(--good)}.gbar .gn{fill:#94a3b8}.gbar .glo{opacity:.4}.gbar .gl{stroke:var(--text,#111);stroke-dasharray:4 3;stroke-width:1.2}
+.gbar .gv{font-size:9.5px;font-weight:700;fill:#fff;text-anchor:middle}.gbar .gvo{fill:var(--text,#111)}.gbar .go{font-size:8.5px;text-anchor:middle;fill:var(--muted,#64748b)}.gbar .gh{font-size:7.5px;text-anchor:middle;fill:var(--muted,#94a3b8)}.gbar .glt{font-size:9.5px;font-weight:700;fill:var(--text,#111)}
 .psum{margin-bottom:4px;padding:4px 7px;border-radius:7px;background:var(--pri-bg,#64748b14);border:1px solid var(--line)}.psum small{font-size:10px;margin:0 3px 0 1px}
 .lbody{flex-wrap:nowrap}.lbody .lside{flex:1 1 200px;min-width:180px;line-height:1.6}.lside .hl{color:var(--primary);text-decoration:underline}
 .chips.sm{display:flex;flex-wrap:wrap;gap:2px;margin:1px 0}.chips.sm i{font-style:normal;font-size:11px;min-width:20px;padding:0 3px;text-align:center;border-radius:4px;border:1px solid var(--line)}.chips.sm i.y{background:#16a34a22;color:var(--good);border-color:var(--good)}.chips.sm i.n{color:var(--muted)}
@@ -384,12 +387,27 @@ function statRow(d){const best=bestOf(d),p=PIDX[d.id+'|'+d.cat],s8=SIDX[d.n+'|'+
   <span>평균 <b>${d.avg}</b> → 최근5 <b class="${up>=0?'good':'bad'}">${d.a5}${up>=0?'▲':'▼'}</b></span><span class="muted">L5 ${d.last.join('·')}</span>
   ${p?`<span>DK 라인 <b>${p.line}</b> 오버 ${p.hit}/${p.N}·${p.h5}/${p.last.length}</span>`:''}
   ${s8?`<span>80% <b>${RECN[s8.rec]}</b> ${s8.th}+</span>`:''}
-  ${best?`<span class="good"><b>★ ${best.th}+ ${fmtO(best.am)}</b> (${best.p}% vs ${best.imp}%)</span>`:''}${muB(d.mu)}</div>${SING.includes(d.cat)?'':muW(d.mu)}<div class="lbody">${strip(d,best)}${sideInfo(d,p)}</div></div>`;}
+  ${best?`<span class="good"><b>★ ${best.th}+ ${fmtO(best.am)}</b> (${best.p}% vs ${best.imp}%)</span>`:''}${muB(d.mu)}</div>${SING.includes(d.cat)?'':muW(d.mu)}<div class="lbody">${strip(d,best)}${sideInfo(d,p)}</div><div id="gb-${d.id}-${d.cat}">${gbar(d,thOf(d,p))}</div></div>`;}
+/* 📊 경기별 막대그래프: 시즌 전 경기(왼쪽 오래된 → 오른쪽 최근), 기준선 점선, 넘음 초록 · 못 넘음 회색, 출전 20분 미만은 흐리게 */
+const GLI={PTS:4,REB:5,AST:6,'3PM':7};
+const GLC={PRA:[4,5,6],PR:[4,5],PA:[4,6],RA:[5,6]},gval=(r,c)=>c in GLI?r[GLI[c]]:(GLC[c]||[]).reduce((a,i)=>a+r[i],0);
+function gbar(d,th){const G=((AUTO.glog||{})[d.id]||[]);if(G.length<2)return '';
+ const V=G.map(r=>gval(r,d.cat)),mx=Math.max(th*1.25,...V)||1,H=96,bw=Math.max(14,Math.min(30,Math.floor(560/G.length))),W=G.length*bw;
+ const y=v=>H-Math.round(H*v/mx),hit=V.filter(v=>v>=th).length;
+ let run=0;for(let i=V.length-1;i>=0&&V[i]>=th;i--)run++;
+ const bars=G.map((r,i)=>{const v=V[i],ok=v>=th,lo=r[3]<20,x=i*bw+2,w=bw-4;
+  return `<g><title>${r[0]} ${r[2]==='h'?'vs':'@'} ${r[1]} · ${v} · ${r[3]}분</title><rect x="${x}" y="${y(v)}" width="${w}" height="${H-y(v)}" rx="2" class="${ok?'gy':'gn'}${lo?' glo':''}"/>
+  <text x="${x+w/2}" y="${H-y(v)<13?y(v)-2:y(v)+11}" class="gv${H-y(v)<13?' gvo':''}">${v}</text>
+  <text x="${x+w/2}" y="${H+11}" class="go">${r[1]}</text><text x="${x+w/2}" y="${H+20}" class="gh">${r[2]==='h'?'홈':'원정'}</text></g>`;}).join('');
+ return `<div class="gbar"><div class="small"><b>📊 경기별 ${MUS[d.cat]}</b> <span class="muted">기준 ${th}+ · </span><b class="good">${hit}/${V.length}</b>${run?` <span class="good">· 최근 ${run}경기 연속</span>`:` <span class="bad">· 직전 경기 ${V[V.length-1]} (못 넘음)</span>`} <span class="muted">· 흐린 막대 = 20분 미만 출전</span></div>
+  <div class="gsc"><svg viewBox="0 -14 ${W+30} ${H+36}" style="width:100%;max-width:${W+30}px;height:auto">${bars}
+  <line x1="0" x2="${W}" y1="${y(th)}" y2="${y(th)}" class="gl"/><text x="${W+3}" y="${y(th)+3}" class="glt">${th}+</text></svg></div></div>`;}
 /* 📌 기준 단계 요약(시즌 vs 오늘 · 상성 · 이번 시즌 맞대결). 단계 버튼으로 바꿔 보기 */
+function setTh(id,c,th){const d=LAD.find(x=>x.id===id&&x.cat===c);document.getElementById(`ps-${id}-${c}`).innerHTML=psum(d,th);const g=document.getElementById(`gb-${id}-${c}`);if(g)g.innerHTML=gbar(d,th);}
 function psum(d,th){const o=oppOf(d),HH=(AUTO.h2h||{})[d.id]||[],PV=(AUTO.h2hP||{})[d.id]||[],R=d.r.map(lv),r0=R.find(r=>r.th===th)||R[0];
  const cur=HH,ok=v=>v>=r0.th;
  const hs=L=>L.map(h=>`<span style="color:var(--${ok(h[d.cat])?'good':'bad'})">${h[d.cat]}</span><small class="muted">(${h.d.slice(h.s==='25-26'?2:5).replace(/-/g,'/')} ${h.ha==='h'?'홈':'원정'}${(h.miss||[]).length?' · 상대 '+h.miss.map(x=>x.split(' ').slice(-1)[0]).join(',')+' 결장':''})</small>`).join(' ');
- return `<b>📌 ${d.n.split(' ').slice(-1)[0]} ${MUS[d.cat]} ${r0.th}+ vs ${o}</b> <span class="thb">${R.map(r=>`<button class="${r.th===r0.th?'on':''}" onclick="event.stopPropagation();document.getElementById('ps-${d.id}-${d.cat}').innerHTML=psum(LAD.find(x=>x.id==='${d.id}'&&x.cat==='${d.cat}'),${r.th})">${r.th}</button>`).join('')}</span><br>
+ return `<b>📌 ${d.n.split(' ').slice(-1)[0]} ${MUS[d.cat]} ${r0.th}+ vs ${o}</b> <span class="thb">${R.map(r=>`<button class="${r.th===r0.th?'on':''}" onclick="event.stopPropagation();setTh('${d.id}','${d.cat}',${r.th})">${r.th}</button>`).join('')}</span><br>
   시즌 <b>${r0.p}%</b> <span class="muted">(${r0.hit}/${d.N} · 최근5 ${r0.h5}/5)</span> → 오늘 <b>${r0.pt}%</b> ${dlt(r0.p,r0.pt)} · 상성 ${d.mu?muB(d.mu):'—'}<br>
   이번 시즌 vs ${o}: ${cur.length?`<b>${cur.filter(h=>ok(h[d.cat])).length}/${cur.length}</b> — ${hs(cur)}`:'<span class="muted">아직 안 만남</span>'}<br>
   지난 시즌 vs ${o}: ${PV.length?`<b>${PV.filter(h=>ok(h[d.cat])).length}/${PV.length}</b> — ${hs(PV)}`:'<span class="muted">맞대결 없음</span>'}`;}
@@ -400,6 +418,7 @@ const OPPK={PTS:[['drtg','100회당 실점',''],['pace','페이스','']],REB:[['
 /* 이유 줄 아이콘: 참고 ℹ️ · 유리 👍 · 불리 ⚠️ (보통 등급은 문장 앞 '유리:/불리:'로) */
 function wIc(g,w){return w.startsWith('참고')?'ℹ️':w.startsWith('유리')?'👍':w.startsWith('불리')?'⚠️':g==='bad'?'⚠️':g==='good'?'👍':'•';}
 function flowL(f){return f?`<div class="pml ${f[0]==='bad'?'bad':f[0]==='good'?'good':''}"><b>⏱️ 경기 흐름</b><div>${f[0]==='bad'?'⚠️':f[0]==='good'?'👍':'•'} ${f[1]}${f[2]?' → 오늘 확률·예상치에 반영했어요':''}</div></div>`:'';}
+function thOf(d,p){const R=d.r.map(lv),ln=p?p.line:null,r0=ln!=null?R.slice().sort((a,b)=>Math.abs(a.th-ln)-Math.abs(b.th-ln))[0]:(R.filter(r=>r.pt>=70).sort((a,b)=>b.th-a.th)[0]||R[0]);return r0?r0.th:0;}
 function sideInfo(d,p){const o=oppOf(d),T=(AUTO.teams||{})[o],HH=(AUTO.h2h||{})[d.id]||[],H=HH.map(h=>h[d.cat]),ln=p?p.line:null;
  const R=d.r.map(lv),r0=ln!=null?R.slice().sort((a,b)=>Math.abs(a.th-ln)-Math.abs(b.th-ln))[0]:(R.filter(r=>r.pt>=70).sort((a,b)=>b.th-a.th)[0]||R[0]);
  const sum=r0?`<div class="psum" id="ps-${d.id}-${d.cat}">${psum(d,r0.th)}</div>`:'';
