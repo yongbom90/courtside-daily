@@ -369,6 +369,10 @@ def main(date, out):
     def pos_of(ab, name):
         return IN.POS.get(next((l.get("pos") for l in logs.get((ab, name), []) if l.get("pos")), ""), "")
 
+    def is_star(aid):
+        t = TIER.get(aid)
+        return None if not t else ((t.get("lgP") or 999) <= 30 or t.get("tm") == 1)
+
     def proj_rank(ab, name, cat):
         dv = (DVP.get(opp_of.get(ab)) or {}).get(pos_of(ab, name))
         if dv and cat in ("PTS", "REB", "AST"):
@@ -566,7 +570,7 @@ def main(date, out):
                    "hm": [round(sum(l[cat] for l in L if l.get("ha") == "h") / max(1, sum(l.get("ha") == "h" for l in L)), 1), sum(l.get("ha") == "h" for l in L)],
                    "aw": [round(sum(l[cat] for l in L if l.get("ha") == "a") / max(1, sum(l.get("ha") == "a" for l in L)), 1), sum(l.get("ha") == "a" for l in L)],
                    "home": ab == g["home"],
-                   "proj": MU.project(vals, cat, proj_rank(ab, name, cat), blow) if cat in MU.PROJ else None, "flow": _fl,
+                   "proj": MU.project(vals, cat, proj_rank(ab, name, cat), blow, is_star(aid)) if cat in MU.PROJ else None, "flow": _fl,
                    "att": {"s": [round(sum(l.get(k, 0) for l in L) / N, 1) for k in ("FGA", "3PA", "FTA")],
                            "l5": [round(sum(l.get(k, 0) for l in L[:5]) / len(L[:5]), 1) for k in ("FGA", "3PA", "FTA")]}}
             mbad = bool(lad["mu"] and lad["mu"][0] == "bad")

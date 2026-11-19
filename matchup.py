@@ -290,11 +290,18 @@ def today(p, cat, rank, blow=False, mtr=0.0):
 PROJ = {"PTS": 0.03, "AST": 0.064, "REB": 0.044, "3PM": 0.0}
 
 
-def project(vals, cat, rank, blow=False):
+# 11/19 체급별 검증(오너: "에이스는 어려운 수비여도 어느 정도 해준다"): 리그 득점 30위 안 또는 팀 1옵션은
+# 쉬운→까다로운 상대 득점 +3.1→+3.3%(영향 없음)·리바 −1.9→−6.0%, 일반 선수 득점 +8.8→+0.1%·리바 +3.1→−8.2%, 어시는 둘 다 비슷.
+STAR_MULT = {"PTS": 0.0, "REB": 0.4, "AST": 1.0}
+ROLE_MULT = {"PTS": 1.45, "REB": 1.25, "AST": 1.0}
+
+
+def project(vals, cat, rank, blow=False, star=None):
     """→ [오늘 예상, 보통 범위 아래(25%), 위(75%), 상대 보정분, 경기 흐름 보정분]"""
     N = len(vals)
     avg = sum(vals) / N
-    adj = avg * PROJ.get(cat, 0) * (15.5 - rank) / 14.5 if rank else 0
+    mult = 1.0 if star is None else (STAR_MULT if star else ROLE_MULT).get(cat, 1.0)
+    adj = avg * PROJ.get(cat, 0) * mult * (15.5 - rank) / 14.5 if rank else 0
     fadj = -avg * BLOW_J if blow else 0
     sv = sorted(vals)
     q = lambda f: sv[min(N - 1, max(0, round(f * (N - 1))))]
