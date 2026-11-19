@@ -145,5 +145,15 @@ th{background:var(--surface2);font-family:"Barlow Condensed";font-size:15px}
 .odds{font-family:"Barlow Condensed";font-size:20px;font-weight:800;text-align:center}
 .odds small{display:block;font-size:10.5px;font-family:"Noto Sans KR";color:var(--muted);font-weight:600}
 @media(max-width:760px){.pmat{grid-template-columns:1fr 70px 80px;row-gap:6px}.pmat .hide-m{display:none}.row2{grid-template-columns:1fr}}
+
+/* 픽 상세 카드 (11/19) */
+.pmat{cursor:pointer}.pmat:hover{border-color:var(--primary)}
+.pdet{background:var(--surface);border:1px solid var(--primary);border-radius:12px;padding:12px;margin:-4px 0 10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.tile{background:var(--surface2);border-radius:10px;padding:9px 11px;border-left:4px solid var(--line)}
+.tile.g{border-left-color:var(--good)}.tile.b{border-left-color:var(--bad)}.tile.w{border-left-color:var(--warn)}
+.tile .tl{font-size:11px;font-weight:800;color:var(--muted);display:flex;justify-content:space-between;gap:6px}
+.tile .tv{font-family:"Barlow Condensed";font-size:22px;font-weight:800;line-height:1.15;margin:2px 0}
+.tile .ts{font-size:12px;line-height:1.45}
+.weak{font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 6px;white-space:nowrap}
 </style>
 </head>

@@ -262,10 +262,25 @@ def grade(P, opp, cat, mx, km):
 SLOPE = {"PTS": 0.218, "REB": 0.188, "AST": 0.2, "3PM": 0.062, "PRA": 0.292, "PR": 0.206, "PA": 0.214, "RA": 0.219}
 
 
-def today(p, cat, rank, blow=False):
+# 11/19 검증(이번 시즌 210경기·주전급 1,586명-경기, 후반부 검증): 시즌:최근5 = 75:25 가 50:50 보다 정확(오차 0.7~1.3%↓),
+# 최근 3경기 출전 추세(최근3/시즌 −1, ±40% 제한)를 로짓에 더하면 리바·어시·PRA 가 더 좋아짐. 3점은 효과 없음.
+W_SEASON = 0.75
+MTR = {"PTS": 0.26, "REB": 0.65, "AST": 1.1, "3PM": 0.0, "PRA": 0.88, "PR": 0.88, "PA": 0.88, "RA": 0.88}
+
+
+def mtrend(L):
+    """L: 최근→과거 로그. 최근 3경기 출전 / 시즌 출전 − 1 (±0.4 제한)"""
+    if len(L) < 5:
+        return 0.0
+    s = sum(l["min"] for l in L) / len(L)
+    return max(-0.4, min(0.4, (sum(l["min"] for l in L[:3]) / 3) / s - 1)) if s else 0.0
+
+
+def today(p, cat, rank, blow=False, mtr=0.0):
     import math
     p = min(max(p, 0.01), 0.99)
-    x = math.log(p / (1 - p)) + (SLOPE.get(cat, 0.2) * (15.5 - rank) / 14.5 if rank else 0) + (BLOW_P if blow else 0)
+    x = math.log(p / (1 - p)) + (SLOPE.get(cat, 0.2) * (15.5 - rank) / 14.5 if rank else 0) + (BLOW_P if blow else 0) \
+        + MTR.get(cat, 0.0) * mtr
     return 1 / (1 + math.exp(-x))
 
 

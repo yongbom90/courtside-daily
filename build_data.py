@@ -469,10 +469,10 @@ def main(date, out):
                 r["rec"] = "caution"
             r["mu"] = mu_for(ab, name, r["cat"])
             _v = [l[r["cat"]] for l in L]
-            _p = ((r["hit"] + 1) / (r["N"] + 2) + (r["h5"] + 1) / 7) / 2
+            _p = MU.W_SEASON * (r["hit"] + 1) / (r["N"] + 2) + (1 - MU.W_SEASON) * (r["h5"] + 1) / 7
             r["flow"] = MU.flow(ab, spme.get(ab), sum(l["min"] for l in L) / len(L))
             _bl = bool(r["flow"] and r["flow"][2])
-            r["p"], r["pt"] = round(100 * _p), round(100 * MU.today(_p, r["cat"], r["mu"][1] if r["mu"] else None, _bl))
+            r["p"], r["pt"] = round(100 * _p), round(100 * MU.today(_p, r["cat"], r["mu"][1] if r["mu"] else None, _bl, MU.mtrend(L)))
             if r["mu"] and r["mu"][0] == "bad":
                 r["rec0"], r["rec"] = r["rec"], MU.downgrade(r["rec"])
         stat80 += rows
@@ -579,7 +579,7 @@ def main(date, out):
                 h5 = sum(v >= th for v in last)
                 # 적중 확률 추정 = 시즌(표본 보정)과 최근 5경기(표본 보정)를 반반
                 ps, p5 = (hit + 1) / (N + 2), (h5 + 1) / (len(last) + 2)
-                p = (ps + p5) / 2
+                p = MU.W_SEASON * ps + (1 - MU.W_SEASON) * p5
                 imp = 1 / dec
                 edge = p - imp
                 flags = base + ([f"최근 5경기 {h5}/5"] if h5 <= 2 else [])
@@ -594,19 +594,19 @@ def main(date, out):
                               "val": val,
                               "last": last, "h5": h5,
                               "min": lad["min"], "min3": lad["min3"],
-                              "flags": flags, "mu": lad["mu"], "pt": round(100 * MU.today(p, cat, lad["mu"][1] if lad["mu"] else None, blow))})
+                              "flags": flags, "mu": lad["mu"], "pt": round(100 * MU.today(p, cat, lad["mu"][1] if lad["mu"] else None, blow, MU.mtrend(L)))})
             # 🪜 고정 간격 사다리: 각 단계 추정 확률(시즌·최근5 반반) + 같은 단계 DK 배당이 있으면 붙임
             last = vals[:5]
             for th in LADDER.get(cat, []):
                 hit, h5 = sum(v >= th for v in vals), sum(v >= th for v in last)
                 ps, p5 = (hit + 1) / (N + 2), (h5 + 1) / (len(last) + 2)
-                p = (ps + p5) / 2
+                p = MU.W_SEASON * ps + (1 - MU.W_SEASON) * p5
                 if p < 0.04 or p > 0.97:
                     continue
                 if lad["r"] and hit == 0 and h5 == 0 and lad["r"][-1][6] == 0 and lad["r"][-1][7] == 0:
                     continue  # 한 번도 못 넘은 단계는 첫 줄만
                 am, imp, edge, val = dk.get(float(th), dk.get(th, (None, None, None, None)))
-                pt = MU.today(p, cat, lad["mu"][1] if lad["mu"] else None, blow)
+                pt = MU.today(p, cat, lad["mu"][1] if lad["mu"] else None, blow, MU.mtrend(L))
                 lad["r"].append([th, am, imp, round(100 * p), round(100 * ps), round(100 * p5), hit, h5, fair_am(p), edge, val,
                                  round(100 * pt), sum(v >= th for v in hv)])
             lad["dkx"] = sorted(t for t in dk if t not in LADDER.get(cat, []))  # 간격 밖 DK 단계(목록 보기에 있음)
@@ -738,7 +738,12 @@ def main(date, out):
         deep[d["id"]] = {"n": name, "t": ab, "g": d["g"], "pos": pos, "min": IN.minutes(L), "usg": IN.usage(L, tb),
                          "ww": IN.with_without(L, tev, mates),
                          "dvp": (DVP.get(opp) or {}).get(pos) if pos else None, "opp": opp}
-    gdeep = {g["m"]: {"pace": IN.pace(TP, g["away"], g["home"]), "out": {ab: out_by_team.get(ab, []) for ab in (g["away"], g["home"])}}
+    _today = datetime.strptime(date, "%Y%m%d")
+    def _rest(ab):
+        ds = [_et(dt) for dt, _ in ev_by_team.get(ab, [])]
+        return (_today - datetime.strptime(max(ds), "%Y-%m-%d")).days - 1 if ds else None
+    gdeep = {g["m"]: {"pace": IN.pace(TP, g["away"], g["home"]), "out": {ab: out_by_team.get(ab, []) for ab in (g["away"], g["home"])},
+                      "rest": {ab: _rest(ab) for ab in (g["away"], g["home"])}}
              for g in games}
     json.dump({"date": date, "prev": prev, "deep": deep, "gdeep": gdeep, "dvp": {ab: DVP[ab] for ab in opp_of if ab in DVP}, "dvpLg": {p: {k: round(sum(v[p][k][0] for v in DVP.values()) / len(DVP), 1) for k in IN.CATS} for p in ("G", "F", "C")} if DVP else {}, "games": games, "teams": teams_mu, "book": {ab: TB[ab] for ab in opp_of if ab in TB}, "nLeague": n_league, "h2h": h2h, "h2hP": h2hP, "avP": avP, "th2h": th2h, "glog": glog, "stat80": stat80, "form": form, "results": results,
                "value": [v for v in value if v["cat"] not in COMBO][:300],
