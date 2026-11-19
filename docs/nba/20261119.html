@@ -168,6 +168,7 @@ th{background:var(--surface2);font-family:"Barlow Condensed";font-size:15px}
 .pgraph{grid-column:1/-1;cursor:default}.pgraph .gbar{margin-top:2px}
 .tier{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:middle;white-space:nowrap;border:1px solid var(--line);background:var(--surface2);color:var(--muted)}
 .tier.s{background:linear-gradient(90deg,#f6c445,#e8912d);color:#3a2300;border-color:#e8912d}.tier.a{background:var(--pri-bg);color:var(--primary);border-color:var(--primary)}.tier.b{color:var(--text)}
+.pwhy{grid-column:1/-1;font-size:13px;line-height:1.55;background:var(--surface2);border-radius:9px;padding:8px 11px}.pwhy .wcol{color:var(--warn);font-weight:600}
 </style>
 </head>
 <style>
@@ -801,6 +802,33 @@ const PM=[],VBY={};VL.forEach(v=>{(VBY[v.id+'|'+v.cat]=VBY[v.id+'|'+v.cat]||[]).
  PM.push({l,r,rk:dv,src:d&&d.dvp&&['PTS','REB','AST','3PM'].includes(l.cat)?'p':'t',inj:(l.fl||[]).some(f=>f.includes('\ubd80\uc0c1')),blow:!!(l.flow&&l.flow[2])});});
 PM.sort((a,b)=>a.inj-b.inj||b.r[11]-a.r[11]||b.r[6]/b.l.N-a.r[6]/a.l.N);
 let pmG='all',pmC='all';
+
+/* \ud83d\udcac \ud53d \uc124\uba85: \ub370\uc774\ud130\uc5d0 \uc788\ub294 \uc218\uce58\ub9cc\uc73c\ub85c \ub9cc\ub4e0 \ud55c \uc904 \uadfc\uac70(\uc7a5\uc810 \u2192 \uc8fc\uc758 \u2192 \ub2e4\ub978 \uae30\uc900\uc120) */
+function pmWhy(x){const l=x.l,r=x.r,th=r[0],d=DEEP[l.id]||{},G=GD[l.g]||{},gm=AUTO.games.find(g=>g.m===l.g)||{},opp=gm.away===l.t?gm.home:gm.away;
+ const gl=(AUTO.glog||{})[l.id]||[],V=gl.map(g=>(GI[l.cat]||[]).reduce((a,i)=>a+g[i],0)),md=med(V);
+ let run=0;for(let i=V.length-1;i>=0&&V[i]>=th;i--)run++;
+ const P=[],W=[],tx=tierOf(l.id);
+ // \uae30\ub85d
+ P.push(r[6]===l.N?`\uc2dc\uc98c ${l.N}\uacbd\uae30 <b>\uc804\ubd80</b> ${th}+`:`\uc2dc\uc98c ${l.N}\uacbd\uae30 \uc911 <b>${r[6]}\uacbd\uae30</b> ${th}+`+(run>=3?` (\ucd5c\uadfc ${run}\uacbd\uae30 \uc5f0\uc18d)`:''));
+ if(md!=null){const gap=+(md-th).toFixed(1);if(gap>=Math.max(2,th*.25))P.push(`\uc911\uc559\uac12 ${md}\ub85c \uae30\uc900\uc120\ubcf4\ub2e4 ${gap} \ub192\uc544 \uc5ec\uc720 \uc788\uc5b4\uc694`);else if(gap<Math.max(1,th*.1))W.push(`\uc911\uc559\uac12 ${md}\ub85c \uae30\uc900\uc120 \uadfc\ucc98\ub77c \ube60\ub4ef\ud574\uc694`);}
+ // \uccb4\uae09\u00b7\ub9e4\uce58\uc5c5
+ const rk=x.rk,star=tx&&((tx.t.lgP||999)<=30||tx.t.tm===1);
+ if(rk){if(rk<=8)P.push(`\uc26c\uc6b4 \uc0c1\ub300: ${opp} \uc218\ube44\uc758 ${x.src==='p'?POSN[d.pos]+' ':''}${KN[l.cat]||CATN[l.cat]} \ud5c8\uc6a9 ${rk}\uc704/30`);
+  else if(rk>=23)(star&&l.cat==='PTS'?P:W).push(star&&l.cat==='PTS'?`${opp} \uc218\ube44\uac00 \uae4c\ub2e4\ub86d\uc9c0\ub9cc(${rk}\uc704) \uc5d0\uc774\uc2a4 \ub4dd\uc810\uc740 \uac80\uc99d\uc0c1 \uc601\ud5a5\uc774 \uac70\uc758 \uc5c6\uc5b4\uc694`:`${opp} \uc218\ube44\uac00 \uae4c\ub2e4\ub85c\uc6b4 \ud3b8\uc774\uc5d0\uc694(${rk}\uc704/30)`);}
+ if(tx&&tx.t.tm===1)P.push(`\ud300 1\uc635\uc158${tx.lv?'\u00b7'+tx.lv:''}`);
+ // \ucd9c\uc804
+ const ms=gl.map(g=>g[3]),mA=ms.length?ms.reduce((a,b)=>a+b,0)/ms.length:0,m3=ms.slice(-3),mt=mA&&m3.length?Math.round(100*(m3.reduce((a,b)=>a+b,0)/m3.length/mA-1)):0;
+ if(mt>=10)P.push(`\ucd5c\uadfc 3\uacbd\uae30 \ucd9c\uc804 +${mt}%`);else if(mt<=-10)W.push(`\ucd5c\uadfc 3\uacbd\uae30 \ucd9c\uc804 ${mt}%`);
+ if(d.min&&d.min.lvl==='volatile')W.push('\ucd9c\uc804\uc2dc\uac04\uc774 \ub4e4\ucb49\ub0a0\ucb49\ud574\uc694');else if(d.min&&d.min.lvl==='stable')P.push(`\ucd9c\uc804 \uc548\uc815(\ud3c9\uade0 ${d.min.avg}\ubd84)`);
+ // \ud750\ub984\u00b7\ubd80\uc0c1
+ if(l.flow&&l.flow[0]==='bad')W.push('\ud070 \uc810\uc218 \ucc28 \uc608\uc0c1 \u2192 4\ucffc\ud130 \ucd9c\uc804\uc774 \uc904 \uc218 \uc788\uc5b4\uc694');
+ if(x.inj)W.push('\ubd80\uc0c1 \ub9ac\ud3ec\ud2b8\uc5d0 \uc788\uc5b4\uc694(\ucd9c\uc804 \ud655\uc778 \ud544\uc694)');
+ if(r[7]<=2)W.push(`\ucd5c\uadfc 5\uacbd\uae30 ${r[7]}/5\ub85c \ucd5c\uadfc \ud750\ub984\uc774 \uc57d\ud574\uc694`);
+ // \ubc30\ub2f9
+ let odd='';if(r[1]!=null){const imp=r[2];odd=imp>=90?`DK ${fmtO(r[1])}(\ubc30\ub2f9 \ud655\ub960 ${imp}%)\ub85c \ube44\uc2f8\uc9c0\ub9cc \ud314\ub808\uc774\uc5d0 \uc11e\uae30 \uc88b\uc740 \uc548\uc815\ud615\uc774\uc5d0\uc694.`:r[11]-imp>=5?`DK ${fmtO(r[1])}\ub294 \ubc30\ub2f9 \ud655\ub960 ${imp}%\ub85c, \uc624\ub298 \ud655\ub960 ${r[11]}%\ubcf4\ub2e4 \uc2f8\uc11c \uac00\uc131\ube44\ub3c4 \uc88b\uc544\uc694.`:`DK ${fmtO(r[1])} (\ubc30\ub2f9 \ud655\ub960 ${imp}%).`;}
+ // \ub2e4\ub978 \uae30\uc900\uc120
+ const R=rungsOf(l),up=R.find(q=>q[0]>th);const nx=up?` \ud55c \ub2e8\uacc4 \uc704 ${up[0]}+\ub294 ${up[11]}%${up[1]!=null?` (${fmtO(up[1])})`:''}.`:'';
+ return `\ud83d\udcac <b>${l.n.split(' ').slice(-1)[0]} ${CATN[l.cat]} ${th}+</b>: ${P.join(', ')}.${W.length?` <span class="wcol">\u26a0\ufe0f ${W.join(', ')}.</span>`:''} ${odd}${nx}`;}
 function pmRow(x){const l=x.l,r=x.r,key=`${l.n} ${CATN[l.cat]} ${r[0]}+`,lower=l.r.filter(q=>q[0]<r[0]).slice(-1)[0];
  return `<div class="pmat" data-i="${PM.indexOf(x)}" onclick="pmTog(event,this)"><div class="nm">${x.inj?'\ud83e\ude79 ':''}${x.rk&&x.rk>=23?'\ud83e\uddf1 ':''}${l.n} ${tierB(l.id)}<small>${l.t} \u00b7 ${l.g}${x.rk?` \u00b7 ${x.src==='p'?'\ud3ec\uc9c0\uc158':'\ud300'} \ub9e4\uce58\uc5c5 <span class="pill ${rkC(x.rk)}">${x.rk}\uc704 ${rkT(x.rk)}</span>`:''}</small></div>
  <div class="pbig">${r[0]}+<small>${CATN[l.cat]}</small></div>
@@ -808,6 +836,7 @@ function pmRow(x){const l=x.l,r=x.r,key=`${l.n} ${CATN[l.cat]} ${r[0]}+`,lower=l
  <div class="small hide-m">\ucd5c\uadfc5 ${l.last.join(' \u00b7 ')}<br><span class="muted">\uc2dc\uc98c \ud3c9\uade0 ${l.avg}${l.proj?` \u2192 \uc624\ub298 \uc608\uc0c1 ${l.proj[0]}`:''}${x.blow?' \u00b7 \u26a0\ufe0f\ube14\ub85c\uc544\uc6c3':''}</span></div>
  <div class="odds">${r[1]!=null?fmtO(r[1]):'\u2014'}<small>${r[1]!=null?'DK \ubc30\ub2f9':'DK \ub2e8\uacc4 \uc5c6\uc74c'}</small></div>
  <button class="btn mini" data-k="${key}" data-o="${r[1]??''}" data-p="${r[11]}" data-g="${l.g}" onclick="toggle(this)">+ \uc2ac\ub9bd \ub2f4\uae30</button>
+ <div class="pwhy">${pmWhy(x)}</div>
  <div class="rungs"><span class="rl">\uae30\uc900\uc120\ubcc4<br>\uc624\ub298 \ud655\ub960</span>${rungsOf(l).map(q=>{const k=`${l.n} ${CATN[l.cat]} ${q[0]}+`;
   return `<button class="rung ${q[11]>=80?'hi':q[11]>=60?'md':'lo'} ${q[0]===r[0]?'sel':''}" data-k="${k}" data-o="${q[1]??''}" data-p="${q[11]}" data-g="${l.g}" onclick="rungClick(this,${PM.indexOf(x)},${q[0]})" title="\ub204\ub974\uba74 \uc2ac\ub9bd\uc5d0 \ub2f4\uae30\uace0 \uadf8\ub798\ud504 \uae30\uc900\uc120\uc774 \ubc14\ub00c\uc5b4\uc694"><b>${q[0]}+</b><span>${q[11]}%</span><em>${q[1]!=null?fmtO(q[1]):'\ubc30\ub2f9 \uc5c6\uc74c'}</em></button>`}).join('')}</div><div class="pgraph" id="pg-${PM.indexOf(x)}">${gbar(l,r[0])}</div></div>`;}
 function rungClick(b,i,th){toggle(b);const g=document.getElementById('pg-'+i);if(g)g.innerHTML=gbar(PM[i].l,th);}
