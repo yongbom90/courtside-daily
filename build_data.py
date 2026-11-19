@@ -4,6 +4,7 @@ usage: python build_data.py YYYYMMDD out.json
 """
 import glob, json, os, sys, urllib.request
 import matchup as MU
+import insight as IN
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
@@ -51,6 +52,7 @@ def box_rows(s):
             ftm, fta = MU._split(d.get("freeThrowsMade-freeThrowsAttempted"))
             n_ = lambda k: int(d.get(k) or 0)
             rows.append({"n": a["athlete"]["displayName"], "id": a["athlete"]["id"], "min": mins, "st": bool(a.get("starter")),
+                         "pos": ((a["athlete"].get("position") or {}).get("abbreviation") or ""),
                          "PTS": n_("points"), "REB": n_("rebounds"), "AST": n_("assists"), "3PM": tpm,
                          "FGM": fgm, "FGA": fga, "3PA": tpa, "FTM": ftm, "FTA": fta, "OREB": n_("offensiveRebounds"),
                          "DREB": n_("defensiveRebounds"), "STL": n_("steals"), "BLK": n_("blocks"), "TOV": n_("turnovers")})
@@ -269,7 +271,7 @@ def league_profiles(date):
         ha = {c.get("team", {}).get("abbreviation"): c.get("homeAway", "")[:1] for c in comp.get("competitors", [])}
         if len(L) == 2 and all(ha.get(t) for t in L):
             rows.append({"d": (comp.get("date") or "")[:10], "t": {t: (ha[t], L[t]) for t in L}})
-    return MU.profiles([MU.team_lines(s) for s in sums]), len(evs), MU.team_book(rows)
+    return MU.profiles([MU.team_lines(s) for s in sums]), len(evs), MU.team_book(rows), IN.dvp([box_rows(s) for s in sums])
 
 
 def main(date, out):
@@ -343,7 +345,7 @@ def main(date, out):
     out_names = {i["n"] for g in games for v in g["inj"].values() for i in v if i["s"] in ("Out", "Doubtful")}
 
     # 🧭 매치업: 리그 30팀 허용 기록 순위 + 상대 핵심 선수(빅맨·림 보호·스틸)
-    TP, n_league, TB = league_profiles(date)
+    TP, n_league, TB, DVP = league_profiles(date)
     opp_of = {}
     for g in games:
         opp_of[g["away"]], opp_of[g["home"]] = g["home"], g["away"]
@@ -361,6 +363,17 @@ def main(date, out):
             opp = opp_of.get(ab)
             _mu[k] = MU.grade(TP, opp, cat, MU.player_mix(L), km[opp]) if L and opp in TP else None
         return _mu[k]
+
+    # 오늘 예상치 보정 순위: 포지션별 상대 허용(득·리·어) 순위가 있으면 그것, 없으면 팀 매치업 순위.
+    # 11/19 검증(리그 210경기·4,764건): 쉬운 상대 5팀 vs 까다로운 5팀 실제/평균 득점 +8.1/+2.2%, 리바 +2.1/−6.6%, 어시 +8.5/−4.3%, 3점 효과 없음.
+    def pos_of(ab, name):
+        return IN.POS.get(next((l.get("pos") for l in logs.get((ab, name), []) if l.get("pos")), ""), "")
+
+    def proj_rank(ab, name, cat):
+        dv = (DVP.get(opp_of.get(ab)) or {}).get(pos_of(ab, name))
+        if dv and cat in ("PTS", "REB", "AST"):
+            return dv[cat][1]
+        return (mu_for(ab, name, cat) or [None, None])[1]
 
     # 🆚 맞대결: 이번 시즌 박스(상대 핵심 선수 결장 여부 포함). 지난 시즌은 오너 요청으로 뺌.
     _h2h = {}
@@ -553,7 +566,7 @@ def main(date, out):
                    "hm": [round(sum(l[cat] for l in L if l.get("ha") == "h") / max(1, sum(l.get("ha") == "h" for l in L)), 1), sum(l.get("ha") == "h" for l in L)],
                    "aw": [round(sum(l[cat] for l in L if l.get("ha") == "a") / max(1, sum(l.get("ha") == "a" for l in L)), 1), sum(l.get("ha") == "a" for l in L)],
                    "home": ab == g["home"],
-                   "proj": MU.project(vals, cat, (mu_for(ab, name, cat) or [None, None])[1], blow) if cat in MU.PROJ else None, "flow": _fl,
+                   "proj": MU.project(vals, cat, proj_rank(ab, name, cat), blow) if cat in MU.PROJ else None, "flow": _fl,
                    "att": {"s": [round(sum(l.get(k, 0) for l in L) / N, 1) for k in ("FGA", "3PA", "FTA")],
                            "l5": [round(sum(l.get(k, 0) for l in L[:5]) / len(L[:5]), 1) for k in ("FGA", "3PA", "FTA")]}}
             mbad = bool(lad["mu"] and lad["mu"][0] == "bad")
@@ -705,7 +718,29 @@ def main(date, out):
             continue
         glog[d["id"]] = [[l["et"][5:].replace("-", "/"), l["opp"], l["ha"], round(l["min"]), l["PTS"], l["REB"], l["AST"], l["3PM"]]
                          for l in reversed(logs[key_of[d["id"]]])]
-    json.dump({"date": date, "prev": prev, "games": games, "teams": teams_mu, "book": {ab: TB[ab] for ab in opp_of if ab in TB}, "nLeague": n_league, "h2h": h2h, "h2hP": h2hP, "avP": avP, "th2h": th2h, "glog": glog, "stat80": stat80, "form": form, "results": results,
+    # 🔬 심층 지표: 출전 안정성·사용률·동료 결장 시 기록(선수별), 포지션별 상대 허용·예상 경기 속도(경기별)
+    team_box = {e: box_rows(sums[e]) for e in all_ev}
+    out_by_team = {}
+    for g in games:
+        for ab, v in g["inj"].items():
+            out_by_team[ab] = [i["n"] for i in v if i["s"] in ("Out", "Doubtful")]
+    deep = {}
+    for d in ladders:
+        if d["id"] in deep or d["id"] not in key_of:
+            continue
+        ab, name = key_of[d["id"]]
+        L = logs[(ab, name)]
+        tb = {e: br.get(ab, []) for e, br in team_box.items()}
+        tev = [e for _, e in sorted(ev_by_team[ab], reverse=True)]
+        mates = [(m, {l["e"] for l in logs.get((ab, m), [])}) for m in out_by_team.get(ab, []) if m != name]
+        pos = IN.POS.get(next((l.get("pos") for l in L if l.get("pos")), ""), "")
+        opp = opp_of.get(ab)
+        deep[d["id"]] = {"n": name, "t": ab, "g": d["g"], "pos": pos, "min": IN.minutes(L), "usg": IN.usage(L, tb),
+                         "ww": IN.with_without(L, tev, mates),
+                         "dvp": (DVP.get(opp) or {}).get(pos) if pos else None, "opp": opp}
+    gdeep = {g["m"]: {"pace": IN.pace(TP, g["away"], g["home"]), "out": {ab: out_by_team.get(ab, []) for ab in (g["away"], g["home"])}}
+             for g in games}
+    json.dump({"date": date, "prev": prev, "deep": deep, "gdeep": gdeep, "dvp": {ab: DVP[ab] for ab in opp_of if ab in DVP}, "dvpLg": {p: {k: round(sum(v[p][k][0] for v in DVP.values()) / len(DVP), 1) for k in IN.CATS} for p in ("G", "F", "C")} if DVP else {}, "games": games, "teams": teams_mu, "book": {ab: TB[ab] for ab in opp_of if ab in TB}, "nLeague": n_league, "h2h": h2h, "h2hP": h2hP, "avP": avP, "th2h": th2h, "glog": glog, "stat80": stat80, "form": form, "results": results,
                "value": [v for v in value if v["cat"] not in COMBO][:300],
                "cvalue": [v for v in value if v["cat"] in COMBO][:200], "ladders": ladders, "qtr": {d["id"]: qtr[d["id"]] for d in ladders if d["id"] in qtr}, "vgrades": vgrades, "vgFrom": vg_from,
                "props": props, "minutes": minutes[:40], "propReview": prop_review, "propReviewFrom": pr_from,
