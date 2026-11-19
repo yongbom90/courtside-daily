@@ -169,5 +169,23 @@ th{background:var(--surface2);font-family:"Barlow Condensed";font-size:15px}
 .tier{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:middle;white-space:nowrap;border:1px solid var(--line);background:var(--surface2);color:var(--muted)}
 .tier.s{background:linear-gradient(90deg,#f6c445,#e8912d);color:#3a2300;border-color:#e8912d}.tier.a{background:var(--pri-bg);color:var(--primary);border-color:var(--primary)}.tier.b{color:var(--text)}
 .pwhy{grid-column:1/-1;font-size:13px;line-height:1.55;background:var(--surface2);border-radius:9px;padding:8px 11px}.pwhy .wcol{color:var(--warn);font-weight:600}
+
+.pside{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(230px,1fr) minmax(170px,.75fr) minmax(170px,.75fr);gap:14px;align-items:start}
+.pside .pgraph{grid-column:auto}
+@media(max-width:1000px){.pside{grid-template-columns:1fr 1fr}.pside .pgraph{grid-column:1/-1}}
+@media(max-width:560px){.pside{grid-template-columns:1fr}}
+.pcol{background:var(--surface2);border-radius:10px;padding:9px 11px;min-width:0}
+.hb{display:grid;grid-template-columns:58px 1fr 34px;align-items:center;gap:6px;margin:5px 0;font-size:12px}
+.hb .hbl{color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb em{grid-column:2/-1;font-style:normal;font-size:10px;color:var(--muted);margin-top:-4px}
+.hbt{position:relative;height:10px;background:var(--surface);border-radius:5px}
+.hbt i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}.hbt i.ok{background:var(--good)}.hbt i.no{background:var(--bad);opacity:.75}
+.hbt u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text)}
+.hb b{font-family:"Barlow Condensed";font-size:16px;text-align:right}
+.qb{display:flex;justify-content:space-around;align-items:flex-end;height:96px;gap:6px;margin:6px 0}
+.qb div{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1}
+.qb i{width:70%;background:var(--primary);opacity:.6;border-radius:4px 4px 0 0}.qb i.top{opacity:1}
+.qb b{font-family:"Barlow Condensed";font-size:15px}.qb span{font-size:10.5px;color:var(--muted)}
+.spark.sm{height:70px}
 </style>
 </head>

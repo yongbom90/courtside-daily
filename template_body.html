@@ -593,6 +593,8 @@ function tierOf(id){const d=DEEP[id];const t=d&&d.tier;if(!t||!t.tm)return null;
  const lv=t.lgP?(t.lgP<=10?'슈퍼스타급':t.lgP<=30?'올스타급':t.lgP<=60?'주력급':''):'';return {t,role,cls,lv};}
 function tierB(id,long){const x=tierOf(id);if(!x)return '';
  return `<span class="tier ${x.cls}" title="팀 내 득점 ${x.t.tm}위 · 리그 득점 ${x.t.lgP||'—'}위 · 사용률 ${x.t.lgU||'—'}위 (20분 이상 ${AUTO.nTier}명 중)">${x.role}${x.lv?' · '+x.lv:''}${long&&x.t.lgP?` · 리그 득점 ${x.t.lgP}위`:''}</span>`;}
+const tipM=g=>{const m=/(\d+):(\d+)\s*(AM|PM)/i.exec(g.time||'');return m?((+m[1]%12)+(m[3].toUpperCase()==='PM'?12:0))*60+ +m[2]:9999;};
+AUTO.games.sort((a,b)=>tipM(a)-tipM(b));
 const LBY={};(AUTO.ladders||[]).forEach(l=>{(LBY[l.id]=LBY[l.id]||{})[l.cat]=l;});
 function paceBar(p){if(!p)return '';const pct=Math.max(4,Math.min(96,50+p.d*8));
  return `<div class="pace"><div class="lbl2">예상 경기 속도 · ${p.exp}회 (리그 ${p.lg})</div><div class="trk"><div class="mid"></div><div class="mk" style="left:${pct}%"></div></div>
@@ -656,6 +658,19 @@ function pmWhy(x){const l=x.l,r=x.r,th=r[0],d=DEEP[l.id]||{},G=GD[l.g]||{},gm=AU
  // 다른 기준선
  const R=rungsOf(l),up=R.find(q=>q[0]>th);const nx=up?` 한 단계 위 ${up[0]}+는 ${up[11]}%${up[1]!=null?` (${fmtO(up[1])})`:''}.`:'';
  return `💬 <b>${l.n.split(' ').slice(-1)[0]} ${CATN[l.cat]} ${th}+</b>: ${P.join(', ')}.${W.length?` <span class="wcol">⚠️ ${W.join(', ')}.</span>`:''} ${odd}${nx}`;}
+
+/* 그래프 옆: 상황별 평균 vs 기준선 · 쿼터별 평균 · 출전시간 추이 */
+function hbars(rows,th){const mx=Math.max(th*1.3,...rows.map(r=>r[1]||0))||1;
+ return rows.filter(r=>r[1]!=null).map(([t,v,sub])=>{const ok=v>=th;return `<div class="hb"><span class="hbl">${t}</span><div class="hbt"><i class="${ok?'ok':'no'}" style="width:${100*v/mx}%"></i><u style="left:${100*th/mx}%"></u></div><b class="${ok?'good':'bad'}">${v}</b>${sub?`<em>${sub}</em>`:''}</div>`}).join('');}
+function pmSide(x){const l=x.l,th=x.r[0],d=DEEP[l.id]||{},gm=AUTO.games.find(g=>g.m===l.g)||{},opp=gm.away===l.t?gm.home:gm.away;
+ const H=((AUTO.h2h||{})[l.id]||[]),hv=H.length?+(H.reduce((a,h)=>a+(h[l.cat]||0),0)/H.length).toFixed(1):null;
+ const rows=[['시즌',l.avg,`${l.N}경기`],['최근5',l.a5,''],[l.home?'홈':'원정',l.home?l.hm[0]:l.aw[0],`${l.home?l.hm[1]:l.aw[1]}경기`],[`vs ${opp}`,hv,H.length?`${H.length}경기`:''],['오늘 예상',l.proj?l.proj[0]:null,'']];
+ let q='';const Q=(AUTO.qtr||{})[l.id],parts=GI[l.cat]&&l.cat!=='3PM'?{PTS:['PTS'],REB:['REB'],AST:['AST'],PRA:['PTS','REB','AST'],PR:['PTS','REB'],PA:['PTS','AST'],RA:['REB','AST']}[l.cat]:null;
+ if(Q&&parts){const qs=[0,1,2,3].map(i=>+parts.reduce((a,k)=>a+(Q[k]?Q[k][i]:0),0).toFixed(1)),mx=Math.max(...qs)||1,best=qs.indexOf(Math.max(...qs));
+  q=`<div class="pcol"><div class="lbl2">쿼터별 평균 ${CATN[l.cat]}</div><div class="qb">${qs.map((v,i)=>`<div><i style="height:${Math.max(4,58*v/mx)}px" class="${i===best?'top':''}"></i><b>${v}</b><span>${i+1}Q</span></div>`).join('')}</div>
+  <div class="small muted">${Q.G}경기 · ${best===3?'4쿼터에 강해요':best===0?'1쿼터부터 강해요':`${best+1}쿼터가 가장 많아요`}${l.cat==='PTS'&&Q.q1z?` · 1Q 무득점 ${Q.q1z}경기`:''}</div></div>`;}
+ const m=d.min;let mm='';if(m){const mx=Math.max(...m.l10)+2;mm=`<div class="pcol"><div class="lbl2">출전시간 최근 10경기</div><div class="spark sm">${m.l10.map(v=>`<i class="${v<m.avg-5?'lo':''}" style="height:${100*v/mx}%" title="${v}분"></i>`).join('')}<div class="avg" style="bottom:${100*m.avg/mx}%"></div></div><div class="small muted">평균 ${m.avg}분 · ${m.lvl==='stable'?'안정':m.lvl==='volatile'?'들쭉날쭉':'보통'}</div></div>`;}
+ return `<div class="pcol"><div class="lbl2">상황별 평균 vs 기준선 ${th}+ <span class="muted">(세로선)</span></div>${hbars(rows,th)}</div>${q}${mm}`;}
 function pmRow(x){const l=x.l,r=x.r,key=`${l.n} ${CATN[l.cat]} ${r[0]}+`,lower=l.r.filter(q=>q[0]<r[0]).slice(-1)[0];
  return `<div class="pmat" data-i="${PM.indexOf(x)}" onclick="pmTog(event,this)"><div class="nm">${x.inj?'🩹 ':''}${x.rk&&x.rk>=23?'🧱 ':''}${l.n} ${tierB(l.id)}<small>${l.t} · ${l.g}${x.rk?` · ${x.src==='p'?'포지션':'팀'} 매치업 <span class="pill ${rkC(x.rk)}">${x.rk}위 ${rkT(x.rk)}</span>`:''}</small></div>
  <div class="pbig">${r[0]}+<small>${CATN[l.cat]}</small></div>
@@ -665,14 +680,14 @@ function pmRow(x){const l=x.l,r=x.r,key=`${l.n} ${CATN[l.cat]} ${r[0]}+`,lower=l
  <button class="btn mini" data-k="${key}" data-o="${r[1]??''}" data-p="${r[11]}" data-g="${l.g}" onclick="toggle(this)">+ 슬립 담기</button>
  <div class="pwhy">${pmWhy(x)}</div>
  <div class="rungs"><span class="rl">기준선별<br>오늘 확률</span>${rungsOf(l).map(q=>{const k=`${l.n} ${CATN[l.cat]} ${q[0]}+`;
-  return `<button class="rung ${q[11]>=80?'hi':q[11]>=60?'md':'lo'} ${q[0]===r[0]?'sel':''}" data-k="${k}" data-o="${q[1]??''}" data-p="${q[11]}" data-g="${l.g}" onclick="rungClick(this,${PM.indexOf(x)},${q[0]})" title="누르면 슬립에 담기고 그래프 기준선이 바뀌어요"><b>${q[0]}+</b><span>${q[11]}%</span><em>${q[1]!=null?fmtO(q[1]):'배당 없음'}</em></button>`}).join('')}</div><div class="pgraph" id="pg-${PM.indexOf(x)}">${gbar(l,r[0])}</div></div>`;}
+  return `<button class="rung ${q[11]>=80?'hi':q[11]>=60?'md':'lo'} ${q[0]===r[0]?'sel':''}" data-k="${k}" data-o="${q[1]??''}" data-p="${q[11]}" data-g="${l.g}" onclick="rungClick(this,${PM.indexOf(x)},${q[0]})" title="누르면 슬립에 담기고 그래프 기준선이 바뀌어요"><b>${q[0]}+</b><span>${q[11]}%</span><em>${q[1]!=null?fmtO(q[1]):'배당 없음'}</em></button>`}).join('')}</div><div class="pside"><div class="pgraph" id="pg-${PM.indexOf(x)}">${gbar(l,r[0])}</div>${pmSide(x)}</div></div>`;}
 function rungClick(b,i,th){toggle(b);const g=document.getElementById('pg-'+i);if(g)g.innerHTML=gbar(PM[i].l,th);}
 function rungsOf(l){const C=l.r.filter(q=>q[11]!=null).map(q=>q.slice());
  (VBY[l.id+'|'+l.cat]||[]).forEach(v=>{const i=C.findIndex(q=>q[0]===v.th);const row=[v.th,v.am,v.imp,v.p,v.ps,v.p5,v.hit,v.h5,null,v.edge,v.val,v.pt,null];
   if(i<0)C.push(row);else if(C[i][1]==null)C[i]=row;});
  return C.filter(q=>q[11]>=25).sort((a,b)=>a[0]-b[0]);}
 let pmT='all';
-function drawPM(){const L=PM.filter(x=>(pmG==='all'||x.l.g===pmG)&&(pmC==='all'||x.l.cat===pmC)&&(pmT==='all'||(()=>{const t=tierOf(x.l.id);return t&&(pmT==='ace'?t.t.tm===1:t.t.tm<=3);})()));
+function drawPM(){const L=PM.filter(x=>(pmG==='all'||x.l.g===pmG)&&(pmC==='all'||x.l.cat===pmC)&&(pmT==='all'||(()=>{const t=tierOf(x.l.id);if(!t)return false;return pmT==='o1'?t.t.tm===1:pmT==='o2'?t.t.tm===2:pmT==='o3'?t.t.tm===3:pmT==='st'?t.role==='주전':t.role==='벤치';})()));
  $('pmlist').innerHTML=L.slice(0,80).map(pmRow).join('')||'<div class="muted">조건에 맞는 픽이 없어요.</div>';sync();}
 $('pmg').innerHTML=['all',...AUTO.games.map(g=>g.m)].map(g=>`<button class="fbtn ${g==='all'?'on':''}" data-v="${g}">${g==='all'?'전체 경기':g}</button>`).join('');
 $('pmc').innerHTML=['all',...Object.keys(CATN)].map(c=>`<button class="fbtn ${c==='all'?'on':''}" data-v="${c}">${c==='all'?'전체 항목':CATN[c]}</button>`).join('');
@@ -703,7 +718,7 @@ function pmDet(x){const l=x.l,r=x.r,th=r[0],d=DEEP[l.id]||{},G=GD[l.g]||{},gm=AU
  const rs=(G.rest||{})[l.t];T.push(tile('','일정 · 장소',`${rs===0?'B2B':rs!=null?`휴식 ${rs}일`:'—'} · ${l.home?'홈':'원정'}`,`홈 평균 ${l.hm[0]} (${l.hm[1]}경기) · 원정 ${l.aw[0]} (${l.aw[1]}경기)`,true));
  return `<div class="pdet">${T.join('')}</div>`;}
 function pmTog(e,el){if(e.target.closest('button,.pgraph,.rungs'))return;const n=el.nextElementSibling;if(n&&n.classList.contains('pdet')){n.remove();return;}el.insertAdjacentHTML('afterend',pmDet(PM[+el.dataset.i]));}
-$('pmt').innerHTML=[['all','전체 선수'],['ace','👑 에이스(팀 1옵션)'],['top3','1~3옵션']].map(([v,t])=>`<button class="fbtn ${v==='all'?'on':''}" data-v="${v}">${t}</button>`).join('');
+$('pmt').innerHTML=[['all','전체 선수'],['o1','👑 1옵션'],['o2','2옵션'],['o3','3옵션'],['st','주전'],['bn','벤치']].map(([v,t])=>`<button class="fbtn ${v==='all'?'on':''}" data-v="${v}">${t}</button>`).join('');
 $('pmt').onclick=e=>{const b=e.target.closest('.fbtn');if(!b)return;pmT=b.dataset.v;$('pmt').querySelectorAll('.fbtn').forEach(x=>x.classList.toggle('on',x===b));drawPM();};
 drawPM();
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));t.classList.add('active');$(t.dataset.t).classList.add('active');window.scrollTo(0,0);if(t.dataset.t==='value'&&!vInit){vInit=true;drawV();}});
