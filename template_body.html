@@ -33,7 +33,7 @@
   <button class="tab" data-t="hot">🔥 폼 좋은 선수</button>
 </div>
 <section class="panel active" id="slate"><div class="note" id="slateNote"></div><div class="grid" id="slateGrid"></div></section>
-<section class="panel" id="pmat"><div class="note"><b>🎯 팔레이 재료</b> — 배당과 상관없이 <b>오늘 넘을 확률</b>(시즌 75%·최근5 25% + 최근 출전시간 추세 + 상대 보정 + 경기 흐름 보정) 순서예요. -500·-1000처럼 비싼 픽도 팔레이에 섞을 수 있게 그대로 넣었어요. 선수·항목마다 오늘 확률 80% 이상인 가장 높은 기준선 1개만 보여줘요. <b>줄을 누르면 베팅 체크리스트(기록·출전·매치업·흐름·부상·동료 결장·일정)가 펼쳐져요.</b> DK 배당이 있는 기준선을 먼저 골라요. 🩹 부상 리포트(Q/DTD) 선수는 맨 아래로 내렸고, 🧱는 상대가 까다로운(23~30위) 매치업이에요.</div><div class="filters" id="pmg"></div><div class="filters" id="pmc"></div><div id="pmlist"></div></section>
+<section class="panel" id="pmat"><div class="note"><b>🎯 팔레이 재료</b> — 배당과 상관없이 <b>오늘 넘을 확률</b>(시즌 75%·최근5 25% + 최근 출전시간 추세 + 상대 보정 + 경기 흐름 보정) 순서예요. -500·-1000처럼 비싼 픽도 팔레이에 섞을 수 있게 그대로 넣었어요. 선수·항목마다 오늘 확률 80% 이상인 가장 높은 기준선 1개만 보여줘요. <b>아래 칸(10+·15+·20+…)은 기준선별 오늘 확률과 DK 배당이에요. 칸을 누르면 그 기준선이 슬립에 담겨요(초록 80%+, 노랑 60~79%).</b> <b>줄을 누르면 베팅 체크리스트(기록·출전·매치업·흐름·부상·동료 결장·일정)가 펼쳐져요.</b> DK 배당이 있는 기준선을 먼저 골라요. 🩹 부상 리포트(Q/DTD) 선수는 맨 아래로 내렸고, 🧱는 상대가 까다로운(23~30위) 매치업이에요.</div><div class="filters" id="pmg"></div><div class="filters" id="pmc"></div><div id="pmlist"></div></section>
 <section class="panel" id="deep"><div class="note"><b>🔬 매치업 보드</b> — 베팅할 때 많이 보는 지표를 선수 카드로 모았어요. <b>상대 난이도</b>는 상대가 같은 포지션(가드·포워드·센터)에게 경기당 내준 기록의 30팀 순위예요(1위 = 가장 많이 내줌 = 쉬움, <span class="pill ez">1~8위 쉬움</span> <span class="pill hd">23~30위 까다로움</span>). <b>오늘 예상</b>은 시즌 평균에 이 순위를 반영했어요(리그 210경기 검증: 득점 ±3%·리바 ±4.4%·어시 ±6.4%, 3점은 효과 없어서 0). <b>출전시간</b> 막대의 빨간색은 평균보다 5분 이상 적게 뛴 경기, <b>사용률</b>은 코트에 있을 때 팀 공격을 끝낸 비율(슛·자유투·실책)이에요. <b>동료 결장 시</b>는 오늘 빠지는 동료가 없던 경기와 같이 뛴 경기의 평균 비교예요.</div><div id="deepWrap"></div></section>
 <section class="panel" id="teams"><div class="note">경기별로 두 팀을 나란히 보여줘요. 최근 5경기·부상·주요 선수 수치는 ESPN 자동 집계예요. 스타일·강점·약점·공략은 분석 의견이에요.</div><div id="teamWrap"></div></section>
 <section class="panel" id="review"><div id="revWrap"></div></section>
@@ -270,7 +270,8 @@ function sync(){$('cnt').innerText=slip.length;
   const pp=slip.filter(s=>s.p),pt=pp.reduce((a,s)=>a*s.p/100,1),gc={};slip.forEach(s=>s.g&&(gc[s.g]=(gc[s.g]||0)+1));const sg=Object.values(gc).filter(v=>v>1).reduce((a,v)=>a+v,0);
   $('slipList').innerText=(pp.length?`🎯 오늘 확률 곱 ≈ ${Math.round(100*pt)}%`+(pp.length<slip.length?` (${slip.length-pp.length}개 확률 없음)`:'')+(sg?` · 같은 경기 ${sg}개는 서로 영향이 있어 실제와 다를 수 있음`:'')+'\n':'')+slip.map(s=>s.k+(s.p?' ['+s.p+'%]':'')+(s.o!==null?' ('+fmtO(s.o)+')':' (북에서 배당 확인)')).join(' · ');}
  document.querySelectorAll('.btn[data-k]').forEach(b=>{const on=slip.some(s=>s.k===b.dataset.k);b.classList.toggle('on',on);b.dataset.l=b.dataset.l||b.innerText;b.innerText=on?'✓ 담김':b.dataset.l;});
- document.querySelectorAll('.lt[data-k]').forEach(b=>b.classList.toggle('on',slip.some(s=>s.k===b.dataset.k)));}
+ document.querySelectorAll('.lt[data-k]').forEach(b=>b.classList.toggle('on',slip.some(s=>s.k===b.dataset.k)));
+ document.querySelectorAll('.rung[data-k]').forEach(b=>b.classList.toggle('on',slip.some(s=>s.k===b.dataset.k)));}
 function toggle(b){const k=b.dataset.k,o=b.dataset.o===''?null:+b.dataset.o,p=+(b.dataset.p||0)||null,g=b.dataset.g||null;const i=slip.findIndex(s=>s.k===k);i>=0?slip.splice(i,1):slip.push({k,o,p,g});sync();}
 function clearSlip(){slip=[];sync();}
 function toast(m){const t=$('toast');t.innerText=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
@@ -628,7 +629,14 @@ function pmRow(x){const l=x.l,r=x.r,key=`${l.n} ${CATN[l.cat]} ${r[0]}+`,lower=l
  <div><div class="small">오늘 <b>${r[11]}%</b> <span class="muted">· 시즌 ${r[6]}/${l.N} · 최근5 ${r[7]}/5</span></div><div class="pbar"><i style="width:${r[11]}%"></i></div></div>
  <div class="small hide-m">최근5 ${l.last.join(' · ')}<br><span class="muted">시즌 평균 ${l.avg}${l.proj?` → 오늘 예상 ${l.proj[0]}`:''}${x.blow?' · ⚠️블로아웃':''}</span></div>
  <div class="odds">${r[1]!=null?fmtO(r[1]):'—'}<small>${r[1]!=null?'DK 배당':'DK 단계 없음'}</small></div>
- <button class="btn mini" data-k="${key}" data-o="${r[1]??''}" data-p="${r[11]}" data-g="${l.g}" onclick="toggle(this)">+ 슬립 담기</button></div>`;}
+ <button class="btn mini" data-k="${key}" data-o="${r[1]??''}" data-p="${r[11]}" data-g="${l.g}" onclick="toggle(this)">+ 슬립 담기</button>
+ <div class="rungs"><span class="rl">기준선별<br>오늘 확률</span>${rungsOf(l).map(q=>{const k=`${l.n} ${CATN[l.cat]} ${q[0]}+`;
+  return `<button class="rung ${q[11]>=80?'hi':q[11]>=60?'md':'lo'} ${q[0]===r[0]?'sel':''}" data-k="${k}" data-o="${q[1]??''}" data-p="${q[11]}" data-g="${l.g}" onclick="rungClick(this,${PM.indexOf(x)},${q[0]})" title="누르면 슬립에 담기고 그래프 기준선이 바뀌어요"><b>${q[0]}+</b><span>${q[11]}%</span><em>${q[1]!=null?fmtO(q[1]):'배당 없음'}</em></button>`}).join('')}</div><div class="pgraph" id="pg-${PM.indexOf(x)}">${gbar(l,r[0])}</div></div>`;}
+function rungClick(b,i,th){toggle(b);const g=document.getElementById('pg-'+i);if(g)g.innerHTML=gbar(PM[i].l,th);}
+function rungsOf(l){const C=l.r.filter(q=>q[11]!=null).map(q=>q.slice());
+ (VBY[l.id+'|'+l.cat]||[]).forEach(v=>{const i=C.findIndex(q=>q[0]===v.th);const row=[v.th,v.am,v.imp,v.p,v.ps,v.p5,v.hit,v.h5,null,v.edge,v.val,v.pt,null];
+  if(i<0)C.push(row);else if(C[i][1]==null)C[i]=row;});
+ return C.filter(q=>q[11]>=25).sort((a,b)=>a[0]-b[0]);}
 function drawPM(){const L=PM.filter(x=>(pmG==='all'||x.l.g===pmG)&&(pmC==='all'||x.l.cat===pmC));
  $('pmlist').innerHTML=L.slice(0,80).map(pmRow).join('')||'<div class="muted">조건에 맞는 픽이 없어요.</div>';sync();}
 $('pmg').innerHTML=['all',...AUTO.games.map(g=>g.m)].map(g=>`<button class="fbtn ${g==='all'?'on':''}" data-v="${g}">${g==='all'?'전체 경기':g}</button>`).join('');
@@ -658,7 +666,7 @@ function pmDet(x){const l=x.l,r=x.r,th=r[0],d=DEEP[l.id]||{},G=GD[l.g]||{},gm=AU
  if(ww.length)T.push(tile('','동료 결장 시 '+CATN[l.cat],'',ww.join('<br>')));
  const rs=(G.rest||{})[l.t];T.push(tile('','일정 · 장소',`${rs===0?'B2B':rs!=null?`휴식 ${rs}일`:'—'} · ${l.home?'홈':'원정'}`,`홈 평균 ${l.hm[0]} (${l.hm[1]}경기) · 원정 ${l.aw[0]} (${l.aw[1]}경기)`,true));
  return `<div class="pdet">${T.join('')}</div>`;}
-function pmTog(e,el){if(e.target.closest('button'))return;const n=el.nextElementSibling;if(n&&n.classList.contains('pdet')){n.remove();return;}el.insertAdjacentHTML('afterend',pmDet(PM[+el.dataset.i]));}
+function pmTog(e,el){if(e.target.closest('button,.pgraph,.rungs'))return;const n=el.nextElementSibling;if(n&&n.classList.contains('pdet')){n.remove();return;}el.insertAdjacentHTML('afterend',pmDet(PM[+el.dataset.i]));}
 drawPM();
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));t.classList.add('active');$(t.dataset.t).classList.add('active');window.scrollTo(0,0);if(t.dataset.t==='value'&&!vInit){vInit=true;drawV();}});
 function toggleTheme(){const r=document.documentElement;const cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=cur==='dark'?'light':'dark';}
