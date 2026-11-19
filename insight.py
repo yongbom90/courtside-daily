@@ -104,3 +104,40 @@ def pace(TP, a, h):
     exp, avg = (pa + ph) / 2, st.mean(lg)
     return {"a": round(pa, 1), "h": round(ph, 1), "exp": round(exp, 1), "lg": round(avg, 1), "d": round(100 * (exp / avg - 1), 1),
             "ra": 1 + sum(v["pace"] > pa for v in TP.values()), "rh": 1 + sum(v["pace"] > ph for v in TP.values())}
+
+
+def tiers(box_by_game, min_g=5):
+    """리그 전체 끝난 경기 → 선수 체급. {id: {t, G, ppg, mpg, usg, lgP(리그 득점 순위), lgU(사용률 순위), tm(팀 내 득점 순위)}}
+    팀 내 순위는 지금 소속 팀(가장 최근 경기 팀)에서 그 팀 경기의 40% 이상 뛴 선수끼리. 리그 순위는 5경기 이상·경기당 20분 이상."""
+    acc, team_g = {}, {}
+    for br in box_by_game:
+        if len(br) != 2:
+            continue
+        for t, rows in br.items():
+            team_g[t] = team_g.get(t, 0) + 1
+            tm_min = sum(r["min"] for r in rows)
+            tm_use = sum(r["FGA"] + 0.44 * r["FTA"] + r["TOV"] for r in rows) or 1
+            for r in rows:
+                a = acc.setdefault(r["id"], {"n": r["n"], "G": 0, "P": 0, "M": 0, "U": 0.0, "t": t})
+                a["G"] += 1; a["P"] += r["PTS"]; a["M"] += r["min"]; a["t"] = t
+                if r["min"]:
+                    a["U"] += 100 * (r["FGA"] + 0.44 * r["FTA"] + r["TOV"]) * (tm_min / 5) / (r["min"] * tm_use)
+    out = {}
+    for pid, a in acc.items():
+        if a["G"] < min_g:
+            continue
+        out[pid] = {"n": a["n"], "t": a["t"], "G": a["G"], "ppg": round(a["P"] / a["G"], 1), "mpg": round(a["M"] / a["G"], 1),
+                    "usg": round(a["U"] / a["G"], 1)}
+    q = [p for p, v in out.items() if v["mpg"] >= 20]
+    for key, nm in (("ppg", "lgP"), ("usg", "lgU")):
+        for i, p in enumerate(sorted(q, key=lambda p: -out[p][key])):
+            out[p][nm] = i + 1
+        out[p] = out[p]
+    by_t = {}
+    for p, v in out.items():
+        if v["G"] >= 0.4 * team_g.get(v["t"], 1):
+            by_t.setdefault(v["t"], []).append(p)
+    for t, ps in by_t.items():
+        for i, p in enumerate(sorted(ps, key=lambda p: -out[p]["ppg"])):
+            out[p]["tm"] = i + 1
+    return out

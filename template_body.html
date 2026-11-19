@@ -33,7 +33,7 @@
   <button class="tab" data-t="hot">🔥 폼 좋은 선수</button>
 </div>
 <section class="panel active" id="slate"><div class="note" id="slateNote"></div><div class="grid" id="slateGrid"></div></section>
-<section class="panel" id="pmat"><div class="note"><b>🎯 팔레이 재료</b> — 배당과 상관없이 <b>오늘 넘을 확률</b>(시즌 75%·최근5 25% + 최근 출전시간 추세 + 상대 보정 + 경기 흐름 보정) 순서예요. -500·-1000처럼 비싼 픽도 팔레이에 섞을 수 있게 그대로 넣었어요. 선수·항목마다 오늘 확률 80% 이상인 가장 높은 기준선 1개만 보여줘요. <b>아래 칸(10+·15+·20+…)은 기준선별 오늘 확률과 DK 배당이에요. 칸을 누르면 그 기준선이 슬립에 담겨요(초록 80%+, 노랑 60~79%).</b> <b>줄을 누르면 베팅 체크리스트(기록·출전·매치업·흐름·부상·동료 결장·일정)가 펼쳐져요.</b> DK 배당이 있는 기준선을 먼저 골라요. 🩹 부상 리포트(Q/DTD) 선수는 맨 아래로 내렸고, 🧱는 상대가 까다로운(23~30위) 매치업이에요.</div><div class="filters" id="pmg"></div><div class="filters" id="pmc"></div><div id="pmlist"></div></section>
+<section class="panel" id="pmat"><div class="note"><b>🎯 팔레이 재료</b> — 배당과 상관없이 <b>오늘 넘을 확률</b>(시즌 75%·최근5 25% + 최근 출전시간 추세 + 상대 보정 + 경기 흐름 보정) 순서예요. -500·-1000처럼 비싼 픽도 팔레이에 섞을 수 있게 그대로 넣었어요. 선수·항목마다 오늘 확률 80% 이상인 가장 높은 기준선 1개만 보여줘요. <b>아래 칸(10+·15+·20+…)은 기준선별 오늘 확률과 DK 배당이에요. 칸을 누르면 그 기준선이 슬립에 담겨요(초록 80%+, 노랑 60~79%).</b> <b>줄을 누르면 베팅 체크리스트(기록·출전·매치업·흐름·부상·동료 결장·일정)가 펼쳐져요.</b> DK 배당이 있는 기준선을 먼저 골라요. 🩹 부상 리포트(Q/DTD) 선수는 맨 아래로 내렸고, 🧱는 상대가 까다로운(23~30위) 매치업이에요. 이름 옆 배지는 <b>체급</b>(팀 내 득점 순위 → 👑1옵션·2옵션·3옵션·주전·벤치, 리그 득점 순위 10위 안 = 슈퍼스타급, 30위 안 = 올스타급, 60위 안 = 주력급)이에요.</div><div class="filters" id="pmg"></div><div class="filters" id="pmc"></div><div class="filters" id="pmt"></div><div id="pmlist"></div></section>
 <section class="panel" id="deep"><div class="note"><b>🔬 매치업 보드</b> — 베팅할 때 많이 보는 지표를 선수 카드로 모았어요. <b>상대 난이도</b>는 상대가 같은 포지션(가드·포워드·센터)에게 경기당 내준 기록의 30팀 순위예요(1위 = 가장 많이 내줌 = 쉬움, <span class="pill ez">1~8위 쉬움</span> <span class="pill hd">23~30위 까다로움</span>). <b>오늘 예상</b>은 시즌 평균에 이 순위를 반영했어요(리그 210경기 검증: 득점 ±3%·리바 ±4.4%·어시 ±6.4%, 3점은 효과 없어서 0). <b>출전시간</b> 막대의 빨간색은 평균보다 5분 이상 적게 뛴 경기, <b>사용률</b>은 코트에 있을 때 팀 공격을 끝낸 비율(슛·자유투·실책)이에요. <b>동료 결장 시</b>는 오늘 빠지는 동료가 없던 경기와 같이 뛴 경기의 평균 비교예요.</div><div id="deepWrap"></div></section>
 <section class="panel" id="teams"><div class="note">경기별로 두 팀을 나란히 보여줘요. 최근 5경기·부상·주요 선수 수치는 ESPN 자동 집계예요. 스타일·강점·약점·공략은 분석 의견이에요.</div><div id="teamWrap"></div></section>
 <section class="panel" id="review"><div id="revWrap"></div></section>
@@ -587,6 +587,12 @@ $('minsGrid').innerHTML=(AUTO.minutes||[]).slice(0,24).map(m=>{const up=m.d>0;
 /* 🔬 매치업 보드 · 🎯 팔레이 재료 */
 const DEEP=AUTO.deep||{},GD=AUTO.gdeep||{},DLG=AUTO.dvpLg||{},POSN={G:'가드',F:'포워드',C:'센터'},KN={PTS:'득점',REB:'리바',AST:'어시','3PM':'3점'};
 const sn=n=>{const p=n.split(' ').filter(x=>!/^(Jr\.?|Sr\.?|II|III|IV)$/.test(x));return p.length>1?p.slice(-1)[0]:n;},rkC=r=>r<=8?'ez':r>=23?'hd':'md',rkT=r=>r<=8?'쉬움':r>=23?'까다로움':'보통';
+function tierOf(id){const d=DEEP[id];const t=d&&d.tier;if(!t||!t.tm)return null;
+ const role=t.tm===1?'👑 1옵션':t.tm===2?'2옵션':t.tm===3?'3옵션':(d.st5>=3?'주전':'벤치');
+ const cls=t.lgP&&t.lgP<=10?'s':t.lgP&&t.lgP<=30?'a':t.tm<=3?'b':'c';
+ const lv=t.lgP?(t.lgP<=10?'슈퍼스타급':t.lgP<=30?'올스타급':t.lgP<=60?'주력급':''):'';return {t,role,cls,lv};}
+function tierB(id,long){const x=tierOf(id);if(!x)return '';
+ return `<span class="tier ${x.cls}" title="팀 내 득점 ${x.t.tm}위 · 리그 득점 ${x.t.lgP||'—'}위 · 사용률 ${x.t.lgU||'—'}위 (20분 이상 ${AUTO.nTier}명 중)">${x.role}${x.lv?' · '+x.lv:''}${long&&x.t.lgP?` · 리그 득점 ${x.t.lgP}위`:''}</span>`;}
 const LBY={};(AUTO.ladders||[]).forEach(l=>{(LBY[l.id]=LBY[l.id]||{})[l.cat]=l;});
 function paceBar(p){if(!p)return '';const pct=Math.max(4,Math.min(96,50+p.d*8));
  return `<div class="pace"><div class="lbl2">예상 경기 속도 · ${p.exp}회 (리그 ${p.lg})</div><div class="trk"><div class="mid"></div><div class="mk" style="left:${pct}%"></div></div>
@@ -605,7 +611,7 @@ function dCard(id){const d=DEEP[id],L=LBY[id]||{};const dv=d.dvp,lg=DLG[d.pos]||
  const ww=(d.ww||[]).map(w=>{const dp=+(w.wo.PTS-w.with.PTS).toFixed(1),dm=+(w.wo.min-w.with.min).toFixed(1);
   return `<div class="wwr"><div><b>${sn(w.w)}</b> 결장 시 <span class="muted">(${w.nO}경기 vs 같이 ${w.nW}경기)</span>${w.nO<=3?' <span class="pill md">표본 적음</span>':''}<br><span class="small">득 ${w.wo.PTS}·리 ${w.wo.REB}·어 ${w.wo.AST}·3점 ${w.wo['3PM']} · ${w.wo.min}분 <span class="muted">(같이: ${w.with.PTS}·${w.with.REB}·${w.with.AST}·${w.with['3PM']})</span></span></div>
   <span class="pill ${w.nO<=3?'md':dp>=3?'ez':dp<=-3?'hd':'md'}">득점 ${dp>0?'+':''}${dp}</span></div>`}).join('');
- return `<div class="dcard"><div class="dhead"><div><b>${d.n}</b><small>${d.t} vs ${d.opp}</small></div><span class="pos">${POSN[d.pos]||'?'}</span></div>
+ return `<div class="dcard"><div class="dhead"><div><b>${d.n}</b> ${tierB(id,true)}<small>${d.t} vs ${d.opp}${d.tier?` · ${d.tier.ppg}점 · ${d.tier.mpg}분 · 사용률 ${d.tier.usg}%`:''}</small></div><span class="pos">${POSN[d.pos]||'?'}</span></div>
  <div><div class="lbl2">${d.opp} 수비 순위 · ${POSN[d.pos]||''}에게 내준 기록 · 1위 = 가장 많이 내줌(쉬움), 30위 = 가장 적게(까다로움)</div><div class="mchips">${chips}</div></div>
  <div><div class="lbl2">오늘 예상 (포지션 매치업·경기 흐름 반영)</div><div class="projs">${pj}</div></div>
  <div class="row2">${mins}${usg}</div>${ww?`<div><div class="lbl2">오늘 빠지는 동료가 없던 경기</div><div class="ww">${ww}</div></div>`:''}</div>`;}
@@ -624,7 +630,7 @@ const PM=[],VBY={};VL.forEach(v=>{(VBY[v.id+'|'+v.cat]=VBY[v.id+'|'+v.cat]||[]).
 PM.sort((a,b)=>a.inj-b.inj||b.r[11]-a.r[11]||b.r[6]/b.l.N-a.r[6]/a.l.N);
 let pmG='all',pmC='all';
 function pmRow(x){const l=x.l,r=x.r,key=`${l.n} ${CATN[l.cat]} ${r[0]}+`,lower=l.r.filter(q=>q[0]<r[0]).slice(-1)[0];
- return `<div class="pmat" data-i="${PM.indexOf(x)}" onclick="pmTog(event,this)"><div class="nm">${x.inj?'🩹 ':''}${x.rk&&x.rk>=23?'🧱 ':''}${l.n}<small>${l.t} · ${l.g}${x.rk?` · ${x.src==='p'?'포지션':'팀'} 매치업 <span class="pill ${rkC(x.rk)}">${x.rk}위 ${rkT(x.rk)}</span>`:''}</small></div>
+ return `<div class="pmat" data-i="${PM.indexOf(x)}" onclick="pmTog(event,this)"><div class="nm">${x.inj?'🩹 ':''}${x.rk&&x.rk>=23?'🧱 ':''}${l.n} ${tierB(l.id)}<small>${l.t} · ${l.g}${x.rk?` · ${x.src==='p'?'포지션':'팀'} 매치업 <span class="pill ${rkC(x.rk)}">${x.rk}위 ${rkT(x.rk)}</span>`:''}</small></div>
  <div class="pbig">${r[0]}+<small>${CATN[l.cat]}</small></div>
  <div><div class="small">오늘 <b>${r[11]}%</b> <span class="muted">· 시즌 ${r[6]}/${l.N} · 최근5 ${r[7]}/5</span></div><div class="pbar"><i style="width:${r[11]}%"></i></div></div>
  <div class="small hide-m">최근5 ${l.last.join(' · ')}<br><span class="muted">시즌 평균 ${l.avg}${l.proj?` → 오늘 예상 ${l.proj[0]}`:''}${x.blow?' · ⚠️블로아웃':''}</span></div>
@@ -637,7 +643,8 @@ function rungsOf(l){const C=l.r.filter(q=>q[11]!=null).map(q=>q.slice());
  (VBY[l.id+'|'+l.cat]||[]).forEach(v=>{const i=C.findIndex(q=>q[0]===v.th);const row=[v.th,v.am,v.imp,v.p,v.ps,v.p5,v.hit,v.h5,null,v.edge,v.val,v.pt,null];
   if(i<0)C.push(row);else if(C[i][1]==null)C[i]=row;});
  return C.filter(q=>q[11]>=25).sort((a,b)=>a[0]-b[0]);}
-function drawPM(){const L=PM.filter(x=>(pmG==='all'||x.l.g===pmG)&&(pmC==='all'||x.l.cat===pmC));
+let pmT='all';
+function drawPM(){const L=PM.filter(x=>(pmG==='all'||x.l.g===pmG)&&(pmC==='all'||x.l.cat===pmC)&&(pmT==='all'||(()=>{const t=tierOf(x.l.id);return t&&(pmT==='ace'?t.t.tm===1:t.t.tm<=3);})()));
  $('pmlist').innerHTML=L.slice(0,80).map(pmRow).join('')||'<div class="muted">조건에 맞는 픽이 없어요.</div>';sync();}
 $('pmg').innerHTML=['all',...AUTO.games.map(g=>g.m)].map(g=>`<button class="fbtn ${g==='all'?'on':''}" data-v="${g}">${g==='all'?'전체 경기':g}</button>`).join('');
 $('pmc').innerHTML=['all',...Object.keys(CATN)].map(c=>`<button class="fbtn ${c==='all'?'on':''}" data-v="${c}">${c==='all'?'전체 항목':CATN[c]}</button>`).join('');
@@ -653,7 +660,8 @@ function pmDet(x){const l=x.l,r=x.r,th=r[0],d=DEEP[l.id]||{},G=GD[l.g]||{},gm=AU
  const gl=(AUTO.glog||{})[l.id]||[],vals=gl.map(g=>(GI[l.cat]||[]).reduce((a,i)=>a+g[i],0)),md=med(vals),l10=vals.slice(-10);
  const h10=l10.filter(v=>v>=th).length,pr=(AUTO.props||[]).find(p=>p.id===l.id&&p.cat===l.cat);
  const ms=gl.map(g=>g[3]),mAvg=ms.length?ms.reduce((a,b)=>a+b,0)/ms.length:0,m3=ms.slice(-3),m3a=m3.length?m3.reduce((a,b)=>a+b,0)/m3.length:0,mt=mAvg?Math.round(100*(m3a/mAvg-1)):0;
- const T=[];
+ const T=[],tx=tierOf(l.id);
+ if(tx)T.push(tile(tx.cls==='s'||tx.cls==='a'?'g':'','체급',tx.role+(tx.lv?' · '+tx.lv:''),`팀 내 득점 ${tx.t.tm}위 · 리그 득점 <b>${tx.t.lgP||'—'}위</b> · 사용률 <b>${tx.t.lgU||'—'}위</b><br><span class="muted">경기당 ${tx.t.ppg}점 · ${tx.t.mpg}분 (리그 20분 이상 ${AUTO.nTier}명 기준)</span>`));
  T.push(tile(md!=null&&md>=th?'g':'b','기준선 vs 기록',`${th}+ <span class="small muted">${CATN[l.cat]}</span>`,`시즌 평균 <b>${l.avg}</b> · 중앙값 <b>${md??'—'}</b>${l.proj?` · 오늘 예상 <b>${l.proj[0]}</b>`:''}${pr?`<br>DK 기본 라인 ${pr.line} (오버 ${pr.hit}/${pr.N})`:''}`));
  T.push(tile(r[7]>=4&&h10>=8?'g':r[7]<=2?'b':'w','적중 기록',`${r[6]}/${l.N}`,`최근10 <b>${h10}/${l10.length}</b> · 최근5 <b>${r[7]}/5</b>${l.hN?` · 맞대결 <b>${r[12]}/${l.hN}</b>`:' · 맞대결 없음'}<br>최근5 기록 ${l.last.join(' · ')}`));
  const imp=r[2];T.push(tile(imp==null?'':r[11]>=imp?'g':'w','오늘 확률 vs 배당',`${r[11]}%`,imp!=null?`DK ${fmtO(r[1])} = 배당 확률 ${imp}% → ${r[11]-imp>=0?'+':''}${r[11]-imp}%p`:'이 단계는 DK 배당 없음 (북에서 확인)'));
@@ -667,6 +675,8 @@ function pmDet(x){const l=x.l,r=x.r,th=r[0],d=DEEP[l.id]||{},G=GD[l.g]||{},gm=AU
  const rs=(G.rest||{})[l.t];T.push(tile('','일정 · 장소',`${rs===0?'B2B':rs!=null?`휴식 ${rs}일`:'—'} · ${l.home?'홈':'원정'}`,`홈 평균 ${l.hm[0]} (${l.hm[1]}경기) · 원정 ${l.aw[0]} (${l.aw[1]}경기)`,true));
  return `<div class="pdet">${T.join('')}</div>`;}
 function pmTog(e,el){if(e.target.closest('button,.pgraph,.rungs'))return;const n=el.nextElementSibling;if(n&&n.classList.contains('pdet')){n.remove();return;}el.insertAdjacentHTML('afterend',pmDet(PM[+el.dataset.i]));}
+$('pmt').innerHTML=[['all','전체 선수'],['ace','👑 에이스(팀 1옵션)'],['top3','1~3옵션']].map(([v,t])=>`<button class="fbtn ${v==='all'?'on':''}" data-v="${v}">${t}</button>`).join('');
+$('pmt').onclick=e=>{const b=e.target.closest('.fbtn');if(!b)return;pmT=b.dataset.v;$('pmt').querySelectorAll('.fbtn').forEach(x=>x.classList.toggle('on',x===b));drawPM();};
 drawPM();
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));t.classList.add('active');$(t.dataset.t).classList.add('active');window.scrollTo(0,0);if(t.dataset.t==='value'&&!vInit){vInit=true;drawV();}});
 function toggleTheme(){const r=document.documentElement;const cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=cur==='dark'?'light':'dark';}

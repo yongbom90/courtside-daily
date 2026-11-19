@@ -271,7 +271,7 @@ def league_profiles(date):
         ha = {c.get("team", {}).get("abbreviation"): c.get("homeAway", "")[:1] for c in comp.get("competitors", [])}
         if len(L) == 2 and all(ha.get(t) for t in L):
             rows.append({"d": (comp.get("date") or "")[:10], "t": {t: (ha[t], L[t]) for t in L}})
-    return MU.profiles([MU.team_lines(s) for s in sums]), len(evs), MU.team_book(rows), IN.dvp([box_rows(s) for s in sums])
+    return MU.profiles([MU.team_lines(s) for s in sums]), len(evs), MU.team_book(rows), IN.dvp([box_rows(s) for s in sums]), IN.tiers([box_rows(s) for s in sums])
 
 
 def main(date, out):
@@ -345,7 +345,7 @@ def main(date, out):
     out_names = {i["n"] for g in games for v in g["inj"].values() for i in v if i["s"] in ("Out", "Doubtful")}
 
     # 🧭 매치업: 리그 30팀 허용 기록 순위 + 상대 핵심 선수(빅맨·림 보호·스틸)
-    TP, n_league, TB, DVP = league_profiles(date)
+    TP, n_league, TB, DVP, TIER = league_profiles(date)
     opp_of = {}
     for g in games:
         opp_of[g["away"]], opp_of[g["home"]] = g["home"], g["away"]
@@ -737,7 +737,8 @@ def main(date, out):
         opp = opp_of.get(ab)
         deep[d["id"]] = {"n": name, "t": ab, "g": d["g"], "pos": pos, "min": IN.minutes(L), "usg": IN.usage(L, tb),
                          "ww": IN.with_without(L, tev, mates),
-                         "dvp": (DVP.get(opp) or {}).get(pos) if pos else None, "opp": opp}
+                         "dvp": (DVP.get(opp) or {}).get(pos) if pos else None, "opp": opp, "tier": TIER.get(d["id"]),
+                         "st5": sum(l.get("st", False) for l in L[:5])}
     _today = datetime.strptime(date, "%Y%m%d")
     def _rest(ab):
         ds = [_et(dt) for dt, _ in ev_by_team.get(ab, [])]
@@ -745,7 +746,7 @@ def main(date, out):
     gdeep = {g["m"]: {"pace": IN.pace(TP, g["away"], g["home"]), "out": {ab: out_by_team.get(ab, []) for ab in (g["away"], g["home"])},
                       "rest": {ab: _rest(ab) for ab in (g["away"], g["home"])}}
              for g in games}
-    json.dump({"date": date, "prev": prev, "deep": deep, "gdeep": gdeep, "dvp": {ab: DVP[ab] for ab in opp_of if ab in DVP}, "dvpLg": {p: {k: round(sum(v[p][k][0] for v in DVP.values()) / len(DVP), 1) for k in IN.CATS} for p in ("G", "F", "C")} if DVP else {}, "games": games, "teams": teams_mu, "book": {ab: TB[ab] for ab in opp_of if ab in TB}, "nLeague": n_league, "h2h": h2h, "h2hP": h2hP, "avP": avP, "th2h": th2h, "glog": glog, "stat80": stat80, "form": form, "results": results,
+    json.dump({"date": date, "prev": prev, "deep": deep, "gdeep": gdeep, "dvp": {ab: DVP[ab] for ab in opp_of if ab in DVP}, "nTier": sum(1 for v in TIER.values() if "lgP" in v), "dvpLg": {p: {k: round(sum(v[p][k][0] for v in DVP.values()) / len(DVP), 1) for k in IN.CATS} for p in ("G", "F", "C")} if DVP else {}, "games": games, "teams": teams_mu, "book": {ab: TB[ab] for ab in opp_of if ab in TB}, "nLeague": n_league, "h2h": h2h, "h2hP": h2hP, "avP": avP, "th2h": th2h, "glog": glog, "stat80": stat80, "form": form, "results": results,
                "value": [v for v in value if v["cat"] not in COMBO][:300],
                "cvalue": [v for v in value if v["cat"] in COMBO][:200], "ladders": ladders, "qtr": {d["id"]: qtr[d["id"]] for d in ladders if d["id"] in qtr}, "vgrades": vgrades, "vgFrom": vg_from,
                "props": props, "minutes": minutes[:40], "propReview": prop_review, "propReviewFrom": pr_from,
