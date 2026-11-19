@@ -629,6 +629,33 @@ const PM=[],VBY={};VL.forEach(v=>{(VBY[v.id+'|'+v.cat]=VBY[v.id+'|'+v.cat]||[]).
  PM.push({l,r,rk:dv,src:d&&d.dvp&&['PTS','REB','AST','3PM'].includes(l.cat)?'p':'t',inj:(l.fl||[]).some(f=>f.includes('부상')),blow:!!(l.flow&&l.flow[2])});});
 PM.sort((a,b)=>a.inj-b.inj||b.r[11]-a.r[11]||b.r[6]/b.l.N-a.r[6]/a.l.N);
 let pmG='all',pmC='all';
+
+/* 💬 픽 설명: 데이터에 있는 수치만으로 만든 한 줄 근거(장점 → 주의 → 다른 기준선) */
+function pmWhy(x){const l=x.l,r=x.r,th=r[0],d=DEEP[l.id]||{},G=GD[l.g]||{},gm=AUTO.games.find(g=>g.m===l.g)||{},opp=gm.away===l.t?gm.home:gm.away;
+ const gl=(AUTO.glog||{})[l.id]||[],V=gl.map(g=>(GI[l.cat]||[]).reduce((a,i)=>a+g[i],0)),md=med(V);
+ let run=0;for(let i=V.length-1;i>=0&&V[i]>=th;i--)run++;
+ const P=[],W=[],tx=tierOf(l.id);
+ // 기록
+ P.push(r[6]===l.N?`시즌 ${l.N}경기 <b>전부</b> ${th}+`:`시즌 ${l.N}경기 중 <b>${r[6]}경기</b> ${th}+`+(run>=3?` (최근 ${run}경기 연속)`:''));
+ if(md!=null){const gap=+(md-th).toFixed(1);if(gap>=Math.max(2,th*.25))P.push(`중앙값 ${md}로 기준선보다 ${gap} 높아 여유 있어요`);else if(gap<Math.max(1,th*.1))W.push(`중앙값 ${md}로 기준선 근처라 빠듯해요`);}
+ // 체급·매치업
+ const rk=x.rk,star=tx&&((tx.t.lgP||999)<=30||tx.t.tm===1);
+ if(rk){if(rk<=8)P.push(`쉬운 상대: ${opp} 수비의 ${x.src==='p'?POSN[d.pos]+' ':''}${KN[l.cat]||CATN[l.cat]} 허용 ${rk}위/30`);
+  else if(rk>=23)(star&&l.cat==='PTS'?P:W).push(star&&l.cat==='PTS'?`${opp} 수비가 까다롭지만(${rk}위) 에이스 득점은 검증상 영향이 거의 없어요`:`${opp} 수비가 까다로운 편이에요(${rk}위/30)`);}
+ if(tx&&tx.t.tm===1)P.push(`팀 1옵션${tx.lv?'·'+tx.lv:''}`);
+ // 출전
+ const ms=gl.map(g=>g[3]),mA=ms.length?ms.reduce((a,b)=>a+b,0)/ms.length:0,m3=ms.slice(-3),mt=mA&&m3.length?Math.round(100*(m3.reduce((a,b)=>a+b,0)/m3.length/mA-1)):0;
+ if(mt>=10)P.push(`최근 3경기 출전 +${mt}%`);else if(mt<=-10)W.push(`최근 3경기 출전 ${mt}%`);
+ if(d.min&&d.min.lvl==='volatile')W.push('출전시간이 들쭉날쭉해요');else if(d.min&&d.min.lvl==='stable')P.push(`출전 안정(평균 ${d.min.avg}분)`);
+ // 흐름·부상
+ if(l.flow&&l.flow[0]==='bad')W.push('큰 점수 차 예상 → 4쿼터 출전이 줄 수 있어요');
+ if(x.inj)W.push('부상 리포트에 있어요(출전 확인 필요)');
+ if(r[7]<=2)W.push(`최근 5경기 ${r[7]}/5로 최근 흐름이 약해요`);
+ // 배당
+ let odd='';if(r[1]!=null){const imp=r[2];odd=imp>=90?`DK ${fmtO(r[1])}(배당 확률 ${imp}%)로 비싸지만 팔레이에 섞기 좋은 안정형이에요.`:r[11]-imp>=5?`DK ${fmtO(r[1])}는 배당 확률 ${imp}%로, 오늘 확률 ${r[11]}%보다 싸서 가성비도 좋아요.`:`DK ${fmtO(r[1])} (배당 확률 ${imp}%).`;}
+ // 다른 기준선
+ const R=rungsOf(l),up=R.find(q=>q[0]>th);const nx=up?` 한 단계 위 ${up[0]}+는 ${up[11]}%${up[1]!=null?` (${fmtO(up[1])})`:''}.`:'';
+ return `💬 <b>${l.n.split(' ').slice(-1)[0]} ${CATN[l.cat]} ${th}+</b>: ${P.join(', ')}.${W.length?` <span class="wcol">⚠️ ${W.join(', ')}.</span>`:''} ${odd}${nx}`;}
 function pmRow(x){const l=x.l,r=x.r,key=`${l.n} ${CATN[l.cat]} ${r[0]}+`,lower=l.r.filter(q=>q[0]<r[0]).slice(-1)[0];
  return `<div class="pmat" data-i="${PM.indexOf(x)}" onclick="pmTog(event,this)"><div class="nm">${x.inj?'🩹 ':''}${x.rk&&x.rk>=23?'🧱 ':''}${l.n} ${tierB(l.id)}<small>${l.t} · ${l.g}${x.rk?` · ${x.src==='p'?'포지션':'팀'} 매치업 <span class="pill ${rkC(x.rk)}">${x.rk}위 ${rkT(x.rk)}</span>`:''}</small></div>
  <div class="pbig">${r[0]}+<small>${CATN[l.cat]}</small></div>
@@ -636,6 +663,7 @@ function pmRow(x){const l=x.l,r=x.r,key=`${l.n} ${CATN[l.cat]} ${r[0]}+`,lower=l
  <div class="small hide-m">최근5 ${l.last.join(' · ')}<br><span class="muted">시즌 평균 ${l.avg}${l.proj?` → 오늘 예상 ${l.proj[0]}`:''}${x.blow?' · ⚠️블로아웃':''}</span></div>
  <div class="odds">${r[1]!=null?fmtO(r[1]):'—'}<small>${r[1]!=null?'DK 배당':'DK 단계 없음'}</small></div>
  <button class="btn mini" data-k="${key}" data-o="${r[1]??''}" data-p="${r[11]}" data-g="${l.g}" onclick="toggle(this)">+ 슬립 담기</button>
+ <div class="pwhy">${pmWhy(x)}</div>
  <div class="rungs"><span class="rl">기준선별<br>오늘 확률</span>${rungsOf(l).map(q=>{const k=`${l.n} ${CATN[l.cat]} ${q[0]}+`;
   return `<button class="rung ${q[11]>=80?'hi':q[11]>=60?'md':'lo'} ${q[0]===r[0]?'sel':''}" data-k="${k}" data-o="${q[1]??''}" data-p="${q[11]}" data-g="${l.g}" onclick="rungClick(this,${PM.indexOf(x)},${q[0]})" title="누르면 슬립에 담기고 그래프 기준선이 바뀌어요"><b>${q[0]}+</b><span>${q[11]}%</span><em>${q[1]!=null?fmtO(q[1]):'배당 없음'}</em></button>`}).join('')}</div><div class="pgraph" id="pg-${PM.indexOf(x)}">${gbar(l,r[0])}</div></div>`;}
 function rungClick(b,i,th){toggle(b);const g=document.getElementById('pg-'+i);if(g)g.innerHTML=gbar(PM[i].l,th);}
