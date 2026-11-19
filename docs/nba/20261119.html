@@ -169,6 +169,24 @@ th{background:var(--surface2);font-family:"Barlow Condensed";font-size:15px}
 .tier{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;vertical-align:middle;white-space:nowrap;border:1px solid var(--line);background:var(--surface2);color:var(--muted)}
 .tier.s{background:linear-gradient(90deg,#f6c445,#e8912d);color:#3a2300;border-color:#e8912d}.tier.a{background:var(--pri-bg);color:var(--primary);border-color:var(--primary)}.tier.b{color:var(--text)}
 .pwhy{grid-column:1/-1;font-size:13px;line-height:1.55;background:var(--surface2);border-radius:9px;padding:8px 11px}.pwhy .wcol{color:var(--warn);font-weight:600}
+
+.pside{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(230px,1fr) minmax(170px,.75fr) minmax(170px,.75fr);gap:14px;align-items:start}
+.pside .pgraph{grid-column:auto}
+@media(max-width:1000px){.pside{grid-template-columns:1fr 1fr}.pside .pgraph{grid-column:1/-1}}
+@media(max-width:560px){.pside{grid-template-columns:1fr}}
+.pcol{background:var(--surface2);border-radius:10px;padding:9px 11px;min-width:0}
+.hb{display:grid;grid-template-columns:58px 1fr 34px;align-items:center;gap:6px;margin:5px 0;font-size:12px}
+.hb .hbl{color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb em{grid-column:2/-1;font-style:normal;font-size:10px;color:var(--muted);margin-top:-4px}
+.hbt{position:relative;height:10px;background:var(--surface);border-radius:5px}
+.hbt i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}.hbt i.ok{background:var(--good)}.hbt i.no{background:var(--bad);opacity:.75}
+.hbt u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text)}
+.hb b{font-family:"Barlow Condensed";font-size:16px;text-align:right}
+.qb{display:flex;justify-content:space-around;align-items:flex-end;height:96px;gap:6px;margin:6px 0}
+.qb div{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1}
+.qb i{width:70%;background:var(--primary);opacity:.6;border-radius:4px 4px 0 0}.qb i.top{opacity:1}
+.qb b{font-family:"Barlow Condensed";font-size:15px}.qb span{font-size:10.5px;color:var(--muted)}
+.spark.sm{height:70px}
 </style>
 </head>
 <style>
@@ -766,6 +784,8 @@ function tierOf(id){const d=DEEP[id];const t=d&&d.tier;if(!t||!t.tm)return null;
  const lv=t.lgP?(t.lgP<=10?'\uc288\ud37c\uc2a4\ud0c0\uae09':t.lgP<=30?'\uc62c\uc2a4\ud0c0\uae09':t.lgP<=60?'\uc8fc\ub825\uae09':''):'';return {t,role,cls,lv};}
 function tierB(id,long){const x=tierOf(id);if(!x)return '';
  return `<span class="tier ${x.cls}" title="\ud300 \ub0b4 \ub4dd\uc810 ${x.t.tm}\uc704 \u00b7 \ub9ac\uadf8 \ub4dd\uc810 ${x.t.lgP||'\u2014'}\uc704 \u00b7 \uc0ac\uc6a9\ub960 ${x.t.lgU||'\u2014'}\uc704 (20\ubd84 \uc774\uc0c1 ${AUTO.nTier}\uba85 \uc911)">${x.role}${x.lv?' \u00b7 '+x.lv:''}${long&&x.t.lgP?` \u00b7 \ub9ac\uadf8 \ub4dd\uc810 ${x.t.lgP}\uc704`:''}</span>`;}
+const tipM=g=>{const m=/(\d+):(\d+)\s*(AM|PM)/i.exec(g.time||'');return m?((+m[1]%12)+(m[3].toUpperCase()==='PM'?12:0))*60+ +m[2]:9999;};
+AUTO.games.sort((a,b)=>tipM(a)-tipM(b));
 const LBY={};(AUTO.ladders||[]).forEach(l=>{(LBY[l.id]=LBY[l.id]||{})[l.cat]=l;});
 function paceBar(p){if(!p)return '';const pct=Math.max(4,Math.min(96,50+p.d*8));
  return `<div class="pace"><div class="lbl2">\uc608\uc0c1 \uacbd\uae30 \uc18d\ub3c4 \u00b7 ${p.exp}\ud68c (\ub9ac\uadf8 ${p.lg})</div><div class="trk"><div class="mid"></div><div class="mk" style="left:${pct}%"></div></div>
@@ -829,6 +849,19 @@ function pmWhy(x){const l=x.l,r=x.r,th=r[0],d=DEEP[l.id]||{},G=GD[l.g]||{},gm=AU
  // \ub2e4\ub978 \uae30\uc900\uc120
  const R=rungsOf(l),up=R.find(q=>q[0]>th);const nx=up?` \ud55c \ub2e8\uacc4 \uc704 ${up[0]}+\ub294 ${up[11]}%${up[1]!=null?` (${fmtO(up[1])})`:''}.`:'';
  return `\ud83d\udcac <b>${l.n.split(' ').slice(-1)[0]} ${CATN[l.cat]} ${th}+</b>: ${P.join(', ')}.${W.length?` <span class="wcol">\u26a0\ufe0f ${W.join(', ')}.</span>`:''} ${odd}${nx}`;}
+
+/* \uadf8\ub798\ud504 \uc606: \uc0c1\ud669\ubcc4 \ud3c9\uade0 vs \uae30\uc900\uc120 \u00b7 \ucffc\ud130\ubcc4 \ud3c9\uade0 \u00b7 \ucd9c\uc804\uc2dc\uac04 \ucd94\uc774 */
+function hbars(rows,th){const mx=Math.max(th*1.3,...rows.map(r=>r[1]||0))||1;
+ return rows.filter(r=>r[1]!=null).map(([t,v,sub])=>{const ok=v>=th;return `<div class="hb"><span class="hbl">${t}</span><div class="hbt"><i class="${ok?'ok':'no'}" style="width:${100*v/mx}%"></i><u style="left:${100*th/mx}%"></u></div><b class="${ok?'good':'bad'}">${v}</b>${sub?`<em>${sub}</em>`:''}</div>`}).join('');}
+function pmSide(x){const l=x.l,th=x.r[0],d=DEEP[l.id]||{},gm=AUTO.games.find(g=>g.m===l.g)||{},opp=gm.away===l.t?gm.home:gm.away;
+ const H=((AUTO.h2h||{})[l.id]||[]),hv=H.length?+(H.reduce((a,h)=>a+(h[l.cat]||0),0)/H.length).toFixed(1):null;
+ const rows=[['\uc2dc\uc98c',l.avg,`${l.N}\uacbd\uae30`],['\ucd5c\uadfc5',l.a5,''],[l.home?'\ud648':'\uc6d0\uc815',l.home?l.hm[0]:l.aw[0],`${l.home?l.hm[1]:l.aw[1]}\uacbd\uae30`],[`vs ${opp}`,hv,H.length?`${H.length}\uacbd\uae30`:''],['\uc624\ub298 \uc608\uc0c1',l.proj?l.proj[0]:null,'']];
+ let q='';const Q=(AUTO.qtr||{})[l.id],parts=GI[l.cat]&&l.cat!=='3PM'?{PTS:['PTS'],REB:['REB'],AST:['AST'],PRA:['PTS','REB','AST'],PR:['PTS','REB'],PA:['PTS','AST'],RA:['REB','AST']}[l.cat]:null;
+ if(Q&&parts){const qs=[0,1,2,3].map(i=>+parts.reduce((a,k)=>a+(Q[k]?Q[k][i]:0),0).toFixed(1)),mx=Math.max(...qs)||1,best=qs.indexOf(Math.max(...qs));
+  q=`<div class="pcol"><div class="lbl2">\ucffc\ud130\ubcc4 \ud3c9\uade0 ${CATN[l.cat]}</div><div class="qb">${qs.map((v,i)=>`<div><i style="height:${Math.max(4,58*v/mx)}px" class="${i===best?'top':''}"></i><b>${v}</b><span>${i+1}Q</span></div>`).join('')}</div>
+  <div class="small muted">${Q.G}\uacbd\uae30 \u00b7 ${best===3?'4\ucffc\ud130\uc5d0 \uac15\ud574\uc694':best===0?'1\ucffc\ud130\ubd80\ud130 \uac15\ud574\uc694':`${best+1}\ucffc\ud130\uac00 \uac00\uc7a5 \ub9ce\uc544\uc694`}${l.cat==='PTS'&&Q.q1z?` \u00b7 1Q \ubb34\ub4dd\uc810 ${Q.q1z}\uacbd\uae30`:''}</div></div>`;}
+ const m=d.min;let mm='';if(m){const mx=Math.max(...m.l10)+2;mm=`<div class="pcol"><div class="lbl2">\ucd9c\uc804\uc2dc\uac04 \ucd5c\uadfc 10\uacbd\uae30</div><div class="spark sm">${m.l10.map(v=>`<i class="${v<m.avg-5?'lo':''}" style="height:${100*v/mx}%" title="${v}\ubd84"></i>`).join('')}<div class="avg" style="bottom:${100*m.avg/mx}%"></div></div><div class="small muted">\ud3c9\uade0 ${m.avg}\ubd84 \u00b7 ${m.lvl==='stable'?'\uc548\uc815':m.lvl==='volatile'?'\ub4e4\ucb49\ub0a0\ucb49':'\ubcf4\ud1b5'}</div></div>`;}
+ return `<div class="pcol"><div class="lbl2">\uc0c1\ud669\ubcc4 \ud3c9\uade0 vs \uae30\uc900\uc120 ${th}+ <span class="muted">(\uc138\ub85c\uc120)</span></div>${hbars(rows,th)}</div>${q}${mm}`;}
 function pmRow(x){const l=x.l,r=x.r,key=`${l.n} ${CATN[l.cat]} ${r[0]}+`,lower=l.r.filter(q=>q[0]<r[0]).slice(-1)[0];
  return `<div class="pmat" data-i="${PM.indexOf(x)}" onclick="pmTog(event,this)"><div class="nm">${x.inj?'\ud83e\ude79 ':''}${x.rk&&x.rk>=23?'\ud83e\uddf1 ':''}${l.n} ${tierB(l.id)}<small>${l.t} \u00b7 ${l.g}${x.rk?` \u00b7 ${x.src==='p'?'\ud3ec\uc9c0\uc158':'\ud300'} \ub9e4\uce58\uc5c5 <span class="pill ${rkC(x.rk)}">${x.rk}\uc704 ${rkT(x.rk)}</span>`:''}</small></div>
  <div class="pbig">${r[0]}+<small>${CATN[l.cat]}</small></div>
@@ -838,14 +871,14 @@ function pmRow(x){const l=x.l,r=x.r,key=`${l.n} ${CATN[l.cat]} ${r[0]}+`,lower=l
  <button class="btn mini" data-k="${key}" data-o="${r[1]??''}" data-p="${r[11]}" data-g="${l.g}" onclick="toggle(this)">+ \uc2ac\ub9bd \ub2f4\uae30</button>
  <div class="pwhy">${pmWhy(x)}</div>
  <div class="rungs"><span class="rl">\uae30\uc900\uc120\ubcc4<br>\uc624\ub298 \ud655\ub960</span>${rungsOf(l).map(q=>{const k=`${l.n} ${CATN[l.cat]} ${q[0]}+`;
-  return `<button class="rung ${q[11]>=80?'hi':q[11]>=60?'md':'lo'} ${q[0]===r[0]?'sel':''}" data-k="${k}" data-o="${q[1]??''}" data-p="${q[11]}" data-g="${l.g}" onclick="rungClick(this,${PM.indexOf(x)},${q[0]})" title="\ub204\ub974\uba74 \uc2ac\ub9bd\uc5d0 \ub2f4\uae30\uace0 \uadf8\ub798\ud504 \uae30\uc900\uc120\uc774 \ubc14\ub00c\uc5b4\uc694"><b>${q[0]}+</b><span>${q[11]}%</span><em>${q[1]!=null?fmtO(q[1]):'\ubc30\ub2f9 \uc5c6\uc74c'}</em></button>`}).join('')}</div><div class="pgraph" id="pg-${PM.indexOf(x)}">${gbar(l,r[0])}</div></div>`;}
+  return `<button class="rung ${q[11]>=80?'hi':q[11]>=60?'md':'lo'} ${q[0]===r[0]?'sel':''}" data-k="${k}" data-o="${q[1]??''}" data-p="${q[11]}" data-g="${l.g}" onclick="rungClick(this,${PM.indexOf(x)},${q[0]})" title="\ub204\ub974\uba74 \uc2ac\ub9bd\uc5d0 \ub2f4\uae30\uace0 \uadf8\ub798\ud504 \uae30\uc900\uc120\uc774 \ubc14\ub00c\uc5b4\uc694"><b>${q[0]}+</b><span>${q[11]}%</span><em>${q[1]!=null?fmtO(q[1]):'\ubc30\ub2f9 \uc5c6\uc74c'}</em></button>`}).join('')}</div><div class="pside"><div class="pgraph" id="pg-${PM.indexOf(x)}">${gbar(l,r[0])}</div>${pmSide(x)}</div></div>`;}
 function rungClick(b,i,th){toggle(b);const g=document.getElementById('pg-'+i);if(g)g.innerHTML=gbar(PM[i].l,th);}
 function rungsOf(l){const C=l.r.filter(q=>q[11]!=null).map(q=>q.slice());
  (VBY[l.id+'|'+l.cat]||[]).forEach(v=>{const i=C.findIndex(q=>q[0]===v.th);const row=[v.th,v.am,v.imp,v.p,v.ps,v.p5,v.hit,v.h5,null,v.edge,v.val,v.pt,null];
   if(i<0)C.push(row);else if(C[i][1]==null)C[i]=row;});
  return C.filter(q=>q[11]>=25).sort((a,b)=>a[0]-b[0]);}
 let pmT='all';
-function drawPM(){const L=PM.filter(x=>(pmG==='all'||x.l.g===pmG)&&(pmC==='all'||x.l.cat===pmC)&&(pmT==='all'||(()=>{const t=tierOf(x.l.id);return t&&(pmT==='ace'?t.t.tm===1:t.t.tm<=3);})()));
+function drawPM(){const L=PM.filter(x=>(pmG==='all'||x.l.g===pmG)&&(pmC==='all'||x.l.cat===pmC)&&(pmT==='all'||(()=>{const t=tierOf(x.l.id);if(!t)return false;return pmT==='o1'?t.t.tm===1:pmT==='o2'?t.t.tm===2:pmT==='o3'?t.t.tm===3:pmT==='st'?t.role==='\uc8fc\uc804':t.role==='\ubca4\uce58';})()));
  $('pmlist').innerHTML=L.slice(0,80).map(pmRow).join('')||'<div class="muted">\uc870\uac74\uc5d0 \ub9de\ub294 \ud53d\uc774 \uc5c6\uc5b4\uc694.</div>';sync();}
 $('pmg').innerHTML=['all',...AUTO.games.map(g=>g.m)].map(g=>`<button class="fbtn ${g==='all'?'on':''}" data-v="${g}">${g==='all'?'\uc804\uccb4 \uacbd\uae30':g}</button>`).join('');
 $('pmc').innerHTML=['all',...Object.keys(CATN)].map(c=>`<button class="fbtn ${c==='all'?'on':''}" data-v="${c}">${c==='all'?'\uc804\uccb4 \ud56d\ubaa9':CATN[c]}</button>`).join('');
@@ -876,7 +909,7 @@ function pmDet(x){const l=x.l,r=x.r,th=r[0],d=DEEP[l.id]||{},G=GD[l.g]||{},gm=AU
  const rs=(G.rest||{})[l.t];T.push(tile('','\uc77c\uc815 \u00b7 \uc7a5\uc18c',`${rs===0?'B2B':rs!=null?`\ud734\uc2dd ${rs}\uc77c`:'\u2014'} \u00b7 ${l.home?'\ud648':'\uc6d0\uc815'}`,`\ud648 \ud3c9\uade0 ${l.hm[0]} (${l.hm[1]}\uacbd\uae30) \u00b7 \uc6d0\uc815 ${l.aw[0]} (${l.aw[1]}\uacbd\uae30)`,true));
  return `<div class="pdet">${T.join('')}</div>`;}
 function pmTog(e,el){if(e.target.closest('button,.pgraph,.rungs'))return;const n=el.nextElementSibling;if(n&&n.classList.contains('pdet')){n.remove();return;}el.insertAdjacentHTML('afterend',pmDet(PM[+el.dataset.i]));}
-$('pmt').innerHTML=[['all','\uc804\uccb4 \uc120\uc218'],['ace','\ud83d\udc51 \uc5d0\uc774\uc2a4(\ud300 1\uc635\uc158)'],['top3','1~3\uc635\uc158']].map(([v,t])=>`<button class="fbtn ${v==='all'?'on':''}" data-v="${v}">${t}</button>`).join('');
+$('pmt').innerHTML=[['all','\uc804\uccb4 \uc120\uc218'],['o1','\ud83d\udc51 1\uc635\uc158'],['o2','2\uc635\uc158'],['o3','3\uc635\uc158'],['st','\uc8fc\uc804'],['bn','\ubca4\uce58']].map(([v,t])=>`<button class="fbtn ${v==='all'?'on':''}" data-v="${v}">${t}</button>`).join('');
 $('pmt').onclick=e=>{const b=e.target.closest('.fbtn');if(!b)return;pmT=b.dataset.v;$('pmt').querySelectorAll('.fbtn').forEach(x=>x.classList.toggle('on',x===b));drawPM();};
 drawPM();
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));t.classList.add('active');$(t.dataset.t).classList.add('active');window.scrollTo(0,0);if(t.dataset.t==='value'&&!vInit){vInit=true;drawV();}});
