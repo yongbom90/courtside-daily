@@ -294,7 +294,8 @@ def main(date, out):
              "inj": {A: [], H: []}, "l5": {}, "stats": {}}
         for inj in s.get("injuries", []):
             g["inj"][inj["team"]["abbreviation"]] = [
-                {"n": i["athlete"]["displayName"], "s": i["status"], "d": (i.get("details") or {}).get("type", "")}
+                {"n": i["athlete"]["displayName"], "s": i["status"], "d": (i.get("details") or {}).get("type", ""),
+                 "id": str(i["athlete"].get("id", ""))}
                 for i in inj.get("injuries", [])]
         for l5 in s.get("lastFiveGames", []):
             g["l5"][l5["team"]["abbreviation"]] = [
@@ -316,6 +317,14 @@ def main(date, out):
         sums = dict(zip(all_ev, ex.map(summary, all_ev)))
         list(ex.map(prop_items, [g["id"] for g in games]))
     lines_by_game = {g["id"]: props_for(g["id"]) for g in games}
+    # 🩹 복귀 보정: ESPN 이 Out/Doubtful 인데 DraftKings 가 그 선수 라인을 올렸으면 출전 예상으로 봄
+    #   (북메이커는 결장 확정 선수 라인을 내림 → 부상 리포트보다 최신인 경우가 많음, 오너 11/21)
+    for g in games:
+        has = {aid for aid, _ in lines_by_game.get(g["id"], {})}
+        for lst in g["inj"].values():
+            for i in lst:
+                if i["s"] in ("Out", "Doubtful") and i.get("id") in has:
+                    i["s"], i["d"] = "Probable", (i["d"] + " · DK 라인 있음(복귀 예상)").strip(" ·")
     miles_by_game = {g["id"]: miles_for(g["id"]) for g in games}
     logs = {}
     for ab, evs in ev_by_team.items():
