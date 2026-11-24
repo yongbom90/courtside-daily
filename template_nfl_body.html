@@ -36,7 +36,8 @@ body{padding-bottom:40px}
 .wx{font-size:12px}
 @media(max-width:760px){.prow{grid-template-columns:1fr 80px}.phead{display:none}.prow>div{grid-column:auto}.prow .c-rate,.prow .c-form,.prow .c-avg,.prow .c-opp{grid-column:1/-1}}
 
-@media(max-width:600px){.qwrap{overflow-x:auto}.qc{min-width:0!important;padding:1px 3px!important}.qc small{display:block;margin:0!important}.qt{font-size:10.5px}}</style>
+@media(max-width:600px){.qwrap{overflow-x:auto}.qc{min-width:0!important;padding:1px 3px!important}.qc small{display:block;margin:0!important}.qt{font-size:10.5px}}.vbox{border:1px solid var(--line);border-radius:10px;padding:6px 8px;margin:6px 0}.vhd{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}.vhd .vbig{font-size:20px;font-weight:800}.vhd .vbig small{font-size:12px;font-weight:600;color:var(--muted);margin-left:2px}.vbars{display:flex;gap:3px;align-items:flex-end;height:64px;margin-top:4px}.vbars>div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}.vbars i{width:100%;max-width:26px;background:#94a3b855;border-radius:3px 3px 0 0;display:block}.vbars>div.lo i{background:#ef444455}.vbars span{font-size:10px;color:var(--muted);white-space:nowrap}.vbars>div.lo span{color:var(--bad);font-weight:700}.vbars em{font-style:normal;font-size:10px;font-weight:700}
+</style>
 <body>
 <div class="wrap">
 <nav class="topnav"><a href="../index.html#nfl">← 홈</a><a href="../index.html#nba">🏀 NBA로</a></nav>
@@ -328,11 +329,17 @@ function lqtable(id,ps){const q=QTN[id];if(!q)return '';const n=q.otG?5:4,H=[...
   <div class="small muted">1Q ${LCAT[q.main]} 0 이하 ${q.q1z}경기 · 최근 ${LCAT[q.main]}(1~4Q): ${q.l5.slice(0,3).map(r=>r.slice(0,4).join('-')+(r[4]?'+OT'+r[4]:'')).join(' / ')}</div></div>`;}
 const LRN={top:'강력추천',rec:'추천',caution:'주의'};
 function lbest(d){return [...d.r].reverse().find(r=>r[6]==='top'||r[6]==='rec');}
+/* 🎯 시도 수: 리시브=타깃, 러싱=캐리, 패스=패스 시도. 확률은 이 시도 분포로 계산(11/24 백테스트) */
+const VKN={TGT:'타깃',CAR:'캐리',ATT:'패스 시도'};
+function nvol(d){const v=d.vi;if(!v||!v.v.length)return '';const A=v.v,n=A.length,av=A.reduce((a,b)=>a+b,0)/n,l5=A.slice(0,5).reduce((a,b)=>a+b,0)/Math.min(5,n),mx=Math.max(...A,1),low=A.filter(a=>a<=av*0.6).length,per=A.reduce((a,b)=>a+b,0)?(v.m.reduce((a,b)=>a+b,0)/A.reduce((a,b)=>a+b,0)):0;
+ const bars=A.map((a,i)=>({a,m:v.m[i]})).reverse().map(x=>`<div class="${x.a<=av*0.6?'lo':''}" title="${VKN[v.k]} ${x.a} · ${LCAT[d.cat]} ${x.m}"><em>${x.a}</em><i style="height:${Math.max(3,46*x.a/mx)}px"></i><span>${x.m}</span></div>`).join('');
+ return `<div class="vbox"><div class="vhd"><b>🎯 ${VKN[v.k]}</b><span class="vbig">${av.toFixed(1)}<small>/경기 (최근${n})</small></span><span>최근5 <b>${l5.toFixed(1)}</b></span><span>${v.k==='TGT'&&d.cat==='REC'?`캐치율 <b>${Math.round(100*per)}%</b>`:`${VKN[v.k]}당 <b>${per.toFixed(1)}야드</b>`}</span>${low?`<span class="bad">⚠️ ${VKN[v.k]} 적은 경기 ${low}/${n}</span>`:''}</div>
+  <div class="vbars">${bars}</div><div class="small muted">위 숫자 = ${VKN[v.k]}, 아래 = ${LCAT[d.cat]} (왼쪽 오래된 → 오른쪽 최근) · 빨강 = 평소의 60% 이하 · 확률은 이 ${VKN[v.k]} 수로 계산</div></div>`;}
 function lstat(d){const up=d.a5-d.avg,best=lbest(d),cau=d.r.find(r=>r[6]==='caution');
  const tiles=d.r.map(([th,p,hit,h5,dk,fair,rec,rf])=>{const isb=best&&best[0]===th;
   const tip=`${th}+ ${LCAT[d.cat]} · 시즌 ${hit}/${d.N} · 최근5 ${h5}/${d.last.length} · 추정 ${p}% · 적정 배당 ${fmtO(fair)}${dk?' · DK 단계 있음':''}${rf&&rf.length?' · 경고: '+rf.join(', '):''}`;
   return `<div class="lt ${p>=70?'hi':p<40?'lo':'mid'} ${rec?'v-'+rec:''} ${isb?'best':''}" title="${tip}"><span class="lth">${th}+</span><span class="ltl">추정</span><span class="ltp">${p}%</span><span class="lth2">시즌 ${hit}/${d.N}<br>최근5 ${h5}/${d.last.length}</span><span class="ltl">적정 배당</span><span class="lto">${fmtO(fair)}</span>${dk?'<span class="ldk">DK ✓</span>':'<span class="ldk off">DK —</span>'}<span class="ltv ${rec||''}">${isb?'★ 최적 · '+LRN[rec]:rec?LRN[rec]:'—'}</span></div>`;}).join('');
- return `<div class="lstat"><div class="lab"><span class="lname">${LCAT[d.cat]}</span><span>평균 <b>${d.avg}</b> → 최근5 <b class="${up>0?'good':up<0?'bad':''}">${d.a5}${up>0?'▲':up<0?'▼':''}</b></span><span class="muted">L5 ${d.last.join('·')}</span>${d.dk!=null?`<span>DK 라인 <b>${d.dk}</b> 오버 ${d.dkHit}/${d.N}·${d.dkH5}/${d.last.length}</span>`:''}${best?`<span class="good"><b>★ ${best[0]}+ ${LRN[best[6]]}</b> (적정 ${fmtO(best[5])} 보다 좋은 배당이면 가성비)</span>`:''}${!best&&cau?`<span style="color:var(--warn)">주의: ${cau[7].join(', ')}</span>`:''}</div><div class="lrow">${tiles}</div></div>`;}
+ return `<div class="lstat"><div class="lab"><span class="lname">${LCAT[d.cat]}</span><span>평균 <b>${d.avg}</b> → 최근5 <b class="${up>0?'good':up<0?'bad':''}">${d.a5}${up>0?'▲':up<0?'▼':''}</b></span><span class="muted">L5 ${d.last.join('·')}</span>${d.dk!=null?`<span>DK 라인 <b>${d.dk}</b> 오버 ${d.dkHit}/${d.N}·${d.dkH5}/${d.last.length}</span>`:''}${best?`<span class="good"><b>★ ${best[0]}+ ${LRN[best[6]]}</b> (적정 ${fmtO(best[5])} 보다 좋은 배당이면 가성비)</span>`:''}${!best&&cau?`<span style="color:var(--warn)">주의: ${cau[7].join(', ')}</span>`:''}</div>${nvol(d)}<div class="lrow">${tiles}</div></div>`;}
 function lcard(G){const d=G[0];return `<div class="lcard"><div class="lhd"><b style="font-size:16px">${d.n}</b><span class="muted">${d.pos} · ${d.t} · ${d.g}</span><span class="r">${d.N}경기</span></div>${d.fl.length?`<div class="lfl">⚠️ ${d.fl.join(' · ')}</div>`:''}${G.map(lstat).join('')}${lqtable(d.id,d.pos)}</div>`;}
 {const pl={};LADN.forEach(d=>{(pl[d.g]=pl[d.g]||{})[d.id]=`${d.n} (${d.pos} ${d.t})`;});
  $('lgame').innerHTML='<option value="all">모든 경기</option>'+[...new Set(LADN.map(d=>d.g))].map(g=>`<option>${g}</option>`).join('');

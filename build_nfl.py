@@ -118,6 +118,31 @@ def ctx_flags(g, ab, aid, ps, cat, th, a5, inj, qb_out, qb_chg, fav):
     return f
 
 
+# 11/24 백테스트(이번 시즌 162경기, 직전 4경기+ 선수, 각 경기 직전 기록만, Brier 낮을수록 정확):
+#   리시브 수(5,488건) 적중률 0.1558 → 경기별 타깃 × 캐치율 0.1437 / 리시브 야드(4,704) 0.1662 → 타깃 × 타깃당 야드 0.1543
+#   러싱 야드(1,393) 0.2026 → 캐리 × 캐리당 야드 0.1984 / 패스 야드(996) 0.2134 → 패스 시도 × 시도당 야드 0.1983
+#   시도 기반 75% + 적중률 25% 섞기가 넷 다 최선 근처.
+W_VOL = 0.75
+VOL = {"REC": ("TGT", 0.65, 20, None), "REYD": ("TGT", 8.0, 30, 11), "RYD": ("CAR", 4.3, 30, 10), "PYD": ("ATT", 6.8, 30, 13)}
+
+
+def vol_p(L, cat, th):
+    """시즌 각 경기의 시도(타깃·캐리·패스 시도) 수를 그대로 다시 굴려서 오늘 th 이상일 확률."""
+    import math
+    if cat not in VOL or not L:
+        return None
+    k, prior, w, c = VOL[cat]
+    vol = [r.get(k, 0) for r in L]
+    eff = (sum(r.get(cat, 0) for r in L) + prior * w) / (sum(vol) + w)
+    if c is None:
+        def bt(n, p, m):
+            n = int(n)
+            return 1.0 if m <= 0 else 0.0 if n < m else sum(math.comb(n, j) * p ** j * (1 - p) ** (n - j) for j in range(m, n + 1))
+        return sum(bt(a, eff, int(math.ceil(th))) for a in vol) / len(vol)
+    Phi = lambda z: 0.5 * (1 + math.erf(z / math.sqrt(2)))
+    return sum(1 - Phi((th - 0.5 - a * eff) / max(c * math.sqrt(max(a, 1)), 1)) for a in vol) / len(vol)
+
+
 def fair_am(p):
     """확률 → 적정 미국식 배당."""
     p = min(max(p, 0.01), 0.99)
@@ -854,6 +879,9 @@ def main(date, out):
                     hit, h5 = sum(v >= th for v in vals), sum(v >= th for v in last)
                     ps_, p5 = (hit + 1) / (N + 2), (h5 + 1) / (len(last) + 2)
                     p = (ps_ + p5) / 2
+                    pv = vol_p(L, cat, th)
+                    if pv is not None:
+                        p = (1 - W_VOL) * p + W_VOL * pv
                     if p > 0.97 or (hit == 0 and zero):
                         continue
                     zero = zero or hit == 0
@@ -873,7 +901,8 @@ def main(date, out):
                                 "avg": round(sum(vals) / N, 1), "a5": round(sum(last) / len(last), 1), "mx": max(vals), "mn": min(vals),
                                 "dk": dk[0] if dk else None, "dkHit": sum(v > dk[0] for v in vals) if dk else None,
                                 "dkH5": sum(v > dk[0] for v in last) if dk else None,
-                                "dkMiles": sorted(miles.get((aid, cat), set())), "fl": fl, "r": rows})
+                                "dkMiles": sorted(miles.get((aid, cat), set())), "fl": fl, "r": rows,
+                                "vi": {"k": VOL[cat][0], "v": [r.get(VOL[cat][0], 0) for r in L[:10]], "m": [r.get(cat, 0) for r in L[:10]]} if cat in VOL else None})
             # 쿼터별: 이 선수가 뛴 경기마다 플레이 집계
             Q = {k: [0.0] * 5 for k in QKEYS}
             otG, q1z, l5 = 0, 0, []

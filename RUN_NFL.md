@@ -15,7 +15,7 @@ PY = Mac 은 `python3`, Windows 는 `python -I`. D = 오늘 날짜 YYYYMMDD(로�
 - `PY build_nfl.py D --count` 가 0 이면(이번 구간 예정 경기 없음) 종료.
 
 ## 1. 데이터 (매번 새로 수집)
-- `PY build_nfl.py D nfl_auto.json` → 경기·라인·부상·날씨·팀 스탯·80~100% 기준선 판정·prop 라인 대비 시즌 기록·TD·역할 변화·🚀 팀별 첫 3드라이브(공격 득점률·수비 저지율과 막은 방법)·첫 TD 쿼터 분포·지난 경기 결과·직전 위젯 픽 채점·지난 라인 vs 실제.
+- `PY build_nfl.py D nfl_auto.json` → 경기·라인·부상·날씨·팀 스탯·80~100% 기준선 판정·prop 라인 대비 시즌 기록·TD·역할 변화·🚀 팀별 첫 3드라이브(공격 득점률·수비 저지율과 막은 방법)·첫 TD 쿼터 분포·지난 경기 결과·직전 위젯 픽 채점·지난 라인 vs 실제. 🪜 사다리 확률: 리셉션·리시빙 야드는 타깃 수, 러시 야드는 캐리 수, 패스 야드는 패스 시도 수 기반 확률을 75% 반영(build_nfl.W_VOL, 11/24 백테스트). 선수 카드에 경기별 시도 수(vi)가 보여요 — 분석 문장에서 시도가 줄거나 들쭉날쭉한 선수는 그 이유(부상·역할 변화)를 짚어 줘요.
 - 필요하면 `PY espn_brief.py nfl <경기 날짜>` (프리뷰: ATS·팀 스탯·부상), `PY espn_brief.py nfl <지난 경기 날짜> review` (박스·쿼터 점수).
 - 지난 경기 AP 리캡: `https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=<results[].id>` 의 article.story.
 
