@@ -248,6 +248,9 @@ def _et(iso):  # ESPN UTC 시각 → 미국 동부 날짜
         return iso[:10]
 
 
+SEASON_ATT = {}
+
+
 def league_profiles(date):
     """시즌 시작 ~ 어제까지 리그 전체 끝난 경기 → 30팀 허용 기록·순위(matchup.profiles)."""
     d = datetime.strptime(SEASON_START, "%Y%m%d")
@@ -271,6 +274,16 @@ def league_profiles(date):
         ha = {c.get("team", {}).get("abbreviation"): c.get("homeAway", "")[:1] for c in comp.get("competitors", [])}
         if len(L) == 2 and all(ha.get(t) for t in L):
             rows.append({"d": (comp.get("date") or "")[:10], "t": {t: (ha[t], L[t]) for t in L}})
+    # 선수별 시즌 시도 합계(어제 리뷰의 '평균 시도' 비교용 — 오늘 경기 없는 팀 선수도 포함)
+    global SEASON_ATT
+    SEASON_ATT = {}
+    for s in sums:
+        for rws in box_rows(s).values():
+            for r in rws:
+                a = SEASON_ATT.setdefault(r["id"], {"3PA": 0, "FGA": 0, "G": 0})
+                a["3PA"] += r["3PA"]
+                a["FGA"] += r["FGA"]
+                a["G"] += 1
     return MU.profiles([MU.team_lines(s) for s in sums]), len(evs), MU.team_book(rows), IN.dvp([box_rows(s) for s in sums]), IN.tiers([box_rows(s) for s in sums])
 
 
@@ -582,6 +595,11 @@ def main(date, out):
                    "proj": MU.project(vals, cat, proj_rank(ab, name, cat), blow, is_star(aid)) if cat in MU.PROJ else None, "flow": _fl,
                    "att": {"s": [round(sum(l.get(k, 0) for l in L) / N, 1) for k in ("FGA", "3PA", "FTA")],
                            "l5": [round(sum(l.get(k, 0) for l in L[:5]) / len(L[:5]), 1) for k in ("FGA", "3PA", "FTA")]}}
+            V = MU.vol_info(L)
+            # 시도 수: 최근10 경기별 (3점 성공/시도, 야투 시도) — 3점·득점 확률에 시도 분포를 씀(matchup.W_VOL)
+            lad["vi"] = {"m3": [l.get("3PM", 0) for l in L[:10]], "a3": [l.get("3PA", 0) for l in L[:10]],
+                         "fga": [l.get("FGA", 0) for l in L[:10]], "fta": [l.get("FTA", 0) for l in L[:10]],
+                         "p3": round(100 * V["p3"], 1), "pps": round(V["pps"], 2)}
             mbad = bool(lad["mu"] and lad["mu"][0] == "bad")
             hv = [h[cat] for h in h2h_of(aid, ab, name)]  # 이번 시즌 맞대결 기록
             lad["hN"] = len(hv)
@@ -592,7 +610,7 @@ def main(date, out):
                 h5 = sum(v >= th for v in last)
                 # 적중 확률 추정 = 시즌(표본 보정)과 최근 5경기(표본 보정)를 반반
                 ps, p5 = (hit + 1) / (N + 2), (h5 + 1) / (len(last) + 2)
-                p = MU.W_SEASON * ps + (1 - MU.W_SEASON) * p5
+                p = MU.with_vol(MU.W_SEASON * ps + (1 - MU.W_SEASON) * p5, V, cat, th)
                 imp = 1 / dec
                 edge = p - imp
                 flags = base + ([f"최근 5경기 {h5}/5"] if h5 <= 2 else [])
@@ -613,7 +631,9 @@ def main(date, out):
             for th in LADDER.get(cat, []):
                 hit, h5 = sum(v >= th for v in vals), sum(v >= th for v in last)
                 ps, p5 = (hit + 1) / (N + 2), (h5 + 1) / (len(last) + 2)
-                p = MU.W_SEASON * ps + (1 - MU.W_SEASON) * p5
+                p0 = MU.W_SEASON * ps + (1 - MU.W_SEASON) * p5
+                pv = MU.vol_p(V, cat, th) if cat in MU.VOL_CATS else None
+                p = MU.with_vol(p0, V, cat, th)
                 if p < 0.04 or p > 0.97:
                     continue
                 if lad["r"] and hit == 0 and h5 == 0 and lad["r"][-1][6] == 0 and lad["r"][-1][7] == 0:
@@ -621,7 +641,7 @@ def main(date, out):
                 am, imp, edge, val = dk.get(float(th), dk.get(th, (None, None, None, None)))
                 pt = MU.today(p, cat, lad["mu"][1] if lad["mu"] else None, blow, MU.mtrend(L))
                 lad["r"].append([th, am, imp, round(100 * p), round(100 * ps), round(100 * p5), hit, h5, fair_am(p), edge, val,
-                                 round(100 * pt), sum(v >= th for v in hv)])
+                                 round(100 * pt), sum(v >= th for v in hv), None if pv is None else round(100 * pv)])
             lad["dkx"] = sorted(t for t in dk if t not in LADDER.get(cat, []))  # 간격 밖 DK 단계(목록 보기에 있음)
             if lad["r"]:
                 ladders.append(lad)
@@ -662,6 +682,17 @@ def main(date, out):
                         "headline": (s.get("article") or {}).get("headline", "")})
 
     # 어제 위젯 라인 vs 실제 기록
+    def vol_why(p, r):
+        """빗나간 3점·득점 픽: 실제 시도 vs 시즌 평균 시도 → 시도 부족/성공률 부족 구분용."""
+        if not r or p["cat"] not in ("3PM", "PTS"):
+            return None
+        k = "3PA" if p["cat"] == "3PM" else "FGA"
+        a = SEASON_ATT.get(p.get("id"))  # 어제 경기 전까지(league_profiles 는 오늘 전날까지 → 어제 경기 포함이라 빼 줌)
+        if not a or a["G"] < 2:
+            return None
+        avg = (a[k] - (r.get(k) or 0)) / (a["G"] - 1)
+        return [k, r.get(k), round(avg, 1), r.get("3PM") if k == "3PA" else r.get("FGM")]
+
     prop_review, pr_from = [], None
     pf = sorted(f for f in glob.glob(os.path.join(HERE, "archive", "nba_*_props.json")) if os.path.basename(f)[4:12] < date)
     if pf:
@@ -673,7 +704,7 @@ def main(date, out):
             r = box.get(p["id"])
             act = r[p["cat"]] if r else None
             prop_review.append({**{k: p.get(k) for k in ("n", "t", "g", "cat", "line", "rate")}, "act": act,
-                                "r": "-" if act is None else ("O" if act > p["line"] else "U")})
+                                "r": "-" if act is None else ("O" if act > p["line"] else "U"), "va": vol_why(p, r)})
 
     vgrades, vg_from = [], None
     vf = sorted(f for f in glob.glob(os.path.join(HERE, "archive", "nba_*_value.json")) if os.path.basename(f)[4:12] < date)
@@ -686,7 +717,7 @@ def main(date, out):
             r = box.get(p["id"])
             act = r[p["cat"]] if r else None
             vgrades.append({**{k: p.get(k) for k in ("n", "t", "g", "cat", "th", "am", "edge")}, "act": act,
-                            "r": "-" if act is None else ("O" if act >= p["th"] else "X")})
+                            "r": "-" if act is None else ("O" if act >= p["th"] else "X"), "va": vol_why(p, r)})
 
     h2h = {d["id"]: _h2h.get(d["id"], []) for d in ladders}
     _tm = {d["id"]: d["t"] for d in ladders}

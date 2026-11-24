@@ -265,6 +265,48 @@ SLOPE = {"PTS": 0.218, "REB": 0.188, "AST": 0.2, "3PM": 0.062, "PRA": 0.292, "PR
 # 11/19 검증(이번 시즌 210경기·주전급 1,586명-경기, 후반부 검증): 시즌:최근5 = 75:25 가 50:50 보다 정확(오차 0.7~1.3%↓),
 # 최근 3경기 출전 추세(최근3/시즌 −1, ±40% 제한)를 로짓에 더하면 리바·어시·PRA 가 더 좋아짐. 3점은 효과 없음.
 W_SEASON = 0.75
+
+# 11/24 백테스트(이번 시즌 258경기, 직전 8경기+·평균 20분+ 선수, 각 경기 직전까지 기록만 사용, Brier 낮을수록 정확):
+#   3점(1~5개+ 6,720건): 기준 넘은 경기 비율 0.1621 → 경기별 3점 시도 × 성공률 0.1549, 25:75 섞기 0.1550
+#   득점(10~30점+ 7,770건): 0.1283 → 경기별 슛 시도(FGA+0.44×FTA) × 시도당 득점 0.1222, 25:75 섞기 0.1225
+# 최근5 시도 추세·상대가 내주는 3점 시도 보정은 오히려 나빠져서 안 씀(시즌 전체 시도 분포가 최선).
+W_VOL = 0.75
+VOL_CATS = ("3PM", "PTS")
+
+
+def _btail(n, p, k):
+    import math
+    if k <= 0:
+        return 1.0
+    if n < k:
+        return 0.0
+    return sum(math.comb(n, j) * p ** j * (1 - p) ** (n - j) for j in range(k, n + 1))
+
+
+def vol_info(L):
+    """L: 시즌 로그 → 시도 기반 계산 재료. 3점 성공률(리그 36%·60개 사전), 시도당 득점(1.1점·40개 사전)."""
+    N = len(L) or 1
+    a3 = [l.get("3PA", 0) for l in L]
+    m3 = sum(l.get("3PM", 0) for l in L)
+    ts = [l.get("FGA", 0) + 0.44 * l.get("FTA", 0) for l in L]
+    pts = sum(l.get("PTS", 0) for l in L)
+    return {"a3": a3, "p3": (m3 + 0.36 * 60) / (sum(a3) + 60), "ts": ts, "pps": (pts + 1.1 * 40) / (sum(ts) + 40), "N": N}
+
+
+def vol_p(V, cat, th):
+    """시즌 각 경기의 시도 수를 그대로 다시 굴려서(시도 변동 포함) 오늘 th 이상일 확률."""
+    import math
+    if cat == "3PM":
+        return sum(_btail(int(a), V["p3"], int(math.ceil(th))) for a in V["a3"]) / V["N"]
+    if cat == "PTS":
+        Phi = lambda z: 0.5 * (1 + math.erf(z / math.sqrt(2)))
+        return sum(1 - Phi((th - 0.5 - a * V["pps"]) / max(1.6 * math.sqrt(max(a, 1)), 0.5)) for a in V["ts"]) / V["N"]
+    return None
+
+
+def with_vol(p, V, cat, th):
+    v = vol_p(V, cat, th) if cat in VOL_CATS else None
+    return p if v is None else (1 - W_VOL) * p + W_VOL * v
 MTR = {"PTS": 0.26, "REB": 0.65, "AST": 1.1, "3PM": 0.0, "PRA": 0.88, "PR": 0.88, "PA": 0.88, "RA": 0.88}
 
 
