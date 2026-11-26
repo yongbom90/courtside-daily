@@ -1,20 +1,21 @@
 #!/bin/bash
 # Mac mini 자동 실행: launchd 가 호출. usage: run.sh nba|nfl
+#   run.sh nba|nfl --due → 지금 해야 할 전체 실행(am|pm)만 출력하고 끝(데스크톱 앱 백업 예약작업용, 로그·잠금·실행 없음)
 # 1) Claude Code(헤드리스)가 RUN.md 절차로 수집·리서치·분석·렌더·docs 등록
 # 2) 새 페이지가 생겼으면 이 스크립트가 git push → GitHub Pages 반영
 set -u
 KIND="${1:-nba}"
+DUEONLY=""; [ "${2:-}" = "--due" ] && DUEONLY=1
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$DIR"
 export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
 mkdir -p logs
 D=$(date +%Y%m%d)
 LOG="logs/${KIND}_${D}_$(date +%H%M).log"
-exec >>"$LOG" 2>&1
-echo "== $(date) $KIND start"
+[ -n "$DUEONLY" ] || { exec >>"$LOG" 2>&1; echo "== $(date) $KIND start"; }
 # 동시 실행 방지(같은 auto.json·docs 를 씀). inj 는 최대 25분 기다리고, 아침/오후 실행은 바쁘면 다음 30분 슬롯에 다시 시도.
 LOCK="logs/.lock"
-for i in $(seq 1 50); do
+[ -n "$DUEONLY" ] || for i in $(seq 1 50); do
   if mkdir "$LOCK" 2>/dev/null; then echo $$ > "$LOCK/pid"; trap 'rm -rf "$LOCK"' EXIT; break; fi
   P=$(cat "$LOCK/pid" 2>/dev/null); if [ -n "$P" ] && ! kill -0 "$P" 2>/dev/null; then rm -rf "$LOCK"; continue; fi
   # 9시처럼 NBA·NFL 이 같은 슬롯에 동시에 뜨면 한쪽이 그냥 끝나버려서, 아침/오후 실행도 최대 5분(10회) 기다린다
@@ -22,7 +23,7 @@ for i in $(seq 1 50); do
   [ "$i" -eq 50 ] && { echo "잠금 대기 초과"; exit 0; }
   sleep 30
 done
-git pull --rebase --autostash -q || echo "git pull 실패 (계속 진행)"
+[ -n "$DUEONLY" ] || git pull --rebase --autostash -q || echo "git pull 실패 (계속 진행)"
 NOW=$(( 10#$(date +%H) * 60 + 10#$(date +%M) ))
 
 # 아침/오후 두 번 전체 실행. launchd 가 9:00 과 10:00~16:00 30분마다 부름.
@@ -70,6 +71,7 @@ elif [ "$KIND" = nba ]; then
   T=$(python3 build_data.py "$D" --tips)
   [ -z "$T" ] && { echo "오늘 NBA 경기 없음"; exit 0; }
   phase "$D" "$T" || exit 0
+  [ -n "$DUEONLY" ] && { echo "$PHASE"; exit 0; }
   export CS_PHASE=$PHASE
   echo "PHASE=$PHASE (첫 경기 $(( ${T%% *} / 60 ))시)"
   PROMPT="RUN.md 를 읽고 절차를 처음부터 끝까지 그대로 수행해. 이번은 $([ $PHASE = am ] && echo '아침' || echo '오후 업데이트') 실행이야(데이터·리서치·분석 전부 새로). PY 는 python3 야. 내보내기는 '웹 모드'만 하고 메일은 보내지 마. git push 는 하지 마."
@@ -79,6 +81,7 @@ else
   T=$(python3 build_nfl.py "$D" --tips)
   [ -z "$T" ] && { echo "오늘 남은 NFL 경기 없음"; exit 0; }
   phase "nfl_$D" "$T" || exit 0
+  [ -n "$DUEONLY" ] && { echo "$PHASE"; exit 0; }
   export CS_PHASE=$PHASE
   echo "PHASE=$PHASE (첫 킥오프 $(( ${T%% *} / 60 ))시)"
   PROMPT="RUN_NFL.md 를 읽고 절차를 처음부터 끝까지 그대로 수행해. 이번은 $([ $PHASE = am ] && echo '아침' || echo '오후 업데이트') 실행이야(데이터·리서치·분석 전부 새로). PY 는 python3 야. 내보내기는 '웹 모드'만 하고 메일은 보내지 마. git push 는 하지 마."
